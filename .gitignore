@@ -1,24 +1,308 @@
-# Compiled class file
+# ==============================================================================
+# AgentArk .gitignore
+# ==============================================================================
+# Repository policy:
+# - Keep source, contracts, migrations, lockfiles, Maven Wrapper and examples.
+# - Ignore generated build output, local runtime state, IDE metadata and secrets.
+# - Never use ignored files as the only place for required project configuration.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Operating systems
+# ------------------------------------------------------------------------------
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ------------------------------------------------------------------------------
+# Editors / IDEs
+# ------------------------------------------------------------------------------
+
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# Visual Studio Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Eclipse / STS
+.classpath
+.project
+.settings/
+.factorypath
+.springBeans
+.sts4-cache/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+
+# Fleet / Cursor / other local editor state
+.fleet/
+.cursor/
+.history/
+
+# Vim / Emacs / editor backups
+*.swp
+*.swo
+*.swn
+*~
+.#*
+\#*\#
+
+# ------------------------------------------------------------------------------
+# Java / JVM / Maven
+# ------------------------------------------------------------------------------
+
+# Maven build output
+target/
+**/target/
+
+# Maven local / generated metadata
+.m2/
+.flattened-pom.xml
+dependency-reduced-pom.xml
+pom.xml.versionsBackup
+pom.xml.releaseBackup
+pom.xml.next
+release.properties
+.mvn/timing.properties
+
+# Keep Maven Wrapper files committed.
+!.mvn/
+!.mvn/wrapper/
+!.mvn/wrapper/maven-wrapper.properties
+!.mvn/wrapper/maven-wrapper.jar
+!mvnw
+!mvnw.cmd
+
+# Java / JVM diagnostics
 *.class
-
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
-
-# Package Files #
-*.jar
-*.war
-*.nar
-*.ear
-*.zip
-*.tar.gz
-*.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+*.hprof
+*.jfr
+*.jfr.old
+
+# JaCoCo / profiler output outside target/
+jacoco.exec
+jacoco-it.exec
+async-profiler-*.html
+async-profiler-*.jfr
+
+# ------------------------------------------------------------------------------
+# Node.js / pnpm / React / Vite
+# ------------------------------------------------------------------------------
+
+node_modules/
+**/node_modules/
+
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Build output / caches
+dist/
+**/dist/
+build/
+**/build/
+.vite/
+**/.vite/
+.cache/
+.parcel-cache/
+.turbo/
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+
+# Frontend test output
+coverage/
+**/coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+allure-results/
+
+# Keep package-manager lockfiles committed.
+!pnpm-lock.yaml
+!package-lock.json
+!yarn.lock
+
+# ------------------------------------------------------------------------------
+# Environment files / local application configuration
+# ------------------------------------------------------------------------------
+
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+application-local.yml
+application-local.yaml
+application-local.properties
+application-secret.yml
+application-secret.yaml
+application-secret.properties
+bootstrap-local.yml
+bootstrap-local.yaml
+bootstrap-local.properties
+
+config/local/
+config/secret/
+local.properties
+
+# ------------------------------------------------------------------------------
+# Secrets / credentials / private keys
+# ------------------------------------------------------------------------------
+
+.secrets/
+secrets/local/
+*.secret
+*.secrets
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+id_rsa
+id_rsa.*
+id_ed25519
+id_ed25519.*
+
+# Local cloud / provider credentials
+credentials.json
+service-account.json
+*-service-account.json
+.aws/
+.azure/
+.gcp/
+
+# ------------------------------------------------------------------------------
+# Logs / temporary files
+# ------------------------------------------------------------------------------
+
+*.log
+logs/
+log/
+
+*.tmp
+*.temp
+*.bak
+*.old
+*.orig
+*.rej
+
+tmp/
+temp/
+
+# Process / socket files
+*.pid
+*.pid.lock
+*.sock
+
+# ------------------------------------------------------------------------------
+# AgentArk local runtime state
+# ------------------------------------------------------------------------------
+
+.agentark/
+.runtime/
+.workspace/
+.sandbox/
+
+runtime-data/
+sandbox-data/
+workspace-data/
+local-artifacts/
+local-uploads/
+
+# Local databases / embedded stores
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# ------------------------------------------------------------------------------
+# Docker Compose / local infrastructure state
+# ------------------------------------------------------------------------------
+
+docker-compose.override.yml
+docker-compose.override.yaml
+compose.override.yml
+compose.override.yaml
+
+deploy/compose/.env
+deploy/compose/.env.*
+!deploy/compose/.env.example
+!deploy/compose/.env.*.example
+
+deploy/compose/.data/
+deploy/compose/data/
+deploy/compose/volumes/
+
+mysql-data/
+redis-data/
+qdrant_storage/
+minio-data/
+elasticsearch-data/
+neo4j-data/
+
+# Local TLS / certificates generated for development
+deploy/compose/certs/local/
+deploy/certs/local/
+
+# ------------------------------------------------------------------------------
+# Test / tooling output
+# ------------------------------------------------------------------------------
+
+reports/
+test-output/
+surefire-reports/
+failsafe-reports/
+
+# Contract / schema tooling caches
+.openapi-generator/
+openapi-generator-cache/
+.schema-cache/
+
+# Static analysis / quality tooling
+.sonar/
+.scannerwork/
+.semgrep/
+.trivy/
+.grype/
+.syft/
+
+# ------------------------------------------------------------------------------
+# Miscellaneous generated files
+# ------------------------------------------------------------------------------
+
+*.patch.tmp
+*.retry
+.cache-loader/
+
+# Keep repository documentation, contracts, migrations, examples and lockfiles
+# explicit and version-controlled. Add project-specific generated directories here
+# only when they are reproducible and should never be committed.
