@@ -15,17 +15,22 @@ Accepted
 
 | 项目 | 版本或 Commit | 约束 |
 |---|---|---|
-| AgentScope Java | Maven `2.0.1` | 初始兼容版本 |
-| AgentScope source | `35f52181fb37eed97cf0adacf2d1c13a63bbfb7d` | `pom.xml` 将 revision 固定为 2.0.1 的源码证据；无对应远端 Tag，必须按 SHA 读取 |
+| AgentScope Java | Maven `2.0.2` | 初始兼容版本 |
+| AgentScope source | `0c61e7494197ded54eefdeaf9bdeb51807beb752` | `release/2.0.2` 合并提交，包含 `agentscope-service/`；无对应远端 Tag，必须按 SHA 读取 |
 | DeepSeek Harness | `47f943859bef60e4160492346772ded9b24f765a` | 仅视觉、交互和前端工程参考 |
 | Java/Spring | JDK 21 / Boot 4.1.0 / Cloud 2025.1.2 | 最终基线 |
 | Persistence | MyBatis-Plus 3.5.17 / Flyway / MySQL 8.4 | 不保留 JPA 自动 DDL |
 | Core infra | Redis 8.10.x / S3-compatible Object Storage | Redis 非权威业务事实 |
 | RAG | Qdrant 1.18.3 | 仅 RAG Profile |
 
+## AgentScope 基线纠错
+
+Phase 00 证实原候选 Commit `35f52181fb37eed97cf0adacf2d1c13a63bbfb7d` 虽对应 2.0.1，但其 Git 树不包含计划后续阶段必须审计和迁移的 `agentscope-service/`，因此不能作为 AgentArk 的完整 AgentScope 来源基线。
+
+`0c61e7494197ded54eefdeaf9bdeb51807beb752` 是来源仓库远端 `main` 可达的 `release/2.0.2` 合并提交，同时包含 Core、Harness、Extensions 与 `agentscope-service/`。来源仓库本地 `main-agentark` HEAD 不作为基线，因为它没有远端引用，无法满足可复现取证要求。
+
 ## 源码使用规则
 
 移动的 `main` 工作区不能作为版本证据。读取上游实现前必须验证目标 Commit 存在，并使用该 Commit 的只读 Worktree、`git show` 或等价固定视图。不得修改上游仓库内容，不得用滚动在线文档替代固定源码和测试。
 
 AgentScope Maven 版本、Source SHA、Compatibility Matrix 必须同时更新；只有其中一项变化时不得验收升级。
-

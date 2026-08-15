@@ -13,6 +13,7 @@ referenced_by: AGENTS.md#knowledge-map
 |---|---|---|
 | 项目入口 | [README](../README.md) | 了解公开定位与真实开发状态 |
 | 执行路线 | [PLAN](../PLAN.md) | 开始或验收任何 Phase/Work Package |
+| 阶段执行证据 | [Phase 00 执行基线](implementation/phase-00-execution-baseline.md) | 复核仓库、工具链和固定 Worktree 基线 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |

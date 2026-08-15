@@ -50,8 +50,8 @@ export AGENTARK_PLAN="$AGENTARK_ROOT/PLAN.md"
 export AGENTARK_README="$AGENTARK_ROOT/README.md"
 
 export AGENTSCOPE_REPO="${AGENTSCOPE_REPO:-$(dirname "$AGENTARK_ROOT")/agentscope-java}"
-export AGENTSCOPE_SOURCE_COMMIT="35f52181fb37eed97cf0adacf2d1c13a63bbfb7d"
-export AGENTSCOPE_ROOT="${AGENTSCOPE_ROOT:-$AGENTARK_ROOT/.agentark/upstreams/agentscope-java-2.0.1}"
+export AGENTSCOPE_SOURCE_COMMIT="0c61e7494197ded54eefdeaf9bdeb51807beb752"
+export AGENTSCOPE_ROOT="${AGENTSCOPE_ROOT:-$AGENTARK_ROOT/.agentark/upstreams/agentscope-java-2.0.2}"
 
 export DEEPSEEK_HARNESS_REPO="${DEEPSEEK_HARNESS_REPO:-$(dirname "$AGENTARK_ROOT")/deepseek-harness}"
 export DEEPSEEK_HARNESS_SOURCE_COMMIT="47f943859bef60e4160492346772ded9b24f765a"
@@ -432,7 +432,7 @@ flowchart LR
 
 | Phase | 状态 | 完成日期 | 阶段报告 | 备注 |
 |---|---|---|---|---|
-| 00 | NOT_STARTED | — | `docs/implementation/phase-00-execution-baseline.md` | |
+| 00 | DONE | 2026-08-15 | `docs/implementation/phase-00-execution-baseline.md` | 固定上游、工具链和仓库规范已验收 |
 | 01 | NOT_STARTED | — | `docs/implementation/phase-01-upstream-audit.md` | |
 | 02 | NOT_STARTED | — | `docs/implementation/phase-02-build-foundation.md` | |
 | 03 | NOT_STARTED | — | `docs/implementation/phase-03-kernel-contracts.md` | |
@@ -493,19 +493,19 @@ $DEEPSEEK_HARNESS_REPO/.git
 
 ### 任务
 
-- [ ] 确认当前目录确实是 AgentArk Git 根目录；
-- [ ] 记录 AgentArk 当前 Branch、HEAD、工作区状态；
-- [ ] 验证两个固定 Commit 存在，并记录来源仓库 Branch、HEAD、Tag、工作区状态；
-- [ ] 在 `.agentark/upstreams/` 创建两个固定 Commit 的 detached Worktree；若已存在则验证 HEAD，禁止静默复用错误版本；
-- [ ] 验证两套固定 Worktree 不会被 AgentArk 构建或格式化工具修改；
-- [ ] 更新 `README.md` 中所有旧架构文档链接；
-- [ ] 检查 `README.md` 与架构文档的模块名、版本和路径是否一致；
-- [ ] 建立本阶段实际需要的 `docs/implementation/` 与 `docs/migration/` 文档；不提交空目录；
-- [ ] 创建 `docs/migration/upstream-baseline.md`；
-- [ ] 记录 JDK、Maven、Node、pnpm、Docker、Git 的实际版本；
-- [ ] 检查 `.gitignore` 是否阻止本地 Secret、构建输出和运行数据入库；
-- [ ] 更新本计划 Phase 00 状态为 `IN_PROGRESS`，完成后改为 `DONE`；
-- [ ] 不创建业务模块，不引入新框架，不修改上游源码。
+- [x] 确认当前目录确实是 AgentArk Git 根目录；
+- [x] 记录 AgentArk 当前 Branch、HEAD、工作区状态；
+- [x] 验证两个固定 Commit 存在，并记录来源仓库 Branch、HEAD、Tag、工作区状态；
+- [x] 在 `.agentark/upstreams/` 创建两个固定 Commit 的 detached Worktree；若已存在则验证 HEAD，禁止静默复用错误版本；
+- [x] 验证两套固定 Worktree 不会被 AgentArk 构建或格式化工具修改；
+- [x] 更新 `README.md` 中所有旧架构文档链接；扫描未发现旧路径，无需机械修改；
+- [x] 检查 `README.md` 与架构文档的模块名、版本和路径是否一致；
+- [x] 建立本阶段实际需要的 `docs/implementation/` 与 `docs/migration/` 文档；不提交空目录；
+- [x] 创建 `docs/migration/upstream-baseline.md`；
+- [x] 记录 JDK、Maven、Node、pnpm、Docker、Git 的实际版本；
+- [x] 检查 `.gitignore` 是否阻止本地 Secret、构建输出和运行数据入库；
+- [x] 更新本计划 Phase 00 状态为 `IN_PROGRESS`，完成后改为 `DONE`；
+- [x] 不创建业务模块，不引入新框架，不修改上游源码。
 
 ### 产物
 
@@ -519,14 +519,14 @@ docs/architecture/decisions/
 
 ### 验收条件
 
-- [ ] 架构、ADR 和数据库文档均可从知识地图直达；
-- [ ] `README.md` 和 `PLAN.md` 指向该路径；
-- [ ] 两个上游 Commit SHA 已记录；
-- [ ] 上游工作区在阶段前后无新增改动；
-- [ ] 环境版本和缺失工具已准确记录；
-- [ ] `git diff HEAD --check` 通过；
-- [ ] Markdown 链接检查无失效的仓库内相对路径；
-- [ ] 未引入业务代码或依赖。
+- [x] 架构、ADR 和数据库文档均可从知识地图直达；
+- [x] `README.md` 和 `PLAN.md` 指向该路径；
+- [x] 两个上游 Commit SHA 已记录；
+- [x] 上游工作区在阶段前后无新增改动；
+- [x] 环境版本和缺失工具已准确记录；
+- [x] `git diff HEAD --check` 通过；
+- [x] Markdown 链接检查无失效的仓库内相对路径；
+- [x] 未引入业务代码或依赖。
 
 ### 验收命令
 
@@ -3809,7 +3809,7 @@ $AGENTSCOPE_ROOT/agentscope-service/（仅用于最终兼容与迁移对照）
 
 #### 兼容与升级
 
-- [ ] AgentScope 2.0.1 Compatibility Matrix；
+- [ ] AgentScope 2.0.2 Compatibility Matrix；
 - [ ] Snapshot Schema N/N-1；
 - [ ] Runtime Event Schema；
 - [ ] OpenAPI Breaking Change；

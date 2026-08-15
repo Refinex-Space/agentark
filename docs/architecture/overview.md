@@ -20,7 +20,7 @@ scope: Agent Platform / Harness / Control Plane / Runtime Plane
 | 文档版本 | 1.1.0 |
 | 适用范围 | AgentArk 后端、前端、运行时、控制面、调度面与基础设施 |
 | 基线日期 | 2026-08-15 |
-| 核心运行时 | AgentScope Java 2.0.1，源码证据固定至 `35f52181fb37eed97cf0adacf2d1c13a63bbfb7d` |
+| 核心运行时 | AgentScope Java 2.0.2，源码证据固定至 `0c61e7494197ded54eefdeaf9bdeb51807beb752` |
 | 目标 Java 基线 | JDK 21 LTS |
 | 目标 Spring 基线 | Spring Boot 4.1.0、Spring Cloud 2025.1.2 |
 
@@ -1407,7 +1407,7 @@ public interface ControlPlaneClient {
 
 ### 9.10 `agentark-runtime-provider-agentscope`
 
-该模块是 AgentScope Java 2.0.1 的专用 Provider 防腐层，只包含：
+该模块是 AgentScope Java 2.0.2 的专用 Provider 防腐层，只包含：
 
 ```text
 space.refinex.agentark.runtime.provider.agentscope
@@ -3204,7 +3204,7 @@ agentark-web/src/
 
 ## 18. 最终技术栈与版本基线
 
-> 以下版本是截至 2026-08-15 的目标基线。AgentScope 源码证据固定到 Commit `35f52181fb37eed97cf0adacf2d1c13a63bbfb7d`，DeepSeek Harness 参考固定到 Commit `47f943859bef60e4160492346772ded9b24f765a`；完整来源规则见 [ADR-0005](decisions/0005-upstream-and-technology-baseline.md)。生产必须通过 AgentArk CI 兼容矩阵后锁定，不自动跟随 `latest`。
+> 以下版本是截至 2026-08-15 的目标基线。AgentScope 源码证据固定到 Commit `0c61e7494197ded54eefdeaf9bdeb51807beb752`，DeepSeek Harness 参考固定到 Commit `47f943859bef60e4160492346772ded9b24f765a`；完整来源规则见 [ADR-0005](decisions/0005-upstream-and-technology-baseline.md)。生产必须通过 AgentArk CI 兼容矩阵后锁定，不自动跟随 `latest`。
 
 ### 18.1 后端与运行时
 
@@ -3212,7 +3212,7 @@ agentark-web/src/
 |---|---|---|
 | Java | **JDK 21 LTS** | 项目编译/运行基线 |
 | Build | Maven Wrapper 3.9.x | 可重复构建、统一插件 |
-| Agent Runtime | **AgentScope Java 2.0.1** 初始锁定 | 后续通过 Adapter/兼容测试升级 |
+| Agent Runtime | **AgentScope Java 2.0.2** 初始锁定 | 后续通过 Adapter/兼容测试升级 |
 | Spring Boot | **4.1.0** | 最终目标；机械迁移阶段暂留 4.0.4 |
 | Spring Cloud | **2025.1.2** | Gateway 使用，与 Boot 4.1 兼容 |
 | Gateway | Spring Cloud Gateway / WebFlux | 路由、边缘策略、SSE |
@@ -3885,15 +3885,15 @@ ADR 只有在本文、知识地图和相关数据库/契约文档同步后才生
 实施时应固定具体 Commit/Tag，而不是长期依赖分支最新内容。
 
 1. [AgentArk Repository](https://github.com/Refinex-Space/agentark)
-2. [AgentScope Java 固定源码](https://github.com/agentscope-ai/agentscope-java/tree/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d)
-3. [AgentScope Service](https://github.com/agentscope-ai/agentscope-java/tree/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service)
-4. [AgentScope Service README](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service/README.md)
-5. [AgentScope Service Parent POM](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service/pom.xml)
-6. [AgentScope Service Common POM](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service/service-common/pom.xml)
-7. [AgentScope Service Dataplane POM](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service/service-dataplane/pom.xml)
-8. [AgentScope Service Frontend package.json](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service/frontend/package.json)
-9. [AgentScope Java 2 Release Notes](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/docs/v2/zh/docs/others/release-notes.md)
-10. [AgentScope Java Simple RAG 固定文档](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/docs/v2/en/integration/rag/simple.md)
+2. [AgentScope Java 固定源码](https://github.com/Refinex-Space/agentscope-java/tree/0c61e7494197ded54eefdeaf9bdeb51807beb752)
+3. [AgentScope Service](https://github.com/Refinex-Space/agentscope-java/tree/0c61e7494197ded54eefdeaf9bdeb51807beb752/agentscope-service)
+4. [AgentScope Service README](https://github.com/Refinex-Space/agentscope-java/blob/0c61e7494197ded54eefdeaf9bdeb51807beb752/agentscope-service/README.md)
+5. [AgentScope Service Parent POM](https://github.com/Refinex-Space/agentscope-java/blob/0c61e7494197ded54eefdeaf9bdeb51807beb752/agentscope-service/pom.xml)
+6. [AgentScope Service Common POM](https://github.com/Refinex-Space/agentscope-java/blob/0c61e7494197ded54eefdeaf9bdeb51807beb752/agentscope-service/service-common/pom.xml)
+7. [AgentScope Service Dataplane POM](https://github.com/Refinex-Space/agentscope-java/blob/0c61e7494197ded54eefdeaf9bdeb51807beb752/agentscope-service/service-dataplane/pom.xml)
+8. [AgentScope Service Frontend package.json](https://github.com/Refinex-Space/agentscope-java/blob/0c61e7494197ded54eefdeaf9bdeb51807beb752/agentscope-service/frontend/package.json)
+9. [AgentScope Java 2 Release Notes](https://github.com/Refinex-Space/agentscope-java/blob/0c61e7494197ded54eefdeaf9bdeb51807beb752/docs/v2/zh/docs/others/release-notes.md)
+10. [AgentScope Java Simple RAG 固定文档](https://github.com/Refinex-Space/agentscope-java/blob/0c61e7494197ded54eefdeaf9bdeb51807beb752/docs/v2/en/integration/rag/simple.md)
 11. [DeepSeek Harness 固定参考](https://github.com/Refinex-Space/deepseek-harness/tree/47f943859bef60e4160492346772ded9b24f765a)
 12. [Spring Boot System Requirements](https://docs.spring.io/spring-boot/system-requirements.html)
 13. [Spring Cloud](https://spring.io/projects/spring-cloud)

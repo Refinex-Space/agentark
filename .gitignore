@@ -277,6 +277,16 @@ deploy/certs/local/
 # Test / tooling output
 # ------------------------------------------------------------------------------
 
+# Python tooling caches / coverage
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
 reports/
 test-output/
 surefire-reports/

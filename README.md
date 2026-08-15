@@ -20,7 +20,7 @@
   </a>
   <img alt="Java" src="https://img.shields.io/badge/Java-21%20LTS-ED8B00?logo=openjdk&logoColor=white">
   <img alt="Spring Boot" src="https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F?logo=springboot&logoColor=white">
-  <img alt="AgentScope Java" src="https://img.shields.io/badge/AgentScope%20Java-2.0.1-5A67D8">
+  <img alt="AgentScope Java" src="https://img.shields.io/badge/AgentScope%20Java-2.0.2-5A67D8">
   <img alt="Project Status" src="https://img.shields.io/badge/status-early%20development-orange">
 </p>
 
@@ -281,7 +281,7 @@ AgentArk deliberately uses a conservative **LTS-first, production-oriented** bas
 | Area | Target |
 |---|---|
 | Java | **JDK 21 LTS** |
-| Agent Runtime | **AgentScope Java 2.0.1**, source evidence pinned by [ADR-0005](./docs/architecture/decisions/0005-upstream-and-technology-baseline.md) |
+| Agent Runtime | **AgentScope Java 2.0.2**, source evidence pinned by [ADR-0005](./docs/architecture/decisions/0005-upstream-and-technology-baseline.md) |
 | Spring Boot | **4.1.0** |
 | Spring Cloud | **2025.1.2** |
 | Persistence | **MyBatis-Plus 3.5.17** + Flyway |
@@ -489,7 +489,7 @@ Before contributing implementation code:
 AgentArk builds on and learns from several open-source projects:
 
 - [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) — primary Java Agent/Harness runtime.
-- [AgentScope Service fixed source](https://github.com/agentscope-ai/agentscope-java/tree/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service) — service-plane behavior and runtime-management reference.
+- [AgentScope Service fixed source](https://github.com/Refinex-Space/agentscope-java/tree/0c61e7494197ded54eefdeaf9bdeb51807beb752/agentscope-service) — service-plane behavior and runtime-management reference.
 - [DeepSeek Harness fixed reference](https://github.com/Refinex-Space/deepseek-harness/tree/47f943859bef60e4160492346772ded9b24f765a) — frontend visual and interaction reference.
 
 AgentArk maintains its own platform domain model, module architecture, UI system, deployment model, and long-term compatibility boundaries.

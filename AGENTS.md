@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.1. The repository currently contains planning and governance documents; implementation modules are introduced only by the matching `PLAN.md` phase.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. The repository currently contains planning and governance documents; implementation modules are introduced only by the matching `PLAN.md` phase.
 
 ## Authority
 

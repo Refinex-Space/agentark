@@ -29,10 +29,10 @@ Provider 先写不可见的新 AgentState Version，再由 Runtime 本地事务�
 
 ## AgentScope 源码证据
 
-固定 Commit `35f52181fb37eed97cf0adacf2d1c13a63bbfb7d` 中：
+固定 Commit `0c61e7494197ded54eefdeaf9bdeb51807beb752` 中：
 
-- [`AgentStateStore`](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-core/src/main/java/io/agentscope/core/state/AgentStateStore.java) 定义 Agent 状态的 save/load/delete/list Port；
-- [`MysqlAgentStateStore`](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-extensions/agentscope-extensions-mysql/src/main/java/io/agentscope/extensions/mysql/state/MysqlAgentStateStore.java) 默认使用 `agentscope.agentscope_sessions`，主键为 `(session_id, state_key, item_index)`，状态保存在 `LONGTEXT`，并可选择自动创建库表；
+- [`AgentStateStore`](https://github.com/Refinex-Space/agentscope-java/blob/0c61e7494197ded54eefdeaf9bdeb51807beb752/agentscope-core/src/main/java/io/agentscope/core/state/AgentStateStore.java) 定义 Agent 状态的 save/load/delete/list Port；
+- [`MysqlAgentStateStore`](https://github.com/Refinex-Space/agentscope-java/blob/0c61e7494197ded54eefdeaf9bdeb51807beb752/agentscope-extensions/agentscope-extensions-mysql/src/main/java/io/agentscope/extensions/mysql/state/MysqlAgentStateStore.java) 默认使用 `agentscope.agentscope_sessions`，主键为 `(session_id, state_key, item_index)`，状态保存在 `LONGTEXT`，并可选择自动创建库表；
 - 该实现把 `(userId, sessionId)` 组合到一个 `session_id` 值，只解决 AgentStateStore 持久化，不定义 IAM、资产、Revision、Deployment、Runtime Work Queue、Event、Approval、Scheduler Job 或平台治理模型。
 
 因此 AgentArk 复用其 `AgentStateStore` 语义和兼容测试，不复用其平台数据库边界或自动 DDL。
