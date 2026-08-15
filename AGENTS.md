@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. The repository currently contains planning and governance documents; implementation modules are introduced only by the matching `PLAN.md` phase.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. The Maven build foundation exists, but Phase 02 deliberately contains no business source or runnable application; implementation enters only through the matching `PLAN.md` phase.
 
 ## Authority
 
@@ -22,12 +22,15 @@ Do not let `README.md`, a moving upstream branch, or an implementation shortcut 
 Run from the repository root:
 
 ```bash
+./mvnw -version
+./mvnw -N validate
+./mvnw verify
 python3 tools/harness/knowledge_gate.py
-python3 tools/harness/verify_upstreams.py
+python3 tools/harness/verify_upstreams.py --require-worktrees
 git diff HEAD --check
 ```
 
-Maven, pnpm, Compose, and Helm commands do not exist yet. Introduce and document them only in their owning PLAN phase; never claim they ran before the corresponding files exist.
+The Maven reactor currently validates empty module boundaries and build policy; a successful build does not imply that backend applications are runnable. pnpm, Compose, and Helm commands do not exist yet and must be introduced only by their owning PLAN phase.
 
 ## Workflow
 
@@ -74,4 +77,4 @@ Do not commit, push, publish, delete branches, or modify upstream repositories w
 - Upstream baseline: `docs/migration/upstream-baseline.md`
 - Executable roadmap: `PLAN.md`
 
-Loop automation is disabled until build/test commands and a bounded implementation slice exist. See the runbook for readiness criteria.
+Loop automation remains disabled until a bounded implementation slice and meaningful tests exist. See the runbook for readiness criteria.

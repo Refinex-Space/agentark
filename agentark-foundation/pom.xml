@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Copyright 2026 refinex. Licensed under the Apache License, Version 2.0. -->
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>space.refinex.agentark</groupId>
+        <artifactId>agentark-parent</artifactId>
+        <version>0.1.0</version>
+        <relativePath>../pom.xml</relativePath>
+    </parent>
+    <artifactId>agentark-foundation</artifactId>
+    <packaging>pom</packaging>
+    <name>AgentArk Foundation</name>
+    <description>Focused infrastructure starter aggregation; implementation begins in Phase 04</description>
+    <modules>
+        <module>agentark-starter-web</module>
+        <module>agentark-starter-security</module>
+        <module>agentark-starter-persistence</module>
+        <module>agentark-starter-redis</module>
+        <module>agentark-starter-storage</module>
+        <module>agentark-starter-observability</module>
+    </modules>
+</project>

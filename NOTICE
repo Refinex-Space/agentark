@@ -1,0 +1,8 @@
+AgentArk
+Copyright 2026 refinex
+
+This product is licensed under the Apache License, Version 2.0.
+
+Third-party dependency attribution is generated from the resolved build graph during the Maven
+verify lifecycle. Distribution artifacts must include the applicable license and notice material
+identified by that report and the generated CycloneDX software bill of materials.

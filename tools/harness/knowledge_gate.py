@@ -7,6 +7,7 @@ import argparse
 import re
 import subprocess
 import sys
+import xml.etree.ElementTree as ET
 from pathlib import Path
 from urllib.parse import unquote
 
@@ -21,6 +22,32 @@ STALE_TOKENS = (
     "PLANS.md",
 )
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+MAVEN_NAMESPACE = {"m": "http://maven.apache.org/POM/4.0.0"}
+APPROVED_ROOT_MODULES = (
+    "agentark-bom",
+    "agentark-kernel",
+    "agentark-foundation",
+    "agentark-control",
+    "agentark-knowledge",
+    "agentark-runtime",
+    "agentark-runtime-provider-agentscope",
+    "agentark-scheduling",
+    "agentark-services",
+)
+APPROVED_FOUNDATION_MODULES = (
+    "agentark-starter-web",
+    "agentark-starter-security",
+    "agentark-starter-persistence",
+    "agentark-starter-redis",
+    "agentark-starter-storage",
+    "agentark-starter-observability",
+)
+APPROVED_SERVICE_MODULES = (
+    "agentark-gateway-server",
+    "agentark-control-server",
+    "agentark-runtime-server",
+    "agentark-scheduler-server",
+)
 
 
 def rel(path: Path) -> str:
@@ -99,6 +126,71 @@ def require_docs_with_sensitive_changes(changed: set[str], errors: list[str]) ->
         errors.append("runtime/deploy configuration changed without config reference or runbook")
 
 
+def pom_modules(path: Path, errors: list[str]) -> tuple[str, ...]:
+    try:
+        root = ET.parse(path).getroot()
+    except (ET.ParseError, OSError) as exc:
+        errors.append(f"invalid Maven POM {rel(path)}: {exc}")
+        return ()
+    return tuple(
+        element.text.strip()
+        for element in root.findall("./m:modules/m:module", MAVEN_NAMESPACE)
+        if element.text and element.text.strip()
+    )
+
+
+def require_maven_foundation(errors: list[str]) -> None:
+    root_pom = ROOT / "pom.xml"
+    if not root_pom.is_file():
+        return
+
+    required_files = (
+        ROOT / "mvnw",
+        ROOT / "mvnw.cmd",
+        ROOT / ".mvn/wrapper/maven-wrapper.properties",
+        ROOT / "LICENSE",
+        ROOT / "NOTICE",
+    )
+    for path in required_files:
+        if not path.is_file():
+            errors.append(f"Maven foundation is missing {rel(path)}")
+
+    module_sets = (
+        (root_pom, APPROVED_ROOT_MODULES),
+        (ROOT / "agentark-foundation/pom.xml", APPROVED_FOUNDATION_MODULES),
+        (ROOT / "agentark-services/pom.xml", APPROVED_SERVICE_MODULES),
+    )
+    for path, expected in module_sets:
+        if not path.is_file():
+            errors.append(f"Maven foundation is missing {rel(path)}")
+            continue
+        actual = pom_modules(path, errors)
+        if actual != expected:
+            errors.append(f"unexpected Maven modules in {rel(path)}: {actual}")
+
+    if (ROOT / "upstream-baseline").exists():
+        errors.append("mechanical upstream-baseline must not exist in the implementation worktree")
+
+    allowed_agentscope_poms = {
+        ROOT / "agentark-bom/pom.xml",
+        ROOT / "agentark-runtime-provider-agentscope/pom.xml",
+    }
+    for module in APPROVED_ROOT_MODULES:
+        module_root = ROOT / module
+        if not module_root.is_dir():
+            continue
+        for path in module_root.rglob("pom.xml"):
+            if "target" in path.parts or path in allowed_agentscope_poms:
+                continue
+            try:
+                pom = ET.parse(path).getroot()
+            except (ET.ParseError, OSError):
+                continue
+            groups = pom.findall(".//m:dependency/m:groupId", MAVEN_NAMESPACE)
+            if any(group.text and group.text.strip() == "io.agentscope" for group in groups):
+                errors.append(f"AgentScope dependency escapes provider boundary: {rel(path)}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", help="Git base revision for docs-with-code checks")
@@ -174,6 +266,7 @@ def main() -> int:
             errors.append("PLAN status table must contain exactly Phase 00-23")
 
     require_docs_with_sensitive_changes(changed_paths(args.base), errors)
+    require_maven_foundation(errors)
 
     if errors:
         print(f"knowledge gate failed: {len(errors)} error(s)")

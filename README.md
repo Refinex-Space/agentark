@@ -251,7 +251,7 @@ agentark
 
 | Module | Type | Responsibility |
 |---|---|---|
-| `agentark-bom` | BOM | Central dependency and plugin version management |
+| `agentark-bom` | BOM | Central third-party and internal dependency version management |
 | `agentark-kernel` | Pure Java library | Stable IDs, domain specifications, snapshot model, minimal cross-plane contracts |
 | `agentark-starter-web` | Starter | Problem Details, request context, Jackson, pagination, API conventions |
 | `agentark-starter-security` | Starter | OIDC/JWT, service identity, API-key framework, method security |
@@ -411,7 +411,7 @@ Repository instructions route contributors to the normative source for each deci
 
 ## Development Status
 
-AgentArk currently follows an **architecture-first migration strategy**.
+AgentArk currently follows an **architecture-first migration strategy**. The Phase 02 build foundation is present: the fixed upstream evidence baseline, Maven Wrapper, approved empty module reactor, dependency BOM, quality lifecycle, license/SBOM generation, and CI skeleton can be verified. No business feature or runnable backend service has been implemented yet.
 
 The initial implementation will be derived from the useful service-plane capabilities in AgentScope Java's `agentscope-service`, while deliberately reshaping module boundaries and gradually replacing the Go control plane with Java.
 
@@ -436,7 +436,7 @@ The migration sequence is designed to avoid changing package names, modules, JDK
 
 | Milestone | Scope | Status |
 |---|---|---|
-| **A — Architecture & Engineering Foundation** | BOM, Kernel, starters, contracts, four service shells, CI, Compose | 🟡 Planned |
+| **A — Architecture & Engineering Foundation** | BOM, Kernel, starters, contracts, four service shells, CI, Compose | 🟡 In progress — build foundation established |
 | **B — Control Plane MVP** | IAM, Agent catalog, assets, revisions, snapshots, deployments | ⚪ Planned |
 | **C — Runtime MVP** | Session, Turn, Run, events, SSE, AgentScope compiler, HITL, recovery | ⚪ Planned |
 | **D — Knowledge / RAG** | ingestion, Qdrant, Knowledge Revision, retrieval, citations | ⚪ Planned |
@@ -467,7 +467,26 @@ git clone https://github.com/Refinex-Space/agentark.git
 cd agentark
 ```
 
-Build and run commands will be documented once the initial multi-module scaffold and Compose profiles land. Until then, the repository should be treated as an architecture and migration work in progress.
+Validate the pinned toolchain and root build policy:
+
+```bash
+./mvnw -version
+./mvnw -N validate
+```
+
+Validate the complete 20-project reactor, run available unit/integration tests, check formatting and license headers, and generate dependency evidence:
+
+```bash
+./mvnw verify
+```
+
+Install the current reactor into the local Maven repository without running tests:
+
+```bash
+./mvnw -DskipTests install
+```
+
+The current Jar modules are intentionally empty Phase 02 placeholders. There is no Spring Boot main class, HTTP endpoint, `agentark-web` build, Compose profile, Helm chart, or runnable product stack yet. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
 
 ### Engineering Rules
 

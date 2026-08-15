@@ -433,8 +433,8 @@ flowchart LR
 | Phase | 状态 | 完成日期 | 阶段报告 | 备注 |
 |---|---|---|---|---|
 | 00 | DONE | 2026-08-15 | `docs/implementation/phase-00-execution-baseline.md` | 固定上游、工具链和仓库规范已验收 |
-| 01 | NOT_STARTED | — | `docs/implementation/phase-01-upstream-audit.md` | |
-| 02 | NOT_STARTED | — | `docs/implementation/phase-02-build-foundation.md` | |
+| 01 | DONE | 2026-08-15 | `docs/implementation/phase-01-upstream-audit.md` | 固定上游结构、行为、迁移分类与许可边界已验收 |
+| 02 | DONE | 2026-08-15 | `docs/implementation/phase-02-build-foundation.md` | 机械迁入证据、Maven/BOM、质量生命周期与 CI 已验收 |
 | 03 | NOT_STARTED | — | `docs/implementation/phase-03-kernel-contracts.md` | |
 | 04 | NOT_STARTED | — | `docs/implementation/phase-04-foundation-starters.md` | |
 | 05 | NOT_STARTED | — | `docs/implementation/phase-05-service-shells.md` | |
@@ -621,19 +621,19 @@ $DEEPSEEK_HARNESS_ROOT/THIRD_PARTY_NOTICES.md
 
 ### 任务
 
-- [ ] 输出 AgentScope Service 模块、包、类、配置、Endpoint、Entity/Table、测试和启动方式清单；
-- [ ] 识别 `service-common` 的所有职责，并给出拆分目标；
-- [ ] 识别 Dataplane 的 Session、Turn、Event、SSE、HITL、Lease、Work Queue、AgentScope 组装逻辑；
-- [ ] 识别 Scheduler 的 Trigger、Job、Channel、Retry、Hands Worker 行为；
-- [ ] 识别 Gateway 的路由、认证、CORS、SSE 代理、限流行为；
-- [ ] 识别 Go Aistio 的 API、资源、数据库迁移、认证、Session/Team/Deployment/Runtime Command；
-- [ ] 识别 Frontend 的功能页面、API Client、Event 模型和状态管理；
-- [ ] 识别 AgentScope Harness/Core/Extensions 中应直接依赖而非复制的模块；
-- [ ] 识别 DeepSeek Harness 中只可借鉴的视觉与交互元素；
-- [ ] 为上游关键行为建立行为基线清单，必要时运行原测试或记录可复现命令；
-- [ ] 对每个候选源路径标注 `REUSE/ADAPT/REFERENCE/REJECT/DEFER`；
-- [ ] 明确许可证、文件头、NOTICE 和第三方资产要求；
-- [ ] 不迁移实现代码。
+- [x] 输出 AgentScope Service 模块、包、类、配置、Endpoint、Entity/Table、测试和启动方式清单；
+- [x] 识别 `service-common` 的所有职责，并给出拆分目标；
+- [x] 识别 Dataplane 的 Session、Turn、Event、SSE、HITL、Lease、Work Queue、AgentScope 组装逻辑；
+- [x] 识别 Scheduler 的 Trigger、Job、Channel、Retry、Hands Worker 行为；
+- [x] 识别 Gateway 的路由、认证、CORS、SSE 代理、限流行为；
+- [x] 识别 Go Aistio 的 API、资源、数据库迁移、认证、Session/Team/Deployment/Runtime Command；
+- [x] 识别 Frontend 的功能页面、API Client、Event 模型和状态管理；
+- [x] 识别 AgentScope Harness/Core/Extensions 中应直接依赖而非复制的模块；
+- [x] 识别 DeepSeek Harness 中只可借鉴的视觉与交互元素；
+- [x] 为上游关键行为建立行为基线清单，必要时运行原测试或记录可复现命令；
+- [x] 对每个候选源路径标注 `REUSE/ADAPT/REFERENCE/REJECT/DEFER`；
+- [x] 明确许可证、文件头、NOTICE 和第三方资产要求；
+- [x] 不迁移实现代码。
 
 ### 必须明确的取用决策
 
@@ -662,15 +662,15 @@ docs/implementation/phase-01-upstream-audit.md
 
 ### 验收条件
 
-- [ ] 两个上游仓库 Commit 已固定；
-- [ ] AgentScope Service 的四个 Java 模块、Go Control、Frontend 均有清单；
-- [ ] AgentScope Harness/Core/Extensions 依赖点已定位到具体模块/包/测试；
-- [ ] DeepSeek 前端真正入口和可借鉴范围已定位；
-- [ ] 每个候选迁移区都有分类和目标模块；
-- [ ] 已列出明确拒绝项；
-- [ ] 已记录原始测试/构建命令；
-- [ ] 未修改上游和 AgentArk 业务代码；
-- [ ] 清单足够支持 Phase 02–21，无“以后再看源码”的空泛条目。
+- [x] 两个上游仓库 Commit 已固定；
+- [x] AgentScope Service 的四个 Java 模块、Go Control、Frontend 均有清单；
+- [x] AgentScope Harness/Core/Extensions 依赖点已定位到具体模块/包/测试；
+- [x] DeepSeek 前端真正入口和可借鉴范围已定位；
+- [x] 每个候选迁移区都有分类和目标模块；
+- [x] 已列出明确拒绝项；
+- [x] 已记录原始测试/构建命令；
+- [x] 未修改上游和 AgentArk 业务代码；
+- [x] 清单足够支持 Phase 02–21，无“以后再看源码”的空泛条目。
 
 ### 验收命令
 
@@ -729,8 +729,8 @@ $AGENTSCOPE_ROOT/CONTRIBUTING.md
 
 #### Work Package A — 机械迁入隔离基线
 
-- [ ] 确认 Phase 01 已记录上游 Commit 和测试命令；
-- [ ] 从 AgentArk 当前 HEAD 创建独立 Worktree/Branch，例如：
+- [x] 确认 Phase 01 已记录上游 Commit 和测试命令；
+- [x] 从 AgentArk 当前 HEAD 创建独立 Worktree/Branch，例如：
 
 ```bash
 git worktree add \
@@ -739,45 +739,45 @@ git worktree add \
   "$(git rev-parse HEAD)"
 ```
 
-- [ ] 在隔离 Worktree 中创建：
+- [x] 在隔离 Worktree 中创建：
 
 ```text
 upstream-baseline/
 └── agentscope-service/
 ```
 
-- [ ] 将 `$AGENTSCOPE_ROOT/agentscope-service/` 按原目录结构机械复制；
-- [ ] 保留所有 Apache-2.0 文件头、LICENSE/NOTICE 和原始路径记录；
-- [ ] 不做领域重构、ORM 迁移、数据库迁移或 Go→Java；
-- [ ] 只允许为了独立取证所必需的最小构建路径调整；
-- [ ] 对任何调整逐文件记录；
-- [ ] 在原 AgentScope Monorepo 或隔离基线中执行可行的 Java/Go/Frontend 测试；
-- [ ] 记录失败测试和环境依赖，不通过删测试解决；
-- [ ] 生成机械迁入文件清单、文件 Hash、源 Commit 和测试报告；
-- [ ] 形成可复查 Diff、文件清单和 Tree Hash；只有用户明确授权时才创建 Commit；
-- [ ] 不将该分支整体 Merge 到目标架构分支；
-- [ ] 结束后回到 AgentArk 主实施 Worktree，确认上游和用户工作区未被破坏。
+- [x] 将 `$AGENTSCOPE_ROOT/agentscope-service/` 按原目录结构机械复制；
+- [x] 保留所有 Apache-2.0 文件头、LICENSE/NOTICE 和原始路径记录；固定 Tree/发布物均无 NOTICE，故不虚构空文件；
+- [x] 不做领域重构、ORM 迁移、数据库迁移或 Go→Java；
+- [x] 只允许为了独立取证所必需的最小构建路径调整；
+- [x] 对任何调整逐文件记录；
+- [x] 在原 AgentScope Monorepo 或隔离基线中执行可行的 Java/Go/Frontend 测试；
+- [x] 记录失败测试和环境依赖，不通过删测试解决；
+- [x] 生成机械迁入文件清单、文件 Hash、源 Commit 和测试报告；
+- [x] 形成可复查 Diff、文件清单和 Tree Hash；未获授权，未创建 Commit；
+- [x] 不将该分支整体 Merge 到目标架构分支；
+- [x] 结束后回到 AgentArk 主实施 Worktree，确认上游和用户工作区未被破坏。
 
 #### Work Package B — AgentArk 最终根工程
 
-- [ ] 创建根 `pom.xml` 聚合工程；
-- [ ] 创建 `agentark-bom`；
-- [ ] 创建最终模块目录与空 POM；
-- [ ] 创建 Maven Wrapper；
-- [ ] 设置 JDK 21 Release；
-- [ ] 锁定 Spring Boot、Spring Cloud、AgentScope、MyBatis-Plus 和测试依赖；
-- [ ] 设置统一编码、UTC、Reproducible Build；
-- [ ] 配置 Maven Enforcer；
-- [ ] 配置 Surefire/Failsafe；
-- [ ] 配置 JaCoCo；
-- [ ] 配置 Spotless 或等价格式工具；
-- [ ] 配置 CycloneDX SBOM；
-- [ ] 配置 License Header/Notice 检查；
-- [ ] 创建 `.editorconfig` 和必要的 `.gitattributes`；
-- [ ] 创建基础 GitHub Actions：Backend Validate/Test、Dependency/License、Docs；
-- [ ] 为尚无源码的模块创建合法空 Jar 或仅 POM 聚合；
-- [ ] 禁止加入业务类型、Controller、Entity 或 AgentScope Adapter；
-- [ ] 机械基线与最终工程的 Diff/证据必须分离；若用户授权提交，Commit 也必须分离。
+- [x] 创建根 `pom.xml` 聚合工程；
+- [x] 创建 `agentark-bom`；
+- [x] 创建最终模块目录与空 POM；
+- [x] 创建 Maven Wrapper；
+- [x] 设置 JDK 21 Release；
+- [x] 锁定 Spring Boot、Spring Cloud、AgentScope、MyBatis-Plus 和测试依赖；
+- [x] 设置统一编码、UTC、Reproducible Build；
+- [x] 配置 Maven Enforcer；
+- [x] 配置 Surefire/Failsafe；
+- [x] 配置 JaCoCo；
+- [x] 配置 Spotless 或等价格式工具；
+- [x] 配置 CycloneDX SBOM；
+- [x] 配置 License Header/Notice 检查；
+- [x] 创建 `.editorconfig` 和必要的 `.gitattributes`；
+- [x] 创建基础 GitHub Actions：Backend Validate/Test、Dependency/License、Docs；
+- [x] 为尚无源码的模块创建合法空 Jar 或仅 POM 聚合；
+- [x] 禁止加入业务类型、Controller、Entity 或 AgentScope Adapter；
+- [x] 机械基线与最终工程的 Diff/证据必须分离；未获授权，未创建 Commit。
 
 ### 目标模块
 
@@ -831,27 +831,27 @@ docs/implementation/phase-02-build-foundation.md
 
 #### 机械基线
 
-- [ ] 基线对应明确 AgentScope Commit；
-- [ ] 文件清单和 SHA-256 可复查；
-- [ ] 原许可证头和 Notice 保留；
-- [ ] 原 Java/Go/Frontend 构建与测试结果已记录；
-- [ ] 基线没有架构重构、JPA→MP、PostgreSQL→MySQL 或 Go→Java；
-- [ ] 基线分支与最终实现分支隔离；
-- [ ] 不存在未经清单记录的上游代码复制。
+- [x] 基线对应明确 AgentScope Commit；
+- [x] 文件清单和 SHA-256 可复查；
+- [x] 原许可证头和 Notice 保留；固定证据不存在 NOTICE，已显式记录；
+- [x] 原 Java/Go/Frontend 构建与测试结果已记录；
+- [x] 基线没有架构重构、JPA→MP、PostgreSQL→MySQL 或 Go→Java；
+- [x] 基线分支与最终实现分支隔离；
+- [x] 不存在未经清单记录的上游代码复制。
 
 #### 最终根工程
 
-- [ ] `./mvnw -version` 使用 JDK 21；
-- [ ] Root Reactor 包含且只包含批准模块；
-- [ ] BOM 管理所有核心版本；
-- [ ] 子模块不重复声明已管理版本；
-- [ ] Enforcer 能阻止 Java 版本错误、依赖收敛问题和 Snapshot 依赖；
-- [ ] 格式、测试、集成测试、覆盖率和 SBOM 生命周期明确；
-- [ ] CI 使用 Wrapper；
-- [ ] 无业务代码和模块环；
-- [ ] 全部 POM 可解析；
-- [ ] 最终分支没有 `upstream-baseline/` 源码目录；
-- [ ] README 当前状态没有虚假宣称功能已实现。
+- [x] `./mvnw -version` 使用 JDK 21；
+- [x] Root Reactor 包含且只包含批准模块；
+- [x] BOM 管理所有核心版本；
+- [x] 子模块不重复声明已管理版本；
+- [x] Enforcer 能阻止 Java 版本错误、依赖收敛问题和 Snapshot 依赖；
+- [x] 格式、测试、集成测试、覆盖率和 SBOM 生命周期明确；
+- [x] CI 使用 Wrapper；
+- [x] 无业务代码和模块环；
+- [x] 全部 POM 可解析；
+- [x] 最终分支没有 `upstream-baseline/` 源码目录；
+- [x] README 当前状态没有虚假宣称功能已实现。
 
 ### 验收命令
 

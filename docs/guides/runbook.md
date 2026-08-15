@@ -20,7 +20,18 @@ git status --short
 
 ## 当前限制
 
-仓库尚无 `pom.xml`、`mvnw`、`agentark-web/package.json`、Compose 或 Helm，因此当前不能运行后端、前端、容器或部署验证。对应能力必须由 `PLAN.md` 的拥有 Phase 创建并在本页增加真实命令。
+Phase 02 已建立 Maven Wrapper、20 Project Reactor、BOM 和质量生命周期。当前可以验证工程结构和依赖边界，但所有 Jar 都是无业务源码的合法空 Jar，四个 Server 也没有 Main Class，不能据此宣称后端可运行。
+
+```bash
+./mvnw -version
+./mvnw -N validate
+./mvnw verify
+./mvnw -DskipTests install
+```
+
+`verify` 执行 Enforcer、Spotless、Java License Header、Surefire/Failsafe、JaCoCo Report、第三方许可汇总和 CycloneDX Aggregate SBOM。当前没有 Java 测试和 Coverage 数据，JaCoCo 会明确报告缺少 Execution Data，而不是产生虚假覆盖率。
+
+仓库仍无 `agentark-web/package.json`、Compose 或 Helm，因此不能运行前端、容器或部署验证。对应能力必须由 `PLAN.md` 的拥有 Phase 创建并在本页增加真实命令。
 
 ## 回滚
 
@@ -33,7 +44,7 @@ git status --short
 当前 Loop 为 `DISABLED`。只有同时满足以下条件才可通过独立变更启用：
 
 1. 目标 Work Package 边界、停止条件和失败升级规则明确；
-2. 最小构建/测试命令已真实存在并稳定运行；
+2. 最小构建/测试命令已真实存在并稳定运行；Phase 02 只满足“构建命令存在”，尚无可循环的业务测试；
 3. 无需生产密钥、外部付费调用或不可逆操作；
 4. 日志、阶段报告和 Diff 可复查；
 5. 最大迭代次数/时间、失败阈值和人工 Checkpoint 已定义。

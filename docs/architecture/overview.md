@@ -1104,21 +1104,28 @@ agentark-gateway-server                -> agentark-control / agentark-runtime / 
 
 `contracts/` 保存语言中立的 OpenAPI、AsyncAPI 和 JSON Schema。它不是可以被随意扩充的 Java“共享 DTO”模块。Java DTO 由契约生成或放在对应服务 Adapter；稳定 Snapshot 语义位于 `agentark-kernel`。
 
-### 9.4 `agentark-bom`
+### 9.4 Root Parent POM 与 `agentark-bom`
 
-**职责**
+**Root Parent POM 职责**
 
-- 通过 `dependencyManagement` 统一 JDK、Spring Boot、Spring Cloud、AgentScope、MyBatis-Plus、Flyway、Jackson、OpenTelemetry、Testcontainers 等版本；
+- 聚合且只聚合批准的 Maven 模块；
+- 锁定 JDK Release、编码、UTC 和 Reproducible Build；
+- 固定 Maven Compiler、Surefire、Failsafe、Enforcer、JaCoCo、Spotless、License 和 CycloneDX 插件版本及生命周期；
+- 执行 Java/Maven 版本、Dependency Convergence、Upper Bound、重复类、Release Dependency 和根许可文件门禁。
+
+**`agentark-bom` 职责**
+
+- 通过 `dependencyManagement` 统一 Spring Boot、Spring Cloud、AgentScope、MyBatis-Plus、Flyway、Jackson、OpenTelemetry、Testcontainers 等依赖版本；
 - 管理 AgentArk 内部模块版本；
 - 形成可审计的 Dependency Convergence Point；
 - 将安全修复和兼容升级集中在一处；
-- 固定 Maven Compiler、Surefire、Failsafe、Enforcer、JaCoCo、CycloneDX 等插件版本。
+- 对跨 BOM 冲突建立带说明的显式兼容 Pin。
 
 **约束**
 
 - BOM 不包含业务代码；
 - 子模块禁止为 BOM 已管理依赖重复声明版本；
-- Maven Enforcer MUST 检查 Java 版本、Dependency Convergence、Upper Bound、重复类、禁止依赖和 Release 中的 Snapshot 依赖；
+- Parent POM 的 Maven Enforcer MUST 检查 Java 版本、Dependency Convergence、Upper Bound、重复类、禁止依赖和 Release 中的 Snapshot 依赖；
 - 基础设施镜像版本由统一版本清单管理并锁定 GA Patch/Digest。
 
 ### 9.5 `agentark-kernel`

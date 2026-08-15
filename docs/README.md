@@ -14,6 +14,8 @@ referenced_by: AGENTS.md#knowledge-map
 | 项目入口 | [README](../README.md) | 了解公开定位与真实开发状态 |
 | 执行路线 | [PLAN](../PLAN.md) | 开始或验收任何 Phase/Work Package |
 | 阶段执行证据 | [Phase 00 执行基线](implementation/phase-00-execution-baseline.md) | 复核仓库、工具链和固定 Worktree 基线 |
+| Phase 01 执行证据 | [上游源码审计](implementation/phase-01-upstream-audit.md) | 复核 Service、Framework、Frontend 审计结论和真实验收边界 |
+| Phase 02 执行证据 | [构建工程底座](implementation/phase-02-build-foundation.md) | 复核机械基线、Reactor/BOM、质量门禁、CI 和验收结果 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |
@@ -31,6 +33,12 @@ referenced_by: AGENTS.md#knowledge-map
 | 术语 | [领域术语](domain/glossary.md) | 命名聚合、接口、表、事件或 UI 文案 |
 | 运维与 Loop | [当前 Runbook](guides/runbook.md) | 本地检查、故障定位、回滚和 Loop 就绪性 |
 | 上游来源 | [上游基线](migration/upstream-baseline.md) | 读取参考源码或执行迁移审计 |
+| 上游迁移审计 | [源码清单](migration/source-inventory.md) | 定位 Service/Core/Harness/Extensions/Frontend 的具体来源 |
+| 迁移分类 | [迁移清单](migration/migration-manifest.md) | 决定候选路径的取用类型、目标模块和明确拒绝项 |
+| 上游行为 | [行为基线](migration/behavior-baseline.md) | 实现或验收 Gateway、Runtime、Scheduler、HITL、SSE 等关键行为 |
+| 机械迁入证据 | [机械迁入报告](migration/mechanical-import-report.md) | 复核 AgentScope Service 机械基线、文件 Hash、许可补证和原始测试结果 |
+| 许可与资产 | [许可证与 NOTICE](migration/license-and-notice.md) | 复制源码、引入依赖、处理图片/品牌或制作发布物 |
+| Go Control 绞杀 | [Aistio 绞杀计划](migration/aistio-strangler.md) | 规划 Control/API/数据 Cohort 迁移、切换和回滚 |
 
 新增 Active 文档必须带 `owner`、`updated`、`status`、`referenced_by` front matter，并在本索引或 `AGENTS.md` 中建立直接路由。
 
