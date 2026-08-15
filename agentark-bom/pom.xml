@@ -127,6 +127,14 @@
                 <version>${project.version}</version>
             </dependency>
 
+            <!-- 统一管理三平面 Migration Test 复用的 Persistence 测试夹具版本。 -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>agentark-starter-persistence</artifactId>
+                <version>${project.version}</version>
+                <type>test-jar</type>
+            </dependency>
+
             <!-- 统一管理 AgentArk Redis Starter 模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>

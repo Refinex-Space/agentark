@@ -12,6 +12,24 @@
       "type": "java.lang.Long",
       "description": "MyBatis-Plus 单次分页查询允许返回的最大条目数，取值范围为 1 到 10000。",
       "defaultValue": 500
+    },
+    {
+      "name": "agentark.foundation.persistence.tenant-defense-enabled",
+      "type": "java.lang.Boolean",
+      "description": "存在所属平面 TenantLineHandler 时是否启用 MyBatis-Plus Tenant 纵深防御；Repository 仍必须显式携带 Scope。",
+      "defaultValue": true
+    },
+    {
+      "name": "agentark.foundation.persistence.sql-telemetry-enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否采集不含 SQL 正文与参数值的 Mapper 语句耗时和结果指标。",
+      "defaultValue": true
+    },
+    {
+      "name": "agentark.foundation.persistence.slow-query-threshold",
+      "type": "java.time.Duration",
+      "description": "触发脱敏慢查询告警的时长阈值，告警只包含稳定 Mapper 语句标识、耗时与结果。",
+      "defaultValue": "500ms"
     }
   ]
 }

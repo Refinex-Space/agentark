@@ -57,7 +57,7 @@ verify_server() {
     printf '%s\n' "${service_name}: health=UP info=SAFE env=HIDDEN"
 }
 
-# 验证账号可访问自身 Schema，且两个非归属 Schema 均被 MySQL 拒绝。
+# 验证账号可访问自身 Schema、Flyway V1 成功且无业务表，并拒绝两个非归属 Schema。
 verify_mysql_account() {
     account_name=$1
     own_schema=$2
@@ -75,6 +75,30 @@ verify_mysql_account() {
         printf '%s\n' "${account_name}: own-schema check failed" >&2
         exit 1
     fi
+    migration_result=$(
+        MYSQL_PWD="${account_password}" \
+            docker compose -f "${compose_file}" --profile core exec -T \
+            -e MYSQL_PWD \
+            mysql mysql -u"${account_name}" -Nse \
+            "SELECT CONCAT(version, ':', success) FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 1" \
+            "${own_schema}"
+    )
+    if [ "${migration_result}" != "1:1" ]; then
+        printf '%s\n' "${account_name}: expected successful Flyway V1, got ${migration_result:-missing}" >&2
+        exit 1
+    fi
+    business_table_count=$(
+        MYSQL_PWD="${account_password}" \
+            docker compose -f "${compose_file}" --profile core exec -T \
+            -e MYSQL_PWD \
+            mysql mysql -u"${account_name}" -Nse \
+            "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name <> 'flyway_schema_history'" \
+            "${own_schema}"
+    )
+    if [ "${business_table_count}" != "0" ]; then
+        printf '%s\n' "${account_name}: Phase 06 unexpectedly created ${business_table_count} business table(s)" >&2
+        exit 1
+    fi
     for denied_schema in "${denied_schema_one}" "${denied_schema_two}"; do
         if MYSQL_PWD="${account_password}" \
             docker compose -f "${compose_file}" --profile core exec -T \
@@ -84,7 +108,7 @@ verify_mysql_account() {
             exit 1
         fi
     done
-    printf '%s\n' "${account_name}: own=${own_schema} cross=DENIED"
+    printf '%s\n' "${account_name}: own=${own_schema} migration=V1 business_tables=0 cross=DENIED"
     unset account_password
 }
 

@@ -1,0 +1,2 @@
+-- Runtime Schema 的 Phase 06 空基线。
+-- Flyway 会在 agentark_runtime 中独立创建 flyway_schema_history；业务表由 Phase 11–14、19 按规范模型增量创建。

@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phase 05 has established four empty-business Spring Boot service shells and a local Core/RAG Compose baseline; business APIs and persistence remain owned by later `PLAN.md` phases.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phase 06 has established four empty-business Spring Boot service shells, a local Core/RAG Compose baseline, and three isolated MySQL/Flyway persistence baselines; business APIs and business tables remain owned by later `PLAN.md` phases.
 
 ## Authority
 

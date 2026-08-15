@@ -50,10 +50,44 @@
             <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
 
+        <!-- 提供 Flyway 识别 MySQL 8.4 方言和系统表所需的数据库扩展。 -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+
         <!-- 提供受控 JSON TypeHandler 使用的 Jackson 3 映射能力。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-jackson</artifactId>
+        </dependency>
+
+        <!-- 提供不记录 SQL 与参数正文的慢查询计时指标；未装配 Registry 时保持无操作。 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 提供 MySQL 8.4 JDBC 驱动，仅供真实数据库契约测试使用。 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 MySQL 8.4 Testcontainers 生命周期与 JDBC 地址。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-mysql</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 将 Testcontainers 生命周期接入 JUnit Jupiter。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
         </dependency>
 
         <!-- 提供 ApplicationContextRunner、AssertJ 和 JUnit 5 测试能力。 -->
@@ -63,4 +97,23 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 发布仅供三平面迁移测试复用的 Testcontainers 测试夹具，不进入生产依赖。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <executions>
+                    <!-- 生成 classifier 为 tests 的测试夹具 JAR。 -->
+                    <execution>
+                        <id>persistence-test-fixtures</id>
+                        <goals>
+                            <goal>test-jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

@@ -54,3 +54,81 @@ management:
     env:
       # 关闭 Env Info 贡献者。
       enabled: false
+
+---
+# Scheduler 持久化生产模板；测试 Profile 显式排除真实数据库接线。
+spring:
+  # 限制本配置文档不在无外部基础设施的上下文测试中加载。
+  config:
+    # 声明 Profile 激活表达式。
+    activate:
+      # 除 test 外的运行环境必须显式提供 Scheduler 数据库凭据。
+      on-profile: "!test"
+  # Scheduler 只连接 agentark_scheduler，URL、账号和密码均无生产默认值。
+  datasource:
+    # Scheduler MySQL JDBC URL，必须指向 agentark_scheduler。
+    url: ${AGENTARK_SCHEDULER_DB_URL}
+    # Scheduler 最小权限数据库账号。
+    username: ${AGENTARK_SCHEDULER_DB_USERNAME}
+    # Scheduler 数据库密码，只能由 Secret 注入。
+    password: ${AGENTARK_SCHEDULER_DB_PASSWORD}
+    # 固定 MySQL Connector/J 驱动。
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # Scheduler HikariCP 有界连接池配置。
+    hikari:
+      # 连接池稳定名称，用于指标区分三个 Owner。
+      pool-name: agentark-scheduler-pool
+      # 最大连接数可按部署容量覆盖。
+      maximum-pool-size: ${AGENTARK_SCHEDULER_DB_POOL_MAX_SIZE:10}
+      # 最小空闲连接保持为 1，避免空业务环境占用过多连接。
+      minimum-idle: ${AGENTARK_SCHEDULER_DB_POOL_MIN_IDLE:1}
+      # 获取连接最多等待 5000 毫秒；Hikari 原生属性使用毫秒整数。
+      connection-timeout: 5000
+      # 连接校验最多等待 3000 毫秒；Hikari 原生属性使用毫秒整数。
+      validation-timeout: 3000
+      # 连接最长存活 1800000 毫秒，低于常见服务端回收周期。
+      max-lifetime: 1800000
+      # 每 120000 毫秒保持低流量连接活跃。
+      keepalive-time: 120000
+      # 每条新连接固定 UTC 和严格模式，禁止依赖实例隐式默认值。
+      connection-init-sql: "SET SESSION time_zone = '+00:00', SESSION sql_mode = 'STRICT_TRANS_TABLES,ONLY_FULL_GROUP_BY,ERROR_FOR_DIVISION_BY_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE,NO_ENGINE_SUBSTITUTION'"
+  # Scheduler Flyway 只读取 Scheduler Location，并在所属 Schema 保存独立历史。
+  flyway:
+    # 应用启动时执行受版本控制的迁移。
+    enabled: true
+    # 禁止自动创建 Schema；部署系统必须预先创建并授权。
+    create-schemas: false
+    # 禁止运行期 clean 删除数据库对象。
+    clean-disabled: true
+    # 拒绝不符合 Flyway 命名规范的迁移文件。
+    validate-migration-naming: true
+    # Scheduler 默认 Schema。
+    default-schema: agentark_scheduler
+    # Scheduler 允许管理的唯一 Schema。
+    schemas: agentark_scheduler
+    # Scheduler 独占 Migration Location。
+    locations: classpath:db/migration/scheduler
+    # 在 agentark_scheduler 内使用标准且独立的历史表名。
+    table: flyway_schema_history
+
+# MyBatis-Plus 生产日志不得输出 SQL 正文或绑定参数。
+mybatis-plus:
+  # MyBatis 原生配置。
+  configuration:
+    # 数据对象字段按下划线列名映射。
+    map-underscore-to-camel-case: true
+    # 禁用 MyBatis SQL 文本日志，慢查询由脱敏遥测插件记录。
+    log-impl: org.apache.ibatis.logging.nologging.NoLoggingImpl
+
+# Scheduler 持久化纵深防御和慢查询基线。
+agentark:
+  # Foundation Starter 配置。
+  foundation:
+    # 持久化增强配置。
+    persistence:
+      # 存在 Scheduler TenantLineHandler 时启用租户 SQL 防御。
+      tenant-defense-enabled: true
+      # 只采集语句类别、结果和耗时。
+      sql-telemetry-enabled: true
+      # 超过 500 毫秒输出不含 SQL/参数的慢查询告警。
+      slow-query-threshold: 500ms

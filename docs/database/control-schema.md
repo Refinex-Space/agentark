@@ -11,6 +11,20 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 
 下表定义 Phase 07–10、19 的最低关系模型。Flyway 可以按 Phase 增量实现，但不得改变 Owner、稳定身份/不可变版本分离和关键约束。
 
+## Flyway 归属
+
+| Phase | 迁移范围 | 边界 |
+|---|---|---|
+| 06 | `V1__phase_06_schema_baseline.sql` | 只建立 Control 独立 Migration History 起点，不创建业务表 |
+| 07 | Organization、Project、Environment、Identity、Membership、Role、Permission、Binding、API Key | IAM 与租户授权事实 |
+| 08 | Agent、资产稳定身份与不可变版本 | 不包含发布 Revision/Snapshot |
+| 09 | Draft、Validation、Revision、Snapshot、Publish Operation、Control Outbox | 发布事务必须原子提交 |
+| 10 | Deployment 与 Deployment Revision | 固定目标 Revision，不写 Runtime Session |
+| 14 | Knowledge Metadata、Revision、Ingestion Result | Scheduler 只提交命令结果，不写 Control 表 |
+| 19 | Secret Metadata、Quota、Audit、Usage/Cost、Evaluation、可靠性补齐 | 不保存 Secret 明文 |
+
+任何表提前、延后或转移 Owner 都必须先修改本模型；影响平台边界或发布一致性时同步提交 ADR。
+
 ## IAM
 
 | 表 | 关键内容 | 关键约束与索引 |
@@ -87,4 +101,3 @@ Scheduler 不写这些表。它调用幂等完成命令；Control 校验 Result 
 | Usage/Cost | `usage_aggregate`, `price_table`, `price_table_version`；聚合维度和价格版本固定 |
 | Evaluation | `evaluation_dataset`, `evaluation_dataset_version`, `evaluation_test_case`, `evaluator`, `evaluator_version`, `evaluation_run`, `evaluation_score`, `release_gate`；所有 Run 固定 Snapshot/Dataset/Evaluator Version |
 | Reliability | `control_outbox`, `control_idempotency_record`；使用 MySQL 规范中的 Claim 和幂等约束 |
-

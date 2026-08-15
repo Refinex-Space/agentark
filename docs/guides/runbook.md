@@ -18,7 +18,7 @@ git status --short
 
 `verify_upstreams.py` 默认验证两个来源仓库包含固定 Commit；Phase 00 建立 detached Worktree 后使用 `--require-worktrees` 同时校验工作视图 HEAD。
 
-## Maven 与四服务验证
+## Maven、持久化与四服务验证
 
 Phase 05 已建立四个可执行 Spring Boot JAR。根 Reactor 仍可全量验证；仅验证四服务时必须显式列出子模块，`-pl agentark-services -am` 只会构建聚合 POM，是不充分的假绿。
 
@@ -30,11 +30,17 @@ Phase 05 已建立四个可执行 Spring Boot JAR。根 Reactor 仍可全量验�
 ./mvnw \
   -pl agentark-services/agentark-gateway-server,agentark-services/agentark-control-server,agentark-services/agentark-runtime-server,agentark-services/agentark-scheduler-server \
   -am clean verify
+
+./mvnw \
+  -pl agentark-control,agentark-runtime,agentark-scheduling \
+  -am clean verify
 ```
+
+第二条命令需要可用的 Docker daemon，会以 Testcontainers 启动真实 `mysql:8.4.11`，验证三套空库/N-1 迁移、Owner 越权拒绝、字符/时区规则和共享持久化 Contract。测试凭据运行时随机生成；报告不应出现其值。
 
 `verify` 执行 Enforcer、Java License Header、Surefire/Failsafe、JaCoCo Report、第三方许可汇总和 CycloneDX Aggregate SBOM。仓库不在 Maven 生命周期执行自动 Java 格式化；格式变更由评审者依据相邻源码风格检查。
 
-仓库仍无 `agentark-web/package.json` 或 Helm，因此前端和 Kubernetes 不可运行。四个 Server 只包含 Actuator 和空业务应用壳，健康不等于 Control/Runtime/Scheduler 业务已实现。
+仓库仍无 `agentark-web/package.json` 或 Helm，因此前端和 Kubernetes 不可运行。四个 Server 仍是空业务应用壳；Control/Runtime/Scheduler 只新增所属 DataSource 和 Flyway V1 History，健康与 Migration 成功不等于业务能力已实现。
 
 ## 本地 Core/RAG
 
@@ -51,6 +57,14 @@ Phase 05 已建立四个可执行 Spring Boot JAR。根 Reactor 仍可全量验�
 ```bash
 ./tools/dev-up.sh --prepare-only
 ```
+
+Phase 06 起，Control、Runtime、Scheduler 启动时会分别执行所属 `V1__phase_06_schema_baseline.sql`。若任一 Flyway 校验失败，服务必须保持失败状态；禁止通过关闭 Flyway、修改历史表或启用 `clean` 绕过。确认本地三套独立历史可用：
+
+```bash
+./tools/verify-core.sh
+```
+
+该脚本验证三个账号只能使用自身 Schema、最新 Migration 为成功 V1 且业务表数为 0；Migration Checksum 和 N-1 升级由对应 Owner 的 Testcontainers 测试与 Flyway 启动校验共同负责。
 
 显式启动包含 Qdrant 1.18.3 的 RAG Profile：
 

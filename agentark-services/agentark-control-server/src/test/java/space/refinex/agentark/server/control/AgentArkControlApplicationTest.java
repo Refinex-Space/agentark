@@ -28,8 +28,23 @@ import org.springframework.core.env.Environment;
  *
  * @author refinex
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = {
+        "spring.profiles.active=test",
+        "spring.autoconfigure.exclude="
+            + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
+            + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,"
+            + "com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration"
+    })
 class AgentArkControlApplicationTest {
+
+    /**
+     * 创建 Control 服务上下文测试实例。
+     */
+    AgentArkControlApplicationTest() {
+        // JUnit Jupiter 为每个测试生命周期创建实例。
+    }
 
     /**
      * 读取测试运行期端口与应用标识。
@@ -38,7 +53,7 @@ class AgentArkControlApplicationTest {
     private Environment environment;
 
     /**
-     * 证明 Control 能在无业务 Controller 和数据库接线时完成启动。
+     * 证明 Control 能在 test Profile 不连接外部数据库时完成应用上下文启动。
      */
     @Test
     void startsAsEmptyMvcApplication() {

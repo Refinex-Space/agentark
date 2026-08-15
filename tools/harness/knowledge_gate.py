@@ -70,6 +70,26 @@ KERNEL_FORBIDDEN_IMPORTS = (
     "org.redisson",
     "redis.clients",
 )
+SCHEMA_OWNERS = {
+    "agentark-control": (
+        "agentark_control",
+        "control",
+        "agentark-services/agentark-control-server/src/main/resources/application.yml",
+        "AGENTARK_CONTROL_DB",
+    ),
+    "agentark-runtime": (
+        "agentark_runtime",
+        "runtime",
+        "agentark-services/agentark-runtime-server/src/main/resources/application.yml",
+        "AGENTARK_RUNTIME_DB",
+    ),
+    "agentark-scheduling": (
+        "agentark_scheduler",
+        "scheduler",
+        "agentark-services/agentark-scheduler-server/src/main/resources/application.yml",
+        "AGENTARK_SCHEDULER_DB",
+    ),
+}
 JAVA_LICENSE_HEADER = """/*
  * Copyright 2026 refinex.
  *
@@ -305,6 +325,56 @@ def require_phase03_boundaries(errors: list[str]) -> None:
             errors.append(f"@SpringBootApplication outside a server module: {rel(path)}")
 
 
+def require_schema_ownership(errors: list[str]) -> None:
+    """Enforce Phase 06 Schema, Flyway and server configuration ownership."""
+    schema_names = {definition[0] for definition in SCHEMA_OWNERS.values()}
+    qualified_schema = re.compile(r"agentark_(?:control|runtime|scheduler)\s*\.", re.IGNORECASE)
+
+    for module, (schema, location, server_config, environment_prefix) in SCHEMA_OWNERS.items():
+        migration_root = ROOT / module / "src/main/resources/db/migration" / location
+        baseline = migration_root / "V1__phase_06_schema_baseline.sql"
+        if not baseline.is_file() or baseline.stat().st_size == 0:
+            errors.append(f"Phase 06 migration baseline is missing or empty: {rel(baseline)}")
+
+        main_root = ROOT / module / "src/main"
+        if main_root.is_dir():
+            for path in main_root.rglob("*"):
+                if not path.is_file() or "target" in path.parts:
+                    continue
+                try:
+                    text = read(path)
+                except UnicodeDecodeError:
+                    continue
+                foreign = sorted(name for name in schema_names - {schema} if name in text)
+                if foreign:
+                    errors.append(
+                        f"cross-Schema reference {foreign} in owner module: {rel(path)}"
+                    )
+                if qualified_schema.search(text):
+                    errors.append(
+                        f"qualified Schema SQL is forbidden; use the owner DataSource: {rel(path)}"
+                    )
+
+        config_path = ROOT / server_config
+        if not config_path.is_file():
+            errors.append(f"owner server configuration is missing: {server_config}")
+            continue
+        config = read(config_path)
+        required_tokens = (
+            f"${{{environment_prefix}_URL}}",
+            f"${{{environment_prefix}_USERNAME}}",
+            f"${{{environment_prefix}_PASSWORD}}",
+            f"default-schema: {schema}",
+            f"schemas: {schema}",
+            f"locations: classpath:db/migration/{location}",
+            "clean-disabled: true",
+            "create-schemas: false",
+        )
+        for token in required_tokens:
+            if token not in config:
+                errors.append(f"owner server configuration lacks {token}: {server_config}")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", help="Git base revision for docs-with-code checks")
@@ -382,6 +452,7 @@ def main() -> int:
     require_docs_with_sensitive_changes(changed_paths(args.base), errors)
     require_maven_foundation(errors)
     require_phase03_boundaries(errors)
+    require_schema_ownership(errors)
 
     if errors:
         print(f"knowledge gate failed: {len(errors)} error(s)")

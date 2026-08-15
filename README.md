@@ -411,7 +411,7 @@ Repository instructions route contributors to the normative source for each deci
 
 ## Development Status
 
-AgentArk currently follows an **architecture-first migration strategy**. Phase 02 provides the fixed upstream evidence baseline and Maven build foundation. Phase 03 provides the framework-free Kernel and language-neutral contract skeletons. Phase 04 provides six focused Foundation Starters. Phase 05 provides four runnable empty-business Spring Boot service shells plus local MySQL, Redis, MinIO, and optional Qdrant Compose profiles. Business APIs, persistence mappings, AgentScope execution, scheduling behavior, and the Web console are not implemented yet.
+AgentArk currently follows an **architecture-first migration strategy**. Phase 02 provides the fixed upstream evidence baseline and Maven build foundation. Phase 03 provides the framework-free Kernel and language-neutral contract skeletons. Phase 04 provides six focused Foundation Starters. Phase 05 provides four runnable empty-business Spring Boot service shells plus local MySQL, Redis, MinIO, and optional Qdrant Compose profiles. Phase 06 provides three isolated DataSource/Flyway histories, MyBatis-Plus persistence rules, real MySQL 8.4 contract tests, and JPA/PostgreSQL migration guidance. Business APIs, business tables, AgentScope execution, scheduling behavior, and the Web console are not implemented yet.
 
 The initial implementation will be derived from the useful service-plane capabilities in AgentScope Java's `agentscope-service`, while deliberately reshaping module boundaries and gradually replacing the Go control plane with Java.
 
@@ -436,7 +436,7 @@ The migration sequence is designed to avoid changing package names, modules, JDK
 
 | Milestone | Scope | Status |
 |---|---|---|
-| **A — Architecture & Engineering Foundation** | BOM, Kernel, starters, contracts, four service shells, CI, Compose | 🟡 In progress — service shells and local Core profile established |
+| **A — Architecture & Engineering Foundation** | BOM, Kernel, starters, contracts, four service shells, CI, Compose | ✅ Complete — service shells, Core profile, and persistence baseline verified |
 | **B — Control Plane MVP** | IAM, Agent catalog, assets, revisions, snapshots, deployments | ⚪ Planned |
 | **C — Runtime MVP** | Session, Turn, Run, events, SSE, AgentScope compiler, HITL, recovery | ⚪ Planned |
 | **D — Knowledge / RAG** | ingestion, Qdrant, Knowledge Revision, retrieval, citations | ⚪ Planned |

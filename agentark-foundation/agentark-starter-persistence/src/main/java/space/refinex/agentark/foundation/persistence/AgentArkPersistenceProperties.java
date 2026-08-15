@@ -16,6 +16,7 @@
 
 package space.refinex.agentark.foundation.persistence;
 
+import java.time.Duration;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -35,6 +36,21 @@ public class AgentArkPersistenceProperties {
      * 单次 MyBatis-Plus 分页查询允许返回的最大条目数。
      */
     private long maxPageSize = 500;
+
+    /**
+     * 存在所属平面提供的 TenantLineHandler 时是否启用租户 SQL 纵深防御。
+     */
+    private boolean tenantDefenseEnabled = true;
+
+    /**
+     * 是否采集不含 SQL 正文和参数值的语句执行指标。
+     */
+    private boolean sqlTelemetryEnabled = true;
+
+    /**
+     * 触发脱敏慢查询告警的执行时长阈值。
+     */
+    private Duration slowQueryThreshold = Duration.ofMillis(500);
 
     /**
      * 返回持久化增强是否启用。
@@ -74,5 +90,63 @@ public class AgentArkPersistenceProperties {
             throw new IllegalArgumentException("maxPageSize must be between 1 and 10000");
         }
         this.maxPageSize = maxPageSize;
+    }
+
+    /**
+     * 返回租户 SQL 纵深防御是否启用。
+     *
+     * @return 启用时为 {@code true}
+     */
+    public boolean isTenantDefenseEnabled() {
+        return tenantDefenseEnabled;
+    }
+
+    /**
+     * 设置租户 SQL 纵深防御开关。
+     *
+     * @param tenantDefenseEnabled 是否允许装配 Tenant 拦截器
+     */
+    public void setTenantDefenseEnabled(boolean tenantDefenseEnabled) {
+        this.tenantDefenseEnabled = tenantDefenseEnabled;
+    }
+
+    /**
+     * 返回脱敏 SQL 遥测是否启用。
+     *
+     * @return 启用时为 {@code true}
+     */
+    public boolean isSqlTelemetryEnabled() {
+        return sqlTelemetryEnabled;
+    }
+
+    /**
+     * 设置脱敏 SQL 遥测开关。
+     *
+     * @param sqlTelemetryEnabled 是否采集语句耗时与结果
+     */
+    public void setSqlTelemetryEnabled(boolean sqlTelemetryEnabled) {
+        this.sqlTelemetryEnabled = sqlTelemetryEnabled;
+    }
+
+    /**
+     * 返回慢查询阈值。
+     *
+     * @return 非空且非负的时长
+     */
+    public Duration getSlowQueryThreshold() {
+        return slowQueryThreshold;
+    }
+
+    /**
+     * 设置慢查询阈值。
+     *
+     * @param slowQueryThreshold 非空且非负的时长
+     * @throws IllegalArgumentException 当时长为空或为负数时抛出
+     */
+    public void setSlowQueryThreshold(Duration slowQueryThreshold) {
+        if (slowQueryThreshold == null || slowQueryThreshold.isNegative()) {
+            throw new IllegalArgumentException("slowQueryThreshold must not be null or negative");
+        }
+        this.slowQueryThreshold = slowQueryThreshold;
     }
 }

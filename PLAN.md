@@ -440,7 +440,7 @@ flowchart LR
 | 03 | DONE | 2026-08-15 | `docs/implementation/phase-03-kernel-contracts.md` | Kernel、Snapshot/Event/API 契约与架构门禁已完成验收 |
 | 04 | DONE | 2026-08-15 | `docs/implementation/phase-04-foundation-starters.md` | 六个职责单一 Starter、条件化配置、安全默认与架构规则已验收 |
 | 05 | DONE | 2026-08-15 | `docs/implementation/phase-05-service-shells.md` | 四服务空业务骨架、Core/RAG Compose、Secret 与三 Schema 隔离已验收 |
-| 06 | NOT_STARTED | — | `docs/implementation/phase-06-persistence-baseline.md` | |
+| 06 | DONE | 2026-08-15 | `docs/implementation/phase-06-persistence-baseline.md` | 三 Schema、Flyway、MyBatis-Plus、Testcontainers 与迁移规范已验收 |
 | 07 | NOT_STARTED | — | `docs/implementation/phase-07-iam-tenancy.md` | |
 | 08 | NOT_STARTED | — | `docs/implementation/phase-08-asset-catalog.md` | |
 | 09 | NOT_STARTED | — | `docs/implementation/phase-09-knowledge-metadata.md` | |
@@ -1256,26 +1256,26 @@ docs/database/scheduler-schema.md
 
 ### 任务
 
-- [ ] 定义 MySQL 命名、字符集、排序规则、时区和严格模式；
-- [ ] 定义 UUIDv7 `BINARY(16)` 持久化；
-- [ ] 定义 `TIMESTAMP(6)`/UTC；
-- [ ] 定义 JSON 字段使用边界；
-- [ ] 定义乐观锁、审计字段和状态编码；
-- [ ] 定义软删除只按聚合语义启用；
-- [ ] 为 Control、Runtime、Scheduler 建立独立 Flyway Location；
-- [ ] 建立三套 DataSource 生产配置模板，但每个服务只加载自己的 DataSource；
-- [ ] 建立 Repository Adapter/DO/Mapper 命名规范；
-- [ ] 根据机械基线中的 JPA Repository 行为建立持久化 Contract Test；
-- [ ] 对分页、排序、乐观锁、事务、JSON、时间和唯一约束逐项建立 JPA → MyBatis-Plus 语义映射；
-- [ ] 创建 `docs/migration/jpa-to-mybatis-plus.md`；
-- [ ] 建立 MyBatis-Plus Tenant 防御配置，但明确它不是唯一授权；
-- [ ] 建立 SQL 日志脱敏和慢查询指标；
-- [ ] 建立 MySQL Testcontainers 基础类/Fixture；
-- [ ] 建立空库 Migration Test；
-- [ ] 建立上一版本 → 当前版本的 Migration 测试框架；
-- [ ] 建立禁止跨 Schema Mapper/SQL 的 ArchUnit/静态检查；
-- [ ] 创建 PostgreSQL → MySQL 类型映射与风险文档；
-- [ ] 本阶段不创建完整业务表；只允许创建必要的 Schema Baseline/元数据表，业务表由后续 Phase 按规范模型实现。
+- [x] 定义 MySQL 命名、字符集、排序规则、时区和严格模式；
+- [x] 定义 UUIDv7 `BINARY(16)` 持久化；
+- [x] 定义 `TIMESTAMP(6)`/UTC；
+- [x] 定义 JSON 字段使用边界；
+- [x] 定义乐观锁、审计字段和状态编码；
+- [x] 定义软删除只按聚合语义启用；
+- [x] 为 Control、Runtime、Scheduler 建立独立 Flyway Location；
+- [x] 建立三套 DataSource 生产配置模板，但每个服务只加载自己的 DataSource；
+- [x] 建立 Repository Adapter/DO/Mapper 命名规范；
+- [x] 根据机械基线中的 JPA Repository 行为建立持久化 Contract Test；
+- [x] 对分页、排序、乐观锁、事务、JSON、时间和唯一约束逐项建立 JPA → MyBatis-Plus 语义映射；
+- [x] 创建 `docs/migration/jpa-to-mybatis-plus.md`；
+- [x] 建立 MyBatis-Plus Tenant 防御配置，但明确它不是唯一授权；
+- [x] 建立 SQL 日志脱敏和慢查询指标；
+- [x] 建立 MySQL Testcontainers 基础类/Fixture；
+- [x] 建立空库 Migration Test；
+- [x] 建立上一版本 → 当前版本的 Migration 测试框架；
+- [x] 建立禁止跨 Schema Mapper/SQL 的 ArchUnit/静态检查；
+- [x] 创建 PostgreSQL → MySQL 类型映射与风险文档；
+- [x] 本阶段不创建完整业务表；只允许创建必要的 Schema Baseline/元数据表，业务表由后续 Phase 按规范模型实现。
 
 ### 产物
 
@@ -1294,18 +1294,18 @@ docs/implementation/phase-06-persistence-baseline.md
 
 ### 验收条件
 
-- [ ] 三个服务各自只能访问自己的 Schema；
-- [ ] 三个 Flyway 历史独立；
-- [ ] 空库 Migration 测试通过；
-- [ ] UUID/Instant/JSON TypeHandler 往返测试通过；
-- [ ] 机械基线 JPA 的关键仓储行为已由 MyBatis-Plus Contract Test 覆盖；
-- [ ] JPA → MyBatis-Plus 语义差异和处理方式已记录；
-- [ ] 无 JPA/Hibernate 依赖；
-- [ ] 无跨 Schema Mapper/SQL；
-- [ ] 不存在共享 `BaseMapper` 业务仓储；
-- [ ] 数据库配置无默认生产密码；
-- [ ] MySQL 与 PostgreSQL 差异风险已完整记录。
-- [ ] 三个规范模型均已纳入知识门禁，后续 Flyway 有明确归属 Phase。
+- [x] 三个服务各自只能访问自己的 Schema；
+- [x] 三个 Flyway 历史独立；
+- [x] 空库 Migration 测试通过；
+- [x] UUID/Instant/JSON TypeHandler 往返测试通过；
+- [x] 机械基线 JPA 的关键仓储行为已由 MyBatis-Plus Contract Test 覆盖；
+- [x] JPA → MyBatis-Plus 语义差异和处理方式已记录；
+- [x] 无 JPA/Hibernate 依赖；
+- [x] 无跨 Schema Mapper/SQL；
+- [x] 不存在共享 `BaseMapper` 业务仓储；
+- [x] 数据库配置无默认生产密码；
+- [x] MySQL 与 PostgreSQL 差异风险已完整记录。
+- [x] 三个规范模型均已纳入知识门禁，后续 Flyway 有明确归属 Phase。
 
 ### 验收命令
 
@@ -1317,6 +1317,7 @@ docs/implementation/phase-06-persistence-baseline.md
 rg -n "agentark_(control|runtime|scheduler)\." \
   agentark-control agentark-runtime agentark-scheduling
 
+python3 tools/harness/knowledge_gate.py
 git diff HEAD --check
 ```
 

@@ -1,0 +1,2 @@
+-- Control Schema 的 Phase 06 空基线。
+-- Flyway 会在 agentark_control 中独立创建 flyway_schema_history；业务表由 Phase 07–10、19 按规范模型增量创建。

@@ -11,6 +11,17 @@ Schema：`agentark_scheduler`。唯一写入者是 Scheduler Server。它不保�
 
 Phase 15 创建下列表、Flyway、Repository 和多实例/幂等测试；Phase 14 的 Ingestion Handler 只定义中立处理与结果契约，不提前拥有 Scheduler 数据。
 
+## Flyway 归属
+
+| Phase | 迁移范围 | 边界 |
+|---|---|---|
+| 06 | `V1__phase_06_schema_baseline.sql` | 只建立 Scheduler 独立 Migration History 起点，不创建业务表 |
+| 14 | 无 Scheduler 业务表 | 只定义 Knowledge Ingestion Handler 与结果契约 |
+| 15 | Trigger、Cursor、Job、Attempt、Lease、Delivery、Dead Letter、Idempotency、Outbox | 完整调度事实、重试与多实例一致性 |
+| 16 | 只允许经本模型评审后的 Channel 兼容增量 | Channel 不能拥有 Runtime Session 或 Control Catalog |
+
+调度处理器不得以实现便利提前创建表；任何 Owner 或状态模型变化必须先更新本文档。
+
 | 表 | 关键内容 | 关键约束与索引 |
 |---|---|---|
 | `trigger_definition` | id, organization_id, project_id, type, schedule/config, target contract, status, version | Scope 内 key 唯一；配置不含 Secret 明文 |

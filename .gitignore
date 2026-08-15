@@ -32,7 +32,7 @@ $RECYCLE.BIN/
 *.iws
 *.iml
 *.ipr
-out/
+/out/
 
 # Visual Studio Code
 .vscode/*

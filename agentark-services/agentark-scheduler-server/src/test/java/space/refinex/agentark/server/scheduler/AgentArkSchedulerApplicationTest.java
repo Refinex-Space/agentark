@@ -28,8 +28,23 @@ import org.springframework.core.env.Environment;
  *
  * @author refinex
  */
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@SpringBootTest(
+    webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
+    properties = {
+        "spring.profiles.active=test",
+        "spring.autoconfigure.exclude="
+            + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
+            + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,"
+            + "com.baomidou.mybatisplus.autoconfigure.MybatisPlusAutoConfiguration"
+    })
 class AgentArkSchedulerApplicationTest {
+
+    /**
+     * 创建 Scheduler 服务上下文测试实例。
+     */
+    AgentArkSchedulerApplicationTest() {
+        // JUnit Jupiter 为每个测试生命周期创建实例。
+    }
 
     /**
      * 读取测试运行期端口与应用标识。

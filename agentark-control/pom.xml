@@ -11,6 +11,63 @@
 
     <artifactId>agentark-control</artifactId>
     <name>AgentArk Control</name>
-    <description>Control 领域模块占位，计划在 Phase 07 开始实现</description>
+    <description>提供 Control 领域、应用与所属 MySQL 持久化边界</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 导入 AgentArk BOM，统一管理 Spring Boot、MyBatis-Plus、Testcontainers 与内部模块版本。 -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>agentark-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- 提供 Control 所属 MyBatis-Plus、Flyway、事务与受控类型处理能力。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-persistence</artifactId>
+        </dependency>
+
+        <!-- 提供 Control Server 连接 MySQL 8.4 的运行时 JDBC 驱动。 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- 复用三平面一致的 MySQL 迁移测试夹具，不进入生产制品。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-persistence</artifactId>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 Control Migration 测试使用的 MySQL 8.4 容器。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-mysql</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 将 Testcontainers 生命周期接入 Control 的 JUnit Jupiter 测试。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 Control 持久化测试的 JUnit、AssertJ 与 Spring 测试支持。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
 </project>

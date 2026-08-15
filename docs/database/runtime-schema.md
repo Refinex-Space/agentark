@@ -11,6 +11,17 @@ Schema：`agentark_runtime`。唯一写入者是 Runtime Server。所有表显�
 
 Phase 11 创建逻辑模型对应的 Flyway、Repository 和事务测试；Phase 12 只实现 Provider Adapter，Phase 13 装配 API/Worker，不得另建 Provider 私有表。
 
+## Flyway 归属
+
+| Phase | 迁移范围 | 边界 |
+|---|---|---|
+| 06 | `V1__phase_06_schema_baseline.sql` | 只建立 Runtime 独立 Migration History 起点，不创建业务表 |
+| 11 | Session、Turn、Run、Work Item、Instance、Event、Approval、Agent State、Checkpoint、Usage、Idempotency、Outbox | 完整 Runtime 持久模型与仓储事务 |
+| 12 | 无新增 Provider 私有表 | AgentScope Adapter 通过 Runtime 端口读写权威模型 |
+| 13 | 只允许经本模型评审后的兼容增量 | API、SSE、Worker 装配不得绕过 Runtime Owner |
+
+Provider 适配便利不能改变表 Owner 或引入 AgentScope 自动建表；任何逻辑模型变化必须先更新本文档。
+
 | 表 | 关键内容 | 关键约束与索引 |
 |---|---|---|
 | `session` | id, organization_id, project_id, deployment_id, revision_id, snapshot_id/hash, participant/channel metadata, status, version | 创建后固定 Revision/Snapshot；幂等创建唯一键 |

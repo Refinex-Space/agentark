@@ -268,6 +268,13 @@
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
+                <configuration>
+                    <!-- 排除 JSqlParser 的超大生成方法，避免第三方字节码插桩触发 MethodTooLargeException。 -->
+                    <excludes>
+                        <!-- AgentArk 不统计第三方 SQL Parser 覆盖率，自有持久化代码仍完整采集。 -->
+                        <exclude>net/sf/jsqlparser/**</exclude>
+                    </excludes>
+                </configuration>
                 <executions>
                     <!-- 在单元测试前准备 JaCoCo Java Agent。 -->
                     <execution>

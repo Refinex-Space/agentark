@@ -9,7 +9,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 05 已建立四个可启动的空业务 Server、`local` Profile 和本地 Compose Core/RAG 基线。当前应用只装配 Web/Actuator 与 Foundation Web/Observability；MySQL、Redis 和 Object Storage 的业务接线、Flyway 与连接池属于 Phase 06，不得把基础设施容器存在误解为持久化基线已完成。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline；三个服务仍为空业务状态，只有各自的 Migration History，没有业务表或业务 API。Gateway 不连接业务数据库。Redis 与 Object Storage 的业务接线仍由后续 Owner Phase 实现。
 
 ## Server 与本地 Profile
 
@@ -43,6 +43,18 @@ Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334`
 
 账号只在 MySQL 空数据卷首次启动时初始化。不得在保留 `mysql-data` 卷的同时删除或替换 `.secrets/`；否则文件凭据会与库内账号失配。`dev-up.sh` 在生成凭据前检查 `agentark_mysql-data` 卷；旧卷存在且任一 MySQL Secret 丢失时会拒绝启动，不会静默生成无法登录的新凭据。
 
+## 三平面 DataSource 与 Flyway
+
+| Server | 必填环境变量 | Schema/Location | 默认连接池 |
+|---|---|---|---|
+| Control | `AGENTARK_CONTROL_DB_URL`、`AGENTARK_CONTROL_DB_USERNAME`、`AGENTARK_CONTROL_DB_PASSWORD` | `agentark_control` / `classpath:db/migration/control` | max `10`、min idle `1` |
+| Runtime | `AGENTARK_RUNTIME_DB_URL`、`AGENTARK_RUNTIME_DB_USERNAME`、`AGENTARK_RUNTIME_DB_PASSWORD` | `agentark_runtime` / `classpath:db/migration/runtime` | max `20`、min idle `1` |
+| Scheduler | `AGENTARK_SCHEDULER_DB_URL`、`AGENTARK_SCHEDULER_DB_USERNAME`、`AGENTARK_SCHEDULER_DB_PASSWORD` | `agentark_scheduler` / `classpath:db/migration/scheduler` | max `10`、min idle `1` |
+
+三个 URL、Username、Password 均没有生产默认值。Compose 只在本地 Profile 提供非秘密 URL/Username，并通过 `configtree:/run/secrets/` 把密码文件映射到同名属性；值不进入 Compose 环境或渲染输出。连接池上限可分别由 `AGENTARK_*_DB_POOL_MAX_SIZE` 覆盖，最小空闲可由 `AGENTARK_*_DB_POOL_MIN_IDLE` 覆盖。
+
+每条新连接设置 UTC 与固定严格模式；Flyway 固定 `create-schemas=false`、`clean-disabled=true`、`validate-migration-naming=true`。只有部署初始化脚本能创建 Schema/账号，业务应用不能自动扩大权限。
+
 ## Foundation Starter 配置
 
 | 属性 | 默认值 | 启用/必填条件 | 安全与所有权说明 |
@@ -62,6 +74,9 @@ Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334`
 | `agentark.foundation.security.authorities-claim` | `scope` | Security 启用 | 只形成候选权限；资源授权仍由 Control IAM 决定 |
 | `agentark.foundation.persistence.enabled` | `true` | 存在 `DataSource` | 只装配 MyBatis-Plus 插件和 TypeHandler，不自动建表 |
 | `agentark.foundation.persistence.max-page-size` | `500` | Persistence 生效 | MySQL 分页上限；超页请求不静默回绕 |
+| `agentark.foundation.persistence.tenant-defense-enabled` | `true` | Persistence 生效且 Owner 提供 `TenantLineHandler` | 只作 SQL 纵深防御；没有 Handler 时不虚构 Tenant，不替代授权与显式 Scope |
+| `agentark.foundation.persistence.sql-telemetry-enabled` | `true` | Persistence 生效 | 只记录 Statement ID、Operation、Outcome、Duration，禁止 SQL 与参数正文 |
+| `agentark.foundation.persistence.slow-query-threshold` | `500ms` | SQL Telemetry 启用 | 非负 Duration；达到阈值时输出脱敏告警 |
 | `agentark.foundation.redis.enabled` | `false` | 必须显式设为 `true` 且存在 `StringRedisTemplate` | Redis 只承担缓存和协调，不得作为业务事实唯一副本 |
 | `agentark.foundation.redis.key-prefix` | `agentark` | Redis 启用 | 平台级小写 Key 前缀 |
 | `agentark.foundation.redis.application-name` | 无 | Redis 启用时必填 | 服务级命名空间，防止四平面 Key 冲突 |
@@ -77,7 +92,7 @@ Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334`
 | `agentark.foundation.observability.collect-tool-arguments` | `false` | 仅显式风险评审后开启 | Tool 参数默认不采集；Secret 始终脱敏 |
 | `agentark.foundation.observability.collect-document-text` | `false` | 仅显式风险评审后开启 | 文档正文默认不采集；Secret 始终脱敏 |
 
-连接、池化、TLS、事务和 Migration 继续使用 Spring Boot 所属标准属性，例如 `spring.datasource.*`、`spring.flyway.*` 和 `spring.data.redis.*`。这些属性的服务接线、测试容器与 Flyway 基线归 Phase 06 所有；Phase 05 不提供可误用于生产的默认连接串。
+连接、池化、TLS、事务和 Migration 使用 Spring Boot 所属标准属性，例如 `spring.datasource.*`、`spring.flyway.*` 和 `spring.data.redis.*`。Phase 06 已固定 MySQL/Flyway 基线；生产 TLS 信任材料与强制模式仍必须由实际部署环境显式提供，不能依赖本地 Compose 的明文内部网络设置。
 
 ## 规范
 

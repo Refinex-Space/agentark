@@ -19,6 +19,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 03 执行证据 | [Kernel 与契约基线](implementation/phase-03-kernel-contracts.md) | 复核强类型 ID、Snapshot、Schema、契约 Lint 和架构门禁 |
 | Phase 04 执行证据 | [Focused Foundation Starters](implementation/phase-04-foundation-starters.md) | 复核六个职责单一 Starter、条件化配置、安全默认和架构规则 |
 | Phase 05 执行证据 | [四服务骨架与本地 Core](implementation/phase-05-service-shells.md) | 复核四个启动单元、健康探针、Compose、Secret 和三 Schema 账号隔离 |
+| Phase 06 执行证据 | [MySQL 持久化基线](implementation/phase-06-persistence-baseline.md) | 复核三套 Flyway、DataSource Owner、MySQL Contract Test 与门禁 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |
@@ -40,6 +41,8 @@ referenced_by: AGENTS.md#knowledge-map
 | 上游迁移审计 | [源码清单](migration/source-inventory.md) | 定位 Service/Core/Harness/Extensions/Frontend 的具体来源 |
 | 迁移分类 | [迁移清单](migration/migration-manifest.md) | 决定候选路径的取用类型、目标模块和明确拒绝项 |
 | 上游行为 | [行为基线](migration/behavior-baseline.md) | 实现或验收 Gateway、Runtime、Scheduler、HITL、SSE 等关键行为 |
+| JPA 语义迁移 | [JPA 到 MyBatis-Plus](migration/jpa-to-mybatis-plus.md) | 实现 Repository、事务、分页、乐观锁、唯一约束或 Tenant 防御 |
+| PostgreSQL 风险 | [PostgreSQL 到 MySQL](migration/postgresql-to-mysql.md) | 迁移类型、SQL、索引、锁、DDL 或上游数据 |
 | 机械迁入证据 | [机械迁入报告](migration/mechanical-import-report.md) | 复核 AgentScope Service 机械基线、文件 Hash、许可补证和原始测试结果 |
 | 许可与资产 | [许可证与 NOTICE](migration/license-and-notice.md) | 复制源码、引入依赖、处理图片/品牌或制作发布物 |
 | Go Control 绞杀 | [Aistio 绞杀计划](migration/aistio-strangler.md) | 规划 Control/API/数据 Cohort 迁移、切换和回滚 |

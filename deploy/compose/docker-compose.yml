@@ -15,6 +15,16 @@ services:
       MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
       # 将 MySQL 默认时区固定为 UTC。
       TZ: UTC
+    # 固定实例字符规则、UTC 与严格模式，应用连接仍会再次设置会话级防御。
+    command:
+      # 固定服务端默认字符集。
+      - --character-set-server=utf8mb4
+      # 固定 MySQL 8.4 Unicode 排序规则。
+      - --collation-server=utf8mb4_0900_ai_ci
+      # 固定数据库服务端时区为 UTC。
+      - --default-time-zone=+00:00
+      # 拒绝截断、零日期、非确定分组和除零等宽松写入行为。
+      - --sql-mode=STRICT_TRANS_TABLES,ONLY_FULL_GROUP_BY,ERROR_FOR_DIVISION_BY_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE,NO_ENGINE_SUBSTITUTION
     # 挂载数据库初始化所需的六个本地 Secret。
     secrets:
       # MySQL root 仅用于首次初始化和健康检查。
@@ -236,6 +246,23 @@ services:
       AGENTARK_RUNTIME_BASE_URL: http://runtime:8082
       # Control 只持有 Scheduler 服务 URL，不共享实现。
       AGENTARK_SCHEDULER_BASE_URL: http://scheduler:8083
+      # 通过 Config Tree 从只读 Secret 文件解析数据库密码。
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      # Control 只连接所属 agentark_control Schema。
+      AGENTARK_CONTROL_DB_URL: "jdbc:mysql://mysql:3306/agentark_control?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8&useUnicode=true"
+      # Control 使用同名最小权限账号。
+      AGENTARK_CONTROL_DB_USERNAME: agentark_control
+    # 将 Control 数据库密码只读挂载为 Spring Config Tree 属性。
+    secrets:
+      # 文件名与 application.yml 的密码占位符一致，值不进入 Compose 环境。
+      - source: mysql_control_password
+        target: AGENTARK_CONTROL_DB_PASSWORD
+    # 等待 MySQL 完成 Schema 与账号初始化后再启动 Control。
+    depends_on:
+      # 仅依赖 MySQL 健康，不依赖其他业务服务的实现或启动顺序。
+      mysql:
+        # MySQL 健康检查通过后才创建 Control 容器。
+        condition: service_healthy
     # Control 宿主端口只绑定回环地址。
     ports:
       # 固定对应 PLAN 的 8081 端口。
@@ -283,6 +310,23 @@ services:
       SPRING_PROFILES_ACTIVE: local
       # Runtime 只持有 Control 服务 URL，不共享实现或读取 Control Schema。
       AGENTARK_CONTROL_BASE_URL: http://control:8081
+      # 通过 Config Tree 从只读 Secret 文件解析数据库密码。
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      # Runtime 只连接所属 agentark_runtime Schema。
+      AGENTARK_RUNTIME_DB_URL: "jdbc:mysql://mysql:3306/agentark_runtime?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8&useUnicode=true"
+      # Runtime 使用同名最小权限账号。
+      AGENTARK_RUNTIME_DB_USERNAME: agentark_runtime
+    # 将 Runtime 数据库密码只读挂载为 Spring Config Tree 属性。
+    secrets:
+      # 文件名与 application.yml 的密码占位符一致，值不进入 Compose 环境。
+      - source: mysql_runtime_password
+        target: AGENTARK_RUNTIME_DB_PASSWORD
+    # 等待 MySQL 完成 Schema 与账号初始化后再启动 Runtime。
+    depends_on:
+      # 仅依赖 MySQL 健康，不依赖 Control 进程或实现。
+      mysql:
+        # MySQL 健康检查通过后才创建 Runtime 容器。
+        condition: service_healthy
     # Runtime 宿主端口只绑定回环地址。
     ports:
       # 固定对应 PLAN 的 8082 端口。
@@ -332,6 +376,23 @@ services:
       AGENTARK_CONTROL_BASE_URL: http://control:8081
       # Scheduler 只持有 Runtime 服务 URL，不共享实现或 Harness。
       AGENTARK_RUNTIME_BASE_URL: http://runtime:8082
+      # 通过 Config Tree 从只读 Secret 文件解析数据库密码。
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      # Scheduler 只连接所属 agentark_scheduler Schema。
+      AGENTARK_SCHEDULER_DB_URL: "jdbc:mysql://mysql:3306/agentark_scheduler?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8&useUnicode=true"
+      # Scheduler 使用同名最小权限账号。
+      AGENTARK_SCHEDULER_DB_USERNAME: agentark_scheduler
+    # 将 Scheduler 数据库密码只读挂载为 Spring Config Tree 属性。
+    secrets:
+      # 文件名与 application.yml 的密码占位符一致，值不进入 Compose 环境。
+      - source: mysql_scheduler_password
+        target: AGENTARK_SCHEDULER_DB_PASSWORD
+    # 等待 MySQL 完成 Schema 与账号初始化后再启动 Scheduler。
+    depends_on:
+      # 仅依赖 MySQL 健康，不依赖 Runtime 或 Control 进程。
+      mysql:
+        # MySQL 健康检查通过后才创建 Scheduler 容器。
+        condition: service_healthy
     # Scheduler 宿主端口只绑定回环地址。
     ports:
       # 固定对应 PLAN 的 8083 端口。

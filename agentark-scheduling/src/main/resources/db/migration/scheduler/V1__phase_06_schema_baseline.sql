@@ -1,0 +1,2 @@
+-- Scheduler Schema 的 Phase 06 空基线。
+-- Flyway 会在 agentark_scheduler 中独立创建 flyway_schema_history；业务表由 Phase 15、19 按规范模型增量创建。
