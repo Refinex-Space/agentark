@@ -1,0 +1,17 @@
+# 本地 Profile 激活条件，本文件只包含非敏感的服务地址模板。
+spring:
+  # 限制该配置文档只在 local Profile 生效。
+  config:
+    # 声明 Profile 激活表达式。
+    activate:
+      # 仅当 `local` 被激活时加载。
+      on-profile: local
+
+# Gateway 只通过 URL 与后端平面关联，此阶段不创建业务路由。
+agentark:
+  # 声明 Gateway 可见的内部服务端点。
+  services:
+    # Control Plane 基础地址；Compose 使用服务 DNS 覆盖。
+    control-base-url: ${AGENTARK_CONTROL_BASE_URL:http://localhost:8081}
+    # Runtime Plane 基础地址；Compose 使用服务 DNS 覆盖。
+    runtime-base-url: ${AGENTARK_RUNTIME_BASE_URL:http://localhost:8082}

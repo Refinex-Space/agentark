@@ -169,6 +169,9 @@ bootstrap-local.yml
 bootstrap-local.yaml
 bootstrap-local.properties
 
+# Phase 05 四服务的 local Profile 是不含 Secret 的可追溯模板，必须纳入版本控制。
+!agentark-services/*/src/main/resources/application-local.yml
+
 config/local/
 config/secret/
 local.properties
@@ -178,6 +181,7 @@ local.properties
 # ------------------------------------------------------------------------------
 
 .secrets/
+deploy/compose/.secrets/
 secrets/local/
 *.secret
 *.secrets

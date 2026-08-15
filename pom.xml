@@ -59,6 +59,7 @@
         <spring-boot.version>4.1.0</spring-boot.version>
         <spring-cloud.version>2025.1.2</spring-cloud.version>
         <mybatis-plus.version>3.5.17</mybatis-plus.version>
+        <spring-boot-maven-plugin.version>${spring-boot.version}</spring-boot-maven-plugin.version>
         <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
         <extra-enforcer-rules.version>1.12.0</extra-enforcer-rules.version>
         <maven-compiler-plugin.version>3.15.0</maven-compiler-plugin.version>
@@ -113,6 +114,13 @@
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
                     <version>${maven-enforcer-plugin.version}</version>
+                </plugin>
+
+                <!-- 统一管理 Spring Boot Maven Plugin，生成可执行 JAR 和构建信息。 -->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot-maven-plugin.version}</version>
                 </plugin>
 
                 <!-- 统一管理 JaCoCo Maven Plugin，采集并生成测试覆盖率报告。 -->

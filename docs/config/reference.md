@@ -9,7 +9,39 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 04 已实现六个 Foundation Starter 的类型安全配置属性和 IDE Metadata。仓库仍未创建可运行 Server Profile、`.env.example` 或部署清单；下列键只在调用方引入对应 Starter 且满足条件时生效，不代表四个后端服务已经可运行。
+Phase 05 已建立四个可启动的空业务 Server、`local` Profile 和本地 Compose Core/RAG 基线。当前应用只装配 Web/Actuator 与 Foundation Web/Observability；MySQL、Redis 和 Object Storage 的业务接线、Flyway 与连接池属于 Phase 06，不得把基础设施容器存在误解为持久化基线已完成。
+
+## Server 与本地 Profile
+
+| 进程 | 默认端口 | Web 栈 | `spring.application.name` | `local` 内部 URL |
+|---|---:|---|---|---|
+| Gateway | `8080` | Spring Cloud Gateway WebFlux | `agentark-gateway-server` | `AGENTARK_CONTROL_BASE_URL`、`AGENTARK_RUNTIME_BASE_URL` |
+| Control | `8081` | Spring MVC | `agentark-control-server` | `AGENTARK_RUNTIME_BASE_URL`、`AGENTARK_SCHEDULER_BASE_URL` |
+| Runtime | `8082` | Spring WebFlux/Reactor | `agentark-runtime-server` | `AGENTARK_CONTROL_BASE_URL` |
+| Scheduler | `8083` | Worker + 最小 Spring MVC 管理端点 | `agentark-scheduler-server` | `AGENTARK_CONTROL_BASE_URL`、`AGENTARK_RUNTIME_BASE_URL` |
+
+四个 Server 的 `application.yml` 共同执行以下安全默认：优雅停机；每个关闭阶段最多 `20s`；只暴露 `health,info`；开启 Liveness/Readiness；`health.show-details=never`；Info 只允许 Maven Build Info，禁止环境与 Java 运行时细节。Gateway 配置中不存在业务 Route。
+
+## Compose Profile
+
+| Profile | 服务 | 固定镜像 | 用途 |
+|---|---|---|---|
+| `core` | MySQL、Redis、MinIO、四个 Server | `mysql:8.4.11`、`redis:8.10.0`、`minio/minio:RELEASE.2025-09-07T16-13-09Z`、`eclipse-temurin:21.0.10_7-jre-alpine-3.23` | 默认本地基础设施与空业务应用壳 |
+| `rag` | Core 全部服务 + Qdrant | 额外 `qdrant/qdrant:v1.18.3` | 显式开启的向量存储预留，默认不启动 |
+
+Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334` 和四个 Server 端口均只绑定 `127.0.0.1`。宿主基础设施端口可在本地 `.env` 中使用 `deploy/compose/.env.example` 列出的非敏感变量覆盖；四个 Server 端口为 Phase 05 固定值。
+
+## 本地 Secret 和数据库账号
+
+`tools/dev-up.sh` 首次运行时用 OpenSSL 生成 256 bit 十六进制随机值，写入已忽略的 `deploy/compose/.secrets/`，目录权限为 `0700`、文件权限为 `0600`。已有 Secret 不覆盖，但启动前必须通过“恰好 64 个十六进制字符”校验，避免换行或 SQL/Shell 元字符进入初始化流程。Compose 只挂载文件，不把密码渲染到 YAML 或 `.env`。
+
+| Schema | 独立账号 | 授权范围 | 禁止范围 |
+|---|---|---|---|
+| `agentark_control` | `agentark_control` | `agentark_control.*` | Runtime/Scheduler Schema |
+| `agentark_runtime` | `agentark_runtime` | `agentark_runtime.*` | Control/Scheduler Schema |
+| `agentark_scheduler` | `agentark_scheduler` | `agentark_scheduler.*` | Control/Runtime Schema |
+
+账号只在 MySQL 空数据卷首次启动时初始化。不得在保留 `mysql-data` 卷的同时删除或替换 `.secrets/`；否则文件凭据会与库内账号失配。`dev-up.sh` 在生成凭据前检查 `agentark_mysql-data` 卷；旧卷存在且任一 MySQL Secret 丢失时会拒绝启动，不会静默生成无法登录的新凭据。
 
 ## Foundation Starter 配置
 
@@ -45,7 +77,7 @@ Phase 04 已实现六个 Foundation Starter 的类型安全配置属性和 IDE M
 | `agentark.foundation.observability.collect-tool-arguments` | `false` | 仅显式风险评审后开启 | Tool 参数默认不采集；Secret 始终脱敏 |
 | `agentark.foundation.observability.collect-document-text` | `false` | 仅显式风险评审后开启 | 文档正文默认不采集；Secret 始终脱敏 |
 
-连接、池化、TLS、事务和 Migration 继续使用 Spring Boot 所属标准属性，例如 `spring.datasource.*`、`spring.flyway.*` 和 `spring.data.redis.*`。这些外部基础设施的真实值、SecretRef 解析和各服务 Profile 归 Phase 05–06 所有；当前仓库不提供可误用于生产的默认连接串。
+连接、池化、TLS、事务和 Migration 继续使用 Spring Boot 所属标准属性，例如 `spring.datasource.*`、`spring.flyway.*` 和 `spring.data.redis.*`。这些属性的服务接线、测试容器与 Flyway 基线归 Phase 06 所有；Phase 05 不提供可误用于生产的默认连接串。
 
 ## 规范
 

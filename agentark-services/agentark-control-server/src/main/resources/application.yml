@@ -1,0 +1,56 @@
+# Control HTTP 服务器配置，当前只公开 Actuator 端点。
+server:
+  # 固定本地 Control 端口，容器部署可通过 SERVER_PORT 覆盖。
+  port: 8081
+  # 使关闭流程先停止接收新请求，再等待存量请求完成。
+  shutdown: graceful
+
+# Control Spring Boot 进程基础属性。
+spring:
+  # 声明稳定的应用标识，用于日志、指标和服务发现。
+  application:
+    # Control 部署单元的唯一进程名称。
+    name: agentark-control-server
+  # 关闭时允许存量请求退出的最长时间。
+  lifecycle:
+    # 单个关闭阶段最多等待 20 秒。
+    timeout-per-shutdown-phase: 20s
+  # 关闭无产品价值的控制台 Banner，减少运行日志噪声。
+  main:
+    # 不输出 Spring Boot Banner。
+    banner-mode: "off"
+
+# Actuator 对外暴露与健康信息脱敏策略。
+management:
+  # 管理 HTTP 端点的暴露范围。
+  endpoints:
+    # 只管理 Web 端点暴露行为。
+    web:
+      # 显式限制可访问端点，禁止环境与 Bean 信息泄露。
+      exposure:
+        # Phase 05 仅允许健康与构建信息。
+        include: health,info
+  # 单个管理端点的安全行为。
+  endpoint:
+    # 健康端点必须支持编排器探针且不暴露内部细节。
+    health:
+      # 启用 `/actuator/health/liveness` 和 `/actuator/health/readiness` 分组。
+      probes:
+        # 无论是否运行在 Kubernetes 都开启探针分组。
+        enabled: true
+      # 匿名健康响应只返回整体状态，不显示组件或配置。
+      show-details: never
+  # Info 端点只提供可审计且非敏感的构建元数据。
+  info:
+    # 允许 Spring Boot Maven Plugin 生成的 Build Info。
+    build:
+      # 开启构建信息贡献者。
+      enabled: true
+    # 不展示主机 Java 运行时细节。
+    java:
+      # 关闭 Java Info 贡献者。
+      enabled: false
+    # 禁止将环境变量或配置映射到 Info 端点。
+    env:
+      # 关闭 Env Info 贡献者。
+      enabled: false

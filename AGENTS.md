@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phase 04 has established the provider-neutral Kernel, language-neutral contract skeletons, and six focused Foundation Starters; runnable applications still enter only through their matching `PLAN.md` phase.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phase 05 has established four empty-business Spring Boot service shells and a local Core/RAG Compose baseline; business APIs and persistence remain owned by later `PLAN.md` phases.
 
 ## Authority
 
@@ -25,12 +25,16 @@ Run from the repository root:
 ./mvnw -version
 ./mvnw -N validate
 ./mvnw verify
+./tools/dev-up.sh
+./tools/dev-status.sh
+./tools/verify-core.sh
+./tools/dev-down.sh
 python3 tools/harness/knowledge_gate.py
 python3 tools/harness/verify_upstreams.py --require-worktrees
 git diff HEAD --check
 ```
 
-The Maven reactor currently validates module boundaries, Kernel behavior, contract Schema, Foundation auto-configuration, architecture rules, and build policy; a successful build does not imply that backend applications are runnable. pnpm, Compose, and Helm commands do not exist yet and must be introduced only by their owning PLAN phase.
+The Maven reactor validates module boundaries, Kernel behavior, contract Schema, Foundation auto-configuration, four service contexts, architecture rules, and build policy. The local Compose stack is development-only and contains empty-business Server shells; pnpm and Helm commands do not exist yet and must be introduced only by their owning PLAN phase.
 
 ## Workflow
 

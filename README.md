@@ -411,7 +411,7 @@ Repository instructions route contributors to the normative source for each deci
 
 ## Development Status
 
-AgentArk currently follows an **architecture-first migration strategy**. Phase 02 provides the fixed upstream evidence baseline, Maven Wrapper, approved module reactor, dependency BOM, quality lifecycle, license/SBOM generation, and CI skeleton. Phase 03 provides the framework-free Kernel primitives, immutable Snapshot model, language-neutral contract skeletons, Golden Schema tests, and architecture gates. Phase 04 provides six focused Foundation Starters for Web, Security, Persistence, Redis, Storage, and Observability. No business feature or runnable backend service has been implemented yet.
+AgentArk currently follows an **architecture-first migration strategy**. Phase 02 provides the fixed upstream evidence baseline and Maven build foundation. Phase 03 provides the framework-free Kernel and language-neutral contract skeletons. Phase 04 provides six focused Foundation Starters. Phase 05 provides four runnable empty-business Spring Boot service shells plus local MySQL, Redis, MinIO, and optional Qdrant Compose profiles. Business APIs, persistence mappings, AgentScope execution, scheduling behavior, and the Web console are not implemented yet.
 
 The initial implementation will be derived from the useful service-plane capabilities in AgentScope Java's `agentscope-service`, while deliberately reshaping module boundaries and gradually replacing the Go control plane with Java.
 
@@ -436,7 +436,7 @@ The migration sequence is designed to avoid changing package names, modules, JDK
 
 | Milestone | Scope | Status |
 |---|---|---|
-| **A — Architecture & Engineering Foundation** | BOM, Kernel, starters, contracts, four service shells, CI, Compose | 🟡 In progress — Kernel and focused starters established |
+| **A — Architecture & Engineering Foundation** | BOM, Kernel, starters, contracts, four service shells, CI, Compose | 🟡 In progress — service shells and local Core profile established |
 | **B — Control Plane MVP** | IAM, Agent catalog, assets, revisions, snapshots, deployments | ⚪ Planned |
 | **C — Runtime MVP** | Session, Turn, Run, events, SSE, AgentScope compiler, HITL, recovery | ⚪ Planned |
 | **D — Knowledge / RAG** | ingestion, Qdrant, Knowledge Revision, retrieval, citations | ⚪ Planned |
@@ -486,7 +486,16 @@ Install the current reactor into the local Maven repository without running test
 ./mvnw -DskipTests install
 ```
 
-The Kernel and six Foundation Starter Jar modules now contain verified implementation code. The business, provider, and server Jar modules remain planned placeholders. There is no Spring Boot main class, HTTP endpoint, `agentark-web` build, Compose profile, Helm chart, or runnable product stack yet. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
+Start the local empty-business service shells and Core infrastructure:
+
+```bash
+./tools/dev-up.sh
+./tools/dev-status.sh
+./tools/verify-core.sh
+./tools/dev-down.sh
+```
+
+The four Server JARs expose only sanitized Actuator health and build information. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. There is still no business HTTP API, persistence mapping, AgentScope execution, `agentark-web` build, Helm chart, or runnable product workflow. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
 
 ### Engineering Rules
 

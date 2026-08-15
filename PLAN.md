@@ -341,6 +341,8 @@ pnpm --dir agentark-web typecheck
 pnpm --dir agentark-web test
 pnpm --dir agentark-web build
 
+./tools/dev-up.sh --prepare-only
+
 docker compose \
   -f deploy/compose/docker-compose.yml \
   --profile core \
@@ -437,7 +439,7 @@ flowchart LR
 | 02 | DONE | 2026-08-15 | `docs/implementation/phase-02-build-foundation.md` | 机械迁入证据、Maven/BOM、质量生命周期与 CI 已验收 |
 | 03 | DONE | 2026-08-15 | `docs/implementation/phase-03-kernel-contracts.md` | Kernel、Snapshot/Event/API 契约与架构门禁已完成验收 |
 | 04 | DONE | 2026-08-15 | `docs/implementation/phase-04-foundation-starters.md` | 六个职责单一 Starter、条件化配置、安全默认与架构规则已验收 |
-| 05 | NOT_STARTED | — | `docs/implementation/phase-05-service-shells.md` | |
+| 05 | DONE | 2026-08-15 | `docs/implementation/phase-05-service-shells.md` | 四服务空业务骨架、Core/RAG Compose、Secret 与三 Schema 隔离已验收 |
 | 06 | NOT_STARTED | — | `docs/implementation/phase-06-persistence-baseline.md` | |
 | 07 | NOT_STARTED | — | `docs/implementation/phase-07-iam-tenancy.md` | |
 | 08 | NOT_STARTED | — | `docs/implementation/phase-08-asset-catalog.md` | |
@@ -1135,23 +1137,23 @@ $AGENTSCOPE_ROOT/agentscope-service/scripts/
 
 ### 任务
 
-- [ ] 创建四个 `@SpringBootApplication`；
-- [ ] Gateway 使用 WebFlux/Spring Cloud Gateway；
-- [ ] Control 使用 Spring MVC；
-- [ ] Runtime 使用 WebFlux/Reactor；
-- [ ] Scheduler 使用 Worker + 最小管理端点；
-- [ ] 本地端口固定为 8080/8081/8082/8083；
-- [ ] 创建 `application.yml`、`application-local.yml` 模板；
-- [ ] 配置 Actuator、Liveness、Readiness、Build Info；
-- [ ] 创建 `deploy/compose/docker-compose.yml`；
-- [ ] Core Profile 启动 MySQL 8.4、Redis 8.10.x GA、MinIO；
-- [ ] RAG Profile 预留 Qdrant 1.18.3，但默认不启动；
-- [ ] 创建三个 MySQL Schema 与独立账号；
-- [ ] 创建 `.env.example`，不提交 Secret；
-- [ ] 创建 `tools/dev-up.sh`、`tools/dev-down.sh`、`tools/dev-status.sh` 或等价跨平台脚本；
-- [ ] 四服务之间只通过配置 URL 关联，不共享实现；
-- [ ] Gateway 暂不配置业务路由；
-- [ ] Control/Runtime/Scheduler 暂无业务表和业务 API。
+- [x] 创建四个 `@SpringBootApplication`；
+- [x] Gateway 使用 WebFlux/Spring Cloud Gateway；
+- [x] Control 使用 Spring MVC；
+- [x] Runtime 使用 WebFlux/Reactor；
+- [x] Scheduler 使用 Worker + 最小管理端点；
+- [x] 本地端口固定为 8080/8081/8082/8083；
+- [x] 创建 `application.yml`、`application-local.yml` 模板；
+- [x] 配置 Actuator、Liveness、Readiness、Build Info；
+- [x] 创建 `deploy/compose/docker-compose.yml`；
+- [x] Core Profile 启动 MySQL 8.4、Redis 8.10.x GA、MinIO；
+- [x] RAG Profile 预留 Qdrant 1.18.3，但默认不启动；
+- [x] 创建三个 MySQL Schema 与独立账号；
+- [x] 创建 `.env.example`，不提交 Secret；
+- [x] 创建 `tools/dev-up.sh`、`tools/dev-down.sh`、`tools/dev-status.sh` 或等价跨平台脚本；
+- [x] 四服务之间只通过配置 URL 关联，不共享实现；
+- [x] Gateway 暂不配置业务路由；
+- [x] Control/Runtime/Scheduler 暂无业务表和业务 API。
 
 ### 产物
 
@@ -1162,25 +1164,30 @@ deploy/compose/.env.example
 tools/dev-up.sh
 tools/dev-down.sh
 tools/dev-status.sh
+tools/verify-core.sh
 docs/implementation/phase-05-service-shells.md
 ```
 
 ### 验收条件
 
-- [ ] 四个 Jar 可分别启动；
-- [ ] Core Compose 可配置解析；
-- [ ] MySQL/Redis/MinIO 有健康检查和持久卷；
-- [ ] 三个 Schema/账号权限隔离；
-- [ ] 不存在跨服务实现依赖；
-- [ ] 只有四个 Server 包含 `@SpringBootApplication`；
-- [ ] Actuator 健康检查可访问且无敏感配置泄露；
-- [ ] 停止/重启不会产生未忽略垃圾文件；
-- [ ] 上游目录未被修改。
+- [x] 四个 Jar 可分别启动；
+- [x] Core Compose 可配置解析；
+- [x] MySQL/Redis/MinIO 有健康检查和持久卷；
+- [x] 三个 Schema/账号权限隔离；
+- [x] 不存在跨服务实现依赖；
+- [x] 只有四个 Server 包含 `@SpringBootApplication`；
+- [x] Actuator 健康检查可访问且无敏感配置泄露；
+- [x] 停止/重启不会产生未忽略垃圾文件；
+- [x] 上游目录未被修改。
 
 ### 验收命令
 
 ```bash
-./mvnw -pl agentark-services -am clean verify
+./mvnw \
+  -pl agentark-services/agentark-gateway-server,agentark-services/agentark-control-server,agentark-services/agentark-runtime-server,agentark-services/agentark-scheduler-server \
+  -am clean verify
+
+./tools/dev-up.sh --prepare-only
 
 docker compose \
   -f deploy/compose/docker-compose.yml \
@@ -1190,7 +1197,7 @@ docker compose \
 docker compose \
   -f deploy/compose/docker-compose.yml \
   --profile core \
-  up -d
+  up -d --wait --wait-timeout 240
 
 docker compose \
   -f deploy/compose/docker-compose.yml \
@@ -1201,6 +1208,8 @@ curl -fsS http://localhost:8080/actuator/health
 curl -fsS http://localhost:8081/actuator/health
 curl -fsS http://localhost:8082/actuator/health
 curl -fsS http://localhost:8083/actuator/health
+
+./tools/verify-core.sh
 
 docker compose \
   -f deploy/compose/docker-compose.yml \

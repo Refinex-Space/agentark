@@ -11,7 +11,21 @@
     <artifactId>agentark-services</artifactId>
     <packaging>pom</packaging>
     <name>AgentArk Services</name>
-    <description>聚合四个后端部署单元，计划在 Phase 05 建立应用壳</description>
+    <description>聚合 Gateway、Control、Runtime 和 Scheduler 四个独立部署单元</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 导入 AgentArk BOM，统一四个 Server 的内部模块与 Spring 生态版本。 -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>agentark-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
     <modules>
         <module>agentark-gateway-server</module>
         <module>agentark-control-server</module>

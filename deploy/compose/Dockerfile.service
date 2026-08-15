@@ -1,0 +1,21 @@
+# 固定 Java 21 JRE 补丁版与 Alpine 基础镜像，避免漂移标签。
+ARG TEMURIN_IMAGE=eclipse-temurin:21.0.10_7-jre-alpine-3.23
+FROM ${TEMURIN_IMAGE}
+
+# 由各 Server 的 Compose build 显式传入可执行 JAR 路径。
+ARG JAR_FILE
+
+# 使用非 root 系统用户运行应用，不将宿主 UID 假定写入镜像。
+RUN addgroup -S agentark && adduser -S -G agentark agentark
+
+# 将 Maven 生成的可执行 JAR 复制到统一运行路径。
+COPY ${JAR_FILE} /opt/agentark/application.jar
+
+# 限制进程后续文件访问权限为非 root 用户。
+USER agentark:agentark
+
+# 将运行目录固定在应用专用路径。
+WORKDIR /opt/agentark
+
+# 直接使用 exec 形式启动，保证 SIGTERM 能传递到 JVM。
+ENTRYPOINT ["java", "-jar", "/opt/agentark/application.jar"]

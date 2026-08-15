@@ -1,0 +1,403 @@
+# 固定本地 Compose 项目名，使持久卷和网络名称可预期。
+name: agentark
+
+# AgentArk 本地服务与基础设施定义。
+services:
+  # MySQL 8.4 承载 Control、Runtime 和 Scheduler 三个彻底隔离的 Schema。
+  mysql:
+    # 固定 MySQL 8.4 当前补丁版，禁止使用 latest 漂移。
+    image: mysql:8.4.11
+    # Core 与 RAG 均需要业务事实库。
+    profiles: ["core", "rag"]
+    # MySQL 入口点从 Compose Secret 文件读取 root 密码。
+    environment:
+      # 不在 Compose 渲染结果中出现 root 密码明文。
+      MYSQL_ROOT_PASSWORD_FILE: /run/secrets/mysql_root_password
+      # 将 MySQL 默认时区固定为 UTC。
+      TZ: UTC
+    # 挂载数据库初始化所需的六个本地 Secret。
+    secrets:
+      # MySQL root 仅用于首次初始化和健康检查。
+      - mysql_root_password
+      # Control 账号密码只授权 agentark_control Schema。
+      - mysql_control_password
+      # Runtime 账号密码只授权 agentark_runtime Schema。
+      - mysql_runtime_password
+      # Scheduler 账号密码只授权 agentark_scheduler Schema。
+      - mysql_scheduler_password
+    # 数据、初始化脚本和时区均使用明确挂载边界。
+    volumes:
+      # 使用命名卷保留 MySQL 数据，普通 down 不删除。
+      - mysql-data:/var/lib/mysql
+      # 仅在空数据目录首次启动时执行账号隔离脚本。
+      - ./mysql/init/01-agentark-schemas.sh:/docker-entrypoint-initdb.d/01-agentark-schemas.sh:ro
+    # 数据库端口只绑定本机回环地址。
+    ports:
+      # 允许通过非敏感环境变量调整宿主端口。
+      - "127.0.0.1:${AGENTARK_MYSQL_PORT:-3306}:3306"
+    # 健康检查通过 Secret 文件鉴权，不输出密码。
+    healthcheck:
+      # 将密码注入 mysqladmin 的进程环境，避免命令行参数泄露。
+      test: ["CMD-SHELL", "MYSQL_PWD=$$(cat /run/secrets/mysql_root_password) mysqladmin ping --host=127.0.0.1 --user=root --silent"]
+      # 每 5 秒执行一次健康检查。
+      interval: 5s
+      # 单次检查最多等待 5 秒。
+      timeout: 5s
+      # 启动期间允许 30 次失败。
+      retries: 30
+      # 给首次 Schema 初始化预留 30 秒。
+      start_period: 30s
+    # 只加入 AgentArk 本地内部网络。
+    networks:
+      # 使用固定的 Core 网络名称。
+      - agentark-core
+
+  # Redis 只承载缓存、租约与协调，不承载唯一业务事实。
+  redis:
+    # 固定 Redis 8.10 GA 补丁版。
+    image: redis:8.10.0
+    # Core 与 RAG 均使用协调基础设施。
+    profiles: ["core", "rag"]
+    # 使用 AOF 持久化并从 Secret 文件读取认证口令。
+    command:
+      # 使用镜像内置 POSIX Shell 读取口令文件。
+      - /bin/sh
+      # 执行后立即替换为 redis-server 主进程。
+      - -c
+      # 禁止将口令注入 Compose 环境或配置输出。
+      - exec redis-server --appendonly yes --requirepass "$$(cat /run/secrets/redis_password)"
+    # 挂载 Redis 认证口令。
+    secrets:
+      # 该本地口令由 dev-up.sh 首次生成。
+      - redis_password
+    # 使用命名卷保留 AOF 数据。
+    volumes:
+      # 普通 down 不删除该卷。
+      - redis-data:/data
+    # Redis 端口只绑定本机回环地址。
+    ports:
+      # 允许通过非敏感环境变量调整宿主端口。
+      - "127.0.0.1:${AGENTARK_REDIS_PORT:-6379}:6379"
+    # 健康检查从 Secret 文件读取认证口令。
+    healthcheck:
+      # 通过 REDISCLI_AUTH 传递口令，避免 redis-cli 参数告警与泄露。
+      test: ["CMD-SHELL", "REDISCLI_AUTH=$$(cat /run/secrets/redis_password) redis-cli ping | grep -q PONG"]
+      # 每 5 秒执行一次健康检查。
+      interval: 5s
+      # 单次检查最多等待 3 秒。
+      timeout: 3s
+      # 启动期间允许 20 次失败。
+      retries: 20
+    # 只加入 AgentArk 本地内部网络。
+    networks:
+      # 使用固定的 Core 网络名称。
+      - agentark-core
+
+  # MinIO 作为本地 S3-compatible Object Storage，Phase 05 仅建立基础设施。
+  minio:
+    # 固定最新可用的发布时间标签，禁止 latest 漂移。
+    image: minio/minio:RELEASE.2025-09-07T16-13-09Z
+    # Core 与 RAG 均需要对象存储。
+    profiles: ["core", "rag"]
+    # 只在环境中声明非敏感的本地账号名。
+    environment:
+      # 本地管理用户名不是 Secret，密码仍由文件提供。
+      MINIO_ROOT_USER: agentark-local
+    # 覆盖会将所有参数解释为 MinIO 子命令的默认入口点，以便安全读取文件 Secret。
+    entrypoint:
+      # 只使用 POSIX Shell 作为受控的 Secret 注入入口。
+      - /bin/sh
+    # 从 Secret 文件读取 MinIO 密码后以 exec 方式启动服务。
+    command:
+      # 运行单条受控启动命令。
+      - -c
+      # 对象 API 使用 9000，管理控制台使用 9001。
+      - export MINIO_ROOT_PASSWORD="$$(cat /run/secrets/minio_root_password)"; exec minio server /data --console-address ":9001"
+    # 挂载 MinIO 本地管理密码。
+    secrets:
+      # 该密码由 dev-up.sh 首次生成。
+      - minio_root_password
+    # 使用命名卷保留对象数据。
+    volumes:
+      # 普通 down 不删除该卷。
+      - minio-data:/data
+    # API 与管理控制台均只绑定本机回环地址。
+    ports:
+      # S3-compatible API 宿主端口。
+      - "127.0.0.1:${AGENTARK_MINIO_API_PORT:-9000}:9000"
+      # MinIO 管理控制台宿主端口。
+      - "127.0.0.1:${AGENTARK_MINIO_CONSOLE_PORT:-9001}:9001"
+    # 健康检查使用 MinIO 匿名 Liveness 端点。
+    healthcheck:
+      # 只判定对象 API 进程是否可用，不输出凭据。
+      test: ["CMD-SHELL", "curl --fail --silent http://127.0.0.1:9000/minio/health/live >/dev/null"]
+      # 每 5 秒执行一次健康检查。
+      interval: 5s
+      # 单次检查最多等待 3 秒。
+      timeout: 3s
+      # 启动期间允许 20 次失败。
+      retries: 20
+    # 只加入 AgentArk 本地内部网络。
+    networks:
+      # 使用固定的 Core 网络名称。
+      - agentark-core
+
+  # Qdrant 只属于可选 RAG Profile，默认 Core 启动不包含该服务。
+  qdrant:
+    # 固定 PLAN 锁定的 Qdrant 1.18.3 版本。
+    image: qdrant/qdrant:v1.18.3
+    # 只在显式选择 RAG Profile 时启动。
+    profiles: ["rag"]
+    # 使用命名卷保留向量索引。
+    volumes:
+      # 普通 down 不删除该卷。
+      - qdrant-data:/qdrant/storage
+    # REST 与 gRPC 端口均只绑定本机回环地址。
+    ports:
+      # Qdrant REST API 宿主端口。
+      - "127.0.0.1:${AGENTARK_QDRANT_HTTP_PORT:-6333}:6333"
+      # Qdrant gRPC API 宿主端口。
+      - "127.0.0.1:${AGENTARK_QDRANT_GRPC_PORT:-6334}:6334"
+    # 只加入 AgentArk 本地内部网络。
+    networks:
+      # 使用固定的 Core 网络名称。
+      - agentark-core
+
+  # Gateway 是 8080 公共入口空壳，Phase 05 不含业务路由。
+  gateway:
+    # 构建当前 Gateway Server 本地镜像。
+    build:
+      # 使用仓库根作为 JAR 复制上下文。
+      context: ../..
+      # 四个 Server 共用受限的非 root JRE 镜像模板。
+      dockerfile: deploy/compose/Dockerfile.service
+      # 只将 Gateway 可执行 JAR 传入镜像。
+      args:
+        # Maven package 阶段生成的 Gateway JAR 路径。
+        JAR_FILE: agentark-services/agentark-gateway-server/target/agentark-gateway-server-0.1.0.jar
+    # 本地镜像名只用于 Compose，不进行发布。
+    image: agentark/agentark-gateway-server:0.1.0-local
+    # Core 与 RAG 都启动 Gateway。
+    profiles: ["core", "rag"]
+    # 开启 local Profile 并用 Compose DNS 覆盖两个后端 URL。
+    environment:
+      # 启用已提交且不含 Secret 的 local 配置模板。
+      SPRING_PROFILES_ACTIVE: local
+      # Gateway 只持有 Control 服务 URL，不共享实现。
+      AGENTARK_CONTROL_BASE_URL: http://control:8081
+      # Gateway 只持有 Runtime 服务 URL，不共享实现。
+      AGENTARK_RUNTIME_BASE_URL: http://runtime:8082
+    # Gateway 宿主端口只绑定回环地址。
+    ports:
+      # 固定对应 PLAN 的 8080 端口。
+      - "127.0.0.1:8080:8080"
+    # 将容器根文件系统设为只读。
+    read_only: true
+    # JVM 需要的临时文件只写入内存文件系统。
+    tmpfs:
+      # 限制临时目录权限并禁止持久化。
+      - /tmp:rw,noexec,nosuid,size=64m
+    # 健康检查只访问脱敏的 Readiness 端点。
+    healthcheck:
+      # 需要总体状态为 UP，响应不包含内部细节。
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8080/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      # 每 5 秒执行一次健康检查。
+      interval: 5s
+      # 单次检查最多等待 3 秒。
+      timeout: 3s
+      # 启动期间允许 30 次失败。
+      retries: 30
+    # 只加入 AgentArk 本地内部网络。
+    networks:
+      # 使用固定的 Core 网络名称。
+      - agentark-core
+
+  # Control 是 8081 Spring MVC 空业务服务壳。
+  control:
+    # 构建当前 Control Server 本地镜像。
+    build:
+      # 使用仓库根作为 JAR 复制上下文。
+      context: ../..
+      # 四个 Server 共用受限的非 root JRE 镜像模板。
+      dockerfile: deploy/compose/Dockerfile.service
+      # 只将 Control 可执行 JAR 传入镜像。
+      args:
+        # Maven package 阶段生成的 Control JAR 路径。
+        JAR_FILE: agentark-services/agentark-control-server/target/agentark-control-server-0.1.0.jar
+    # 本地镜像名只用于 Compose，不进行发布。
+    image: agentark/agentark-control-server:0.1.0-local
+    # Core 与 RAG 都启动 Control。
+    profiles: ["core", "rag"]
+    # 开启 local Profile 并用 Compose DNS 覆盖内部服务 URL。
+    environment:
+      # 启用已提交且不含 Secret 的 local 配置模板。
+      SPRING_PROFILES_ACTIVE: local
+      # Control 只持有 Runtime 服务 URL，不共享实现。
+      AGENTARK_RUNTIME_BASE_URL: http://runtime:8082
+      # Control 只持有 Scheduler 服务 URL，不共享实现。
+      AGENTARK_SCHEDULER_BASE_URL: http://scheduler:8083
+    # Control 宿主端口只绑定回环地址。
+    ports:
+      # 固定对应 PLAN 的 8081 端口。
+      - "127.0.0.1:8081:8081"
+    # 将容器根文件系统设为只读。
+    read_only: true
+    # JVM 需要的临时文件只写入内存文件系统。
+    tmpfs:
+      # 限制临时目录权限并禁止持久化。
+      - /tmp:rw,noexec,nosuid,size=64m
+    # 健康检查只访问脱敏的 Readiness 端点。
+    healthcheck:
+      # 需要总体状态为 UP，响应不包含内部细节。
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8081/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      # 每 5 秒执行一次健康检查。
+      interval: 5s
+      # 单次检查最多等待 3 秒。
+      timeout: 3s
+      # 启动期间允许 30 次失败。
+      retries: 30
+    # 只加入 AgentArk 本地内部网络。
+    networks:
+      # 使用固定的 Core 网络名称。
+      - agentark-core
+
+  # Runtime 是 8082 WebFlux/Reactor 空业务服务壳。
+  runtime:
+    # 构建当前 Runtime Server 本地镜像。
+    build:
+      # 使用仓库根作为 JAR 复制上下文。
+      context: ../..
+      # 四个 Server 共用受限的非 root JRE 镜像模板。
+      dockerfile: deploy/compose/Dockerfile.service
+      # 只将 Runtime 可执行 JAR 传入镜像。
+      args:
+        # Maven package 阶段生成的 Runtime JAR 路径。
+        JAR_FILE: agentark-services/agentark-runtime-server/target/agentark-runtime-server-0.1.0.jar
+    # 本地镜像名只用于 Compose，不进行发布。
+    image: agentark/agentark-runtime-server:0.1.0-local
+    # Core 与 RAG 都启动 Runtime。
+    profiles: ["core", "rag"]
+    # 开启 local Profile 并用 Compose DNS 覆盖 Control URL。
+    environment:
+      # 启用已提交且不含 Secret 的 local 配置模板。
+      SPRING_PROFILES_ACTIVE: local
+      # Runtime 只持有 Control 服务 URL，不共享实现或读取 Control Schema。
+      AGENTARK_CONTROL_BASE_URL: http://control:8081
+    # Runtime 宿主端口只绑定回环地址。
+    ports:
+      # 固定对应 PLAN 的 8082 端口。
+      - "127.0.0.1:8082:8082"
+    # 将容器根文件系统设为只读。
+    read_only: true
+    # JVM 需要的临时文件只写入内存文件系统。
+    tmpfs:
+      # 限制临时目录权限并禁止持久化。
+      - /tmp:rw,noexec,nosuid,size=64m
+    # 健康检查只访问脱敏的 Readiness 端点。
+    healthcheck:
+      # 需要总体状态为 UP，响应不包含内部细节。
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8082/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      # 每 5 秒执行一次健康检查。
+      interval: 5s
+      # 单次检查最多等待 3 秒。
+      timeout: 3s
+      # 启动期间允许 30 次失败。
+      retries: 30
+    # 只加入 AgentArk 本地内部网络。
+    networks:
+      # 使用固定的 Core 网络名称。
+      - agentark-core
+
+  # Scheduler 是 8083 空工作器与最小管理端点服务壳。
+  scheduler:
+    # 构建当前 Scheduler Server 本地镜像。
+    build:
+      # 使用仓库根作为 JAR 复制上下文。
+      context: ../..
+      # 四个 Server 共用受限的非 root JRE 镜像模板。
+      dockerfile: deploy/compose/Dockerfile.service
+      # 只将 Scheduler 可执行 JAR 传入镜像。
+      args:
+        # Maven package 阶段生成的 Scheduler JAR 路径。
+        JAR_FILE: agentark-services/agentark-scheduler-server/target/agentark-scheduler-server-0.1.0.jar
+    # 本地镜像名只用于 Compose，不进行发布。
+    image: agentark/agentark-scheduler-server:0.1.0-local
+    # Core 与 RAG 都启动 Scheduler。
+    profiles: ["core", "rag"]
+    # 开启 local Profile 并用 Compose DNS 覆盖内部服务 URL。
+    environment:
+      # 启用已提交且不含 Secret 的 local 配置模板。
+      SPRING_PROFILES_ACTIVE: local
+      # Scheduler 只持有 Control 服务 URL，不共享实现。
+      AGENTARK_CONTROL_BASE_URL: http://control:8081
+      # Scheduler 只持有 Runtime 服务 URL，不共享实现或 Harness。
+      AGENTARK_RUNTIME_BASE_URL: http://runtime:8082
+    # Scheduler 宿主端口只绑定回环地址。
+    ports:
+      # 固定对应 PLAN 的 8083 端口。
+      - "127.0.0.1:8083:8083"
+    # 将容器根文件系统设为只读。
+    read_only: true
+    # JVM 需要的临时文件只写入内存文件系统。
+    tmpfs:
+      # 限制临时目录权限并禁止持久化。
+      - /tmp:rw,noexec,nosuid,size=64m
+    # 健康检查只访问脱敏的 Readiness 端点。
+    healthcheck:
+      # 需要总体状态为 UP，响应不包含内部细节。
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8083/actuator/health/readiness | grep -q '\"status\":\"UP\"'"]
+      # 每 5 秒执行一次健康检查。
+      interval: 5s
+      # 单次检查最多等待 3 秒。
+      timeout: 3s
+      # 启动期间允许 30 次失败。
+      retries: 30
+    # 只加入 AgentArk 本地内部网络。
+    networks:
+      # 使用固定的 Core 网络名称。
+      - agentark-core
+
+# Compose Secret 只引用已忽略的本地文件，不向仓库提交值。
+secrets:
+  # MySQL root 密码的本地文件映射。
+  mysql_root_password:
+    # 该文件由 tools/dev-up.sh 以 0600 权限生成。
+    file: ./.secrets/mysql-root-password
+  # Control Schema 账号密码的本地文件映射。
+  mysql_control_password:
+    # 该文件由 tools/dev-up.sh 以 0600 权限生成。
+    file: ./.secrets/mysql-control-password
+  # Runtime Schema 账号密码的本地文件映射。
+  mysql_runtime_password:
+    # 该文件由 tools/dev-up.sh 以 0600 权限生成。
+    file: ./.secrets/mysql-runtime-password
+  # Scheduler Schema 账号密码的本地文件映射。
+  mysql_scheduler_password:
+    # 该文件由 tools/dev-up.sh 以 0600 权限生成。
+    file: ./.secrets/mysql-scheduler-password
+  # Redis 认证口令的本地文件映射。
+  redis_password:
+    # 该文件由 tools/dev-up.sh 以 0600 权限生成。
+    file: ./.secrets/redis-password
+  # MinIO 本地管理密码的本地文件映射。
+  minio_root_password:
+    # 该文件由 tools/dev-up.sh 以 0600 权限生成。
+    file: ./.secrets/minio-root-password
+
+# 持久卷只由各自基础设施容器持有。
+volumes:
+  # MySQL 三 Schema 业务事实与 Migration 历史持久卷。
+  mysql-data:
+  # Redis AOF 持久卷。
+  redis-data:
+  # MinIO 对象数据持久卷。
+  minio-data:
+  # Qdrant 可选向量索引持久卷。
+  qdrant-data:
+
+# 四服务与本地基础设施只通过独立 Bridge 网络交互。
+networks:
+  # AgentArk 本地 Core/RAG 共用内部网络。
+  agentark-core:
+    # 显式使用 Docker Bridge 驱动。
+    driver: bridge

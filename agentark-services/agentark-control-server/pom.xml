@@ -4,13 +4,84 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>space.refinex.agentark</groupId>
-        <artifactId>agentark-parent</artifactId>
+        <artifactId>agentark-services</artifactId>
         <version>0.1.0</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>agentark-control-server</artifactId>
     <name>AgentArk Control Server</name>
-    <description>Control 后端部署单元占位，计划在 Phase 05 建立应用壳</description>
+    <description>提供基于 Spring MVC 的 Control Plane 独立部署单元</description>
+
+    <dependencies>
+        <!-- 提供 Spring MVC、内嵌 Servlet 容器与 JSON HTTP 运行时。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+
+        <!-- 提供请求标识、标准错误与 MVC 公共 Web 基础。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-web</artifactId>
+        </dependency>
+
+        <!-- 提供安全默认的指标、追踪与结构化日志约定。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-observability</artifactId>
+        </dependency>
+
+        <!-- 提供 Control Plane 领域边界，当前 Phase 仅为空实现占位。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-control</artifactId>
+        </dependency>
+
+        <!-- 提供 Knowledge 元数据领域边界，当前 Phase 仅为空实现占位。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-knowledge</artifactId>
+        </dependency>
+
+        <!-- 提供健康、Liveness、Readiness 和 Build Info 管理端点。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+
+        <!-- 提供 Spring Boot 上下文、JUnit 5 和断言测试能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 生成可独立启动的 Spring Boot JAR 并写入可追溯构建信息。 -->
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <!-- 将普通 JAR 重新打包为包含运行时依赖的可执行 JAR。 -->
+                    <execution>
+                        <id>repackage</id>
+                        <goals>
+                            <goal>repackage</goal>
+                        </goals>
+                    </execution>
+                    <!-- 生成 META-INF/build-info.properties 供 Actuator 安全展示构建元数据。 -->
+                    <execution>
+                        <id>build-info</id>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 </project>
