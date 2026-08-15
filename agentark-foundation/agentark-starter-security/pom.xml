@@ -4,13 +4,51 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>space.refinex.agentark</groupId>
-        <artifactId>agentark-parent</artifactId>
+        <artifactId>agentark-foundation</artifactId>
         <version>0.1.0</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>agentark-starter-security</artifactId>
     <name>AgentArk Starter Security</name>
-    <description>安全工程约定 Starter 占位，计划在 Phase 04 开始实现</description>
+    <description>提供 OIDC JWT、服务身份、租户选择与方法安全基线</description>
 
+    <dependencies>
+        <!-- 复用强类型租户标识并保持认证基础与 IAM 业务解耦。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-kernel</artifactId>
+        </dependency>
+
+        <!-- 提供条件化自动配置和类型安全配置属性。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- 提供认证主体、方法安全和认证转换基础能力。 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-config</artifactId>
+        </dependency>
+
+        <!-- 提供 OAuth 2.0 Resource Server JWT 认证契约。 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!-- 提供 OIDC JWT 解码、JWK 和 Token Validator 能力。 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-oauth2-jose</artifactId>
+        </dependency>
+
+        <!-- 提供 ApplicationContextRunner、AssertJ 和 JUnit 5 测试能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

@@ -29,7 +29,7 @@ Phase 02 已建立 Maven Wrapper、20 Project Reactor、BOM 和质量生命周�
 ./mvnw -DskipTests install
 ```
 
-`verify` 执行 Enforcer、Spotless、Java License Header、Surefire/Failsafe、JaCoCo Report、第三方许可汇总和 CycloneDX Aggregate SBOM。当前没有 Java 测试和 Coverage 数据，JaCoCo 会明确报告缺少 Execution Data，而不是产生虚假覆盖率。
+`verify` 执行 Enforcer、Java License Header、Surefire/Failsafe、JaCoCo Report、第三方许可汇总和 CycloneDX Aggregate SBOM。仓库不在 Maven 生命周期执行自动 Java 格式化；格式变更由评审者依据相邻源码风格检查。
 
 仓库仍无 `agentark-web/package.json`、Compose 或 Helm，因此不能运行前端、容器或部署验证。对应能力必须由 `PLAN.md` 的拥有 Phase 创建并在本页增加真实命令。
 

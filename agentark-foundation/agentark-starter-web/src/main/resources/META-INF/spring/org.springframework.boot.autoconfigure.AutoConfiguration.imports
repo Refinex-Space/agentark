@@ -1,0 +1,3 @@
+space.refinex.agentark.foundation.web.AgentArkWebAutoConfiguration
+space.refinex.agentark.foundation.web.AgentArkServletWebAutoConfiguration
+space.refinex.agentark.foundation.web.AgentArkReactiveWebAutoConfiguration

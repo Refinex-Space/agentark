@@ -1,0 +1,23 @@
+{
+  "$comment": "AgentArk Web Starter 的手工补充配置元数据；配置属性类仍是运行时事实来源。",
+  "properties": [
+    {
+      "name": "agentark.foundation.web.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用 Web 请求上下文、JSON 定制和标准错误映射。",
+      "defaultValue": true
+    },
+    {
+      "name": "agentark.foundation.web.request-id-header",
+      "type": "java.lang.String",
+      "description": "请求关联标识使用并回写的 HTTP Header 名称。",
+      "defaultValue": "X-Request-ID"
+    },
+    {
+      "name": "agentark.foundation.web.max-page-size",
+      "type": "java.lang.Integer",
+      "description": "Cursor 分页允许的最大单页条目数，取值范围为 1 到 1000。",
+      "defaultValue": 200
+    }
+  ]
+}

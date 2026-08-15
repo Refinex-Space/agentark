@@ -17,6 +17,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 01 执行证据 | [上游源码审计](implementation/phase-01-upstream-audit.md) | 复核 Service、Framework、Frontend 审计结论和真实验收边界 |
 | Phase 02 执行证据 | [构建工程底座](implementation/phase-02-build-foundation.md) | 复核机械基线、Reactor/BOM、质量门禁、CI 和验收结果 |
 | Phase 03 执行证据 | [Kernel 与契约基线](implementation/phase-03-kernel-contracts.md) | 复核强类型 ID、Snapshot、Schema、契约 Lint 和架构门禁 |
+| Phase 04 执行证据 | [Focused Foundation Starters](implementation/phase-04-foundation-starters.md) | 复核六个职责单一 Starter、条件化配置、安全默认和架构规则 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |

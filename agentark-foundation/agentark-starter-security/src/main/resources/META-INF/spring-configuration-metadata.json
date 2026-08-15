@@ -1,0 +1,62 @@
+{
+  "$comment": "AgentArk Security Starter 配置元数据；所有 URI 只允许 HTTPS，严禁在属性中保存 Token 或私钥。",
+  "properties": [
+    {
+      "name": "agentark.foundation.security.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用 JWT Decoder 和方法安全基础；未显式配置时保持关闭。",
+      "defaultValue": false
+    },
+    {
+      "name": "agentark.foundation.security.issuer-uri",
+      "type": "java.net.URI",
+      "description": "用于 OIDC Discovery 与 iss 校验的绝对 HTTPS Issuer URI。"
+    },
+    {
+      "name": "agentark.foundation.security.jwk-set-uri",
+      "type": "java.net.URI",
+      "description": "显式 JWK Set 绝对 HTTPS URI，配置后优先于 Discovery。"
+    },
+    {
+      "name": "agentark.foundation.security.audiences",
+      "type": "java.util.Set<java.lang.String>",
+      "description": "JWT 必须至少匹配一个值的服务端 Audience 白名单。"
+    },
+    {
+      "name": "agentark.foundation.security.organization-claim",
+      "type": "java.lang.String",
+      "description": "受信 JWT 中组织 UUIDv7 的 Claim 名称。",
+      "defaultValue": "org_id"
+    },
+    {
+      "name": "agentark.foundation.security.project-claim",
+      "type": "java.lang.String",
+      "description": "受信 JWT 中项目 UUIDv7 的 Claim 名称。",
+      "defaultValue": "project_id"
+    },
+    {
+      "name": "agentark.foundation.security.environment-claim",
+      "type": "java.lang.String",
+      "description": "受信 JWT 中环境 UUIDv7 的 Claim 名称。",
+      "defaultValue": "environment_id"
+    },
+    {
+      "name": "agentark.foundation.security.principal-type-claim",
+      "type": "java.lang.String",
+      "description": "受信 JWT 中主体类型的 Claim 名称；Claim 缺失时按 USER 处理。",
+      "defaultValue": "principal_type"
+    },
+    {
+      "name": "agentark.foundation.security.service-id-claim",
+      "type": "java.lang.String",
+      "description": "服务 JWT 中稳定服务标识的 Claim 名称。",
+      "defaultValue": "service_id"
+    },
+    {
+      "name": "agentark.foundation.security.authorities-claim",
+      "type": "java.lang.String",
+      "description": "受信 JWT 中候选权限集合或空格分隔权限字符串的 Claim 名称。",
+      "defaultValue": "scope"
+    }
+  ]
+}

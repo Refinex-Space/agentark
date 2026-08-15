@@ -1,0 +1,35 @@
+{
+  "$comment": "AgentArk Observability Starter 配置元数据；Secret 永不采集，三类正文采集项默认全部关闭。",
+  "properties": [
+    {
+      "name": "agentark.foundation.observability.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否启用 AgentArk OTel、Micrometer、Trace 和结构化日志约定。",
+      "defaultValue": true
+    },
+    {
+      "name": "agentark.foundation.observability.allowed-tags",
+      "type": "java.util.Set<java.lang.String>",
+      "description": "Metric Tag 与 Span Attribute 允许使用的低基数字段白名单。",
+      "defaultValue": ["operation", "outcome", "error.category", "runtime.provider"]
+    },
+    {
+      "name": "agentark.foundation.observability.collect-prompt-text",
+      "type": "java.lang.Boolean",
+      "description": "是否显式允许采集 Prompt 正文；默认关闭。",
+      "defaultValue": false
+    },
+    {
+      "name": "agentark.foundation.observability.collect-tool-arguments",
+      "type": "java.lang.Boolean",
+      "description": "是否显式允许采集 Tool 参数；默认关闭。",
+      "defaultValue": false
+    },
+    {
+      "name": "agentark.foundation.observability.collect-document-text",
+      "type": "java.lang.Boolean",
+      "description": "是否显式允许采集文档正文；默认关闭。",
+      "defaultValue": false
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "$comment": "AgentArk Persistence Starter 只补充 MyBatis-Plus 约定；DataSource、Hikari 与 Flyway 使用 Spring Boot 标准配置且禁止自动 DDL。",
+  "properties": [
+    {
+      "name": "agentark.foundation.persistence.enabled",
+      "type": "java.lang.Boolean",
+      "description": "存在 DataSource 时是否启用分页、乐观锁和受控 TypeHandler。",
+      "defaultValue": true
+    },
+    {
+      "name": "agentark.foundation.persistence.max-page-size",
+      "type": "java.lang.Long",
+      "description": "MyBatis-Plus 单次分页查询允许返回的最大条目数，取值范围为 1 到 10000。",
+      "defaultValue": 500
+    }
+  ]
+}

@@ -436,7 +436,7 @@ flowchart LR
 | 01 | DONE | 2026-08-15 | `docs/implementation/phase-01-upstream-audit.md` | 固定上游结构、行为、迁移分类与许可边界已验收 |
 | 02 | DONE | 2026-08-15 | `docs/implementation/phase-02-build-foundation.md` | 机械迁入证据、Maven/BOM、质量生命周期与 CI 已验收 |
 | 03 | DONE | 2026-08-15 | `docs/implementation/phase-03-kernel-contracts.md` | Kernel、Snapshot/Event/API 契约与架构门禁已完成验收 |
-| 04 | NOT_STARTED | — | `docs/implementation/phase-04-foundation-starters.md` | |
+| 04 | DONE | 2026-08-15 | `docs/implementation/phase-04-foundation-starters.md` | 六个职责单一 Starter、条件化配置、安全默认与架构规则已验收 |
 | 05 | NOT_STARTED | — | `docs/implementation/phase-05-service-shells.md` | |
 | 06 | NOT_STARTED | — | `docs/implementation/phase-06-persistence-baseline.md` | |
 | 07 | NOT_STARTED | — | `docs/implementation/phase-07-iam-tenancy.md` | |
@@ -770,7 +770,7 @@ upstream-baseline/
 - [x] 配置 Maven Enforcer；
 - [x] 配置 Surefire/Failsafe；
 - [x] 配置 JaCoCo；
-- [x] 配置 Spotless 或等价格式工具；
+- [x] 建立代码风格规范；仓库不绑定自动 Java 格式化器；
 - [x] 配置 CycloneDX SBOM；
 - [x] 配置 License Header/Notice 检查；
 - [x] 创建 `.editorconfig` 和必要的 `.gitattributes`；
@@ -1008,65 +1008,65 @@ $AGENTSCOPE_ROOT/agentscope-service/service-scheduler/
 
 #### `agentark-starter-web`
 
-- [ ] RFC 9457 `ProblemDetail`；
-- [ ] Request ID、Trace ID、Tenant Context 基础；
-- [ ] Jackson/时间/ID/枚举配置；
-- [ ] Cursor Page 公共契约；
-- [ ] MVC/WebFlux 条件化自动配置；
-- [ ] Validation 和 Global Exception Mapping；
-- [ ] 不提供统一 `Result<T>`。
+- [x] RFC 9457 `ProblemDetail`；
+- [x] Request ID、Trace ID、Tenant Context 基础；
+- [x] Jackson/时间/ID/枚举配置；
+- [x] Cursor Page 公共契约；
+- [x] MVC/WebFlux 条件化自动配置；
+- [x] Validation 和 Global Exception Mapping；
+- [x] 不提供统一 `Result<T>`。
 
 #### `agentark-starter-security`
 
-- [ ] Resource Server/OIDC/JWT 基础；
-- [ ] `AgentArkPrincipal`、Service Identity、Tenant Selection；
-- [ ] API Key Authentication 扩展点；
-- [ ] Method Security 基线；
-- [ ] JWK/Issuer/Audience 配置；
-- [ ] 不实现 User/Role/Membership 业务。
+- [x] Resource Server/OIDC/JWT 基础；
+- [x] `AgentArkPrincipal`、Service Identity、Tenant Selection；
+- [x] API Key Authentication 扩展点；
+- [x] Method Security 基线；
+- [x] JWK/Issuer/Audience 配置；
+- [x] 不实现 User/Role/Membership 业务。
 
 #### `agentark-starter-persistence`
 
-- [ ] MyBatis-Plus Boot 4 配置；
-- [ ] HikariCP、事务、分页、乐观锁；
-- [ ] UUIDv7 `BINARY(16)`、Instant、JSON TypeHandler；
-- [ ] Flyway 配置；
-- [ ] 数据库审计字段接口；
-- [ ] 不包含业务 Mapper/DO。
+- [x] MyBatis-Plus Boot 4 配置；
+- [x] HikariCP、事务、分页、乐观锁；
+- [x] UUIDv7 `BINARY(16)`、Instant、JSON TypeHandler；
+- [x] Flyway 配置；
+- [x] 数据库审计字段接口；
+- [x] 不包含业务 Mapper/DO。
 
 #### `agentark-starter-redis`
 
-- [ ] `TypedCache`；
-- [ ] `DistributedLeaseManager`；
-- [ ] `FencingTokenSource`；
-- [ ] `IdempotencyStore`；
-- [ ] `RateLimiter`；
-- [ ] Key Namespace/TTL/序列化规范；
-- [ ] 不提供万能 `RedisUtils`。
+- [x] `TypedCache`；
+- [x] `DistributedLeaseManager`；
+- [x] `FencingTokenSource`；
+- [x] `IdempotencyStore`；
+- [x] `RateLimiter`；
+- [x] Key Namespace/TTL/序列化规范；
+- [x] 不提供万能 `RedisUtils`。
 
 #### `agentark-starter-storage`
 
-- [ ] `ObjectStore`、`ObjectRef`、Put/Get/Head/Delete/Sign；
-- [ ] Local 实现；
-- [ ] S3-compatible SPI 骨架；
-- [ ] Checksum/Size/Content-Type 校验；
-- [ ] 不允许调用方任意构造授权路径。
+- [x] `ObjectStore`、`ObjectRef`、Put/Get/Head/Delete/Sign；
+- [x] Local 实现；
+- [x] S3-compatible SPI 骨架；
+- [x] Checksum/Size/Content-Type 校验；
+- [x] 不允许调用方任意构造授权路径。
 
 #### `agentark-starter-observability`
 
-- [ ] OTel/Micrometer；
-- [ ] W3C Trace Context；
-- [ ] JSON Structured Logging；
-- [ ] Agent/Model/Tool/RAG/Sandbox Span 约定；
-- [ ] Metric Tag 白名单；
-- [ ] Secret/Prompt/文档默认不采集。
+- [x] OTel/Micrometer；
+- [x] W3C Trace Context；
+- [x] JSON Structured Logging；
+- [x] Agent/Model/Tool/RAG/Sandbox Span 约定；
+- [x] Metric Tag 白名单；
+- [x] Secret/Prompt/文档默认不采集。
 
 #### 质量
 
-- [ ] 为每个 Starter 写 `ApplicationContextRunner` 自动配置测试；
-- [ ] 验证禁用/启用条件；
-- [ ] 建立 Starter Metadata；
-- [ ] 建立禁止业务类型进入 Starter 的 ArchUnit 规则。
+- [x] 为每个 Starter 写 `ApplicationContextRunner` 自动配置测试；
+- [x] 验证禁用/启用条件；
+- [x] 建立 Starter Metadata；
+- [x] 建立禁止业务类型进入 Starter 的 ArchUnit 规则。
 
 ### 产物
 
@@ -1083,20 +1083,20 @@ docs/migration/migration-manifest.md（更新）
 
 ### 验收条件
 
-- [ ] 六个 Starter 可独立引入；
-- [ ] 自动配置按条件生效；
-- [ ] Starter 之间无不必要环；
-- [ ] 无业务 Controller、Mapper、Entity、AgentScope 类型；
-- [ ] 无 `RedisUtils`、`SpringContextHolder`、反射 Bean Copy；
-- [ ] Security 只解决认证基础，不拥有 IAM；
-- [ ] Persistence 不启用自动 DDL；
-- [ ] Secret/敏感字段日志脱敏测试通过；
-- [ ] 全 Starter 测试和架构规则通过。
+- [x] 六个 Starter 可独立引入；
+- [x] 自动配置按条件生效；
+- [x] Starter 之间无不必要环；
+- [x] 无业务 Controller、Mapper、Entity、AgentScope 类型；
+- [x] 无 `RedisUtils`、`SpringContextHolder`、反射 Bean Copy；
+- [x] Security 只解决认证基础，不拥有 IAM；
+- [x] Persistence 不启用自动 DDL；
+- [x] Secret/敏感字段日志脱敏测试通过；
+- [x] 全 Starter 测试和架构规则通过。
 
 ### 验收命令
 
 ```bash
-./mvnw -pl agentark-foundation -am clean verify
+./mvnw -pl agentark-foundation/agentark-starter-web,agentark-foundation/agentark-starter-security,agentark-foundation/agentark-starter-persistence,agentark-foundation/agentark-starter-redis,agentark-foundation/agentark-starter-storage,agentark-foundation/agentark-starter-observability -am clean verify
 
 rg -n "@(Controller|RestController|Mapper|Entity|TableName)|HarnessAgent|RedisUtils|SpringContextHolder" \
   agentark-foundation && exit 1 || true

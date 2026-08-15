@@ -4,13 +4,33 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>space.refinex.agentark</groupId>
-        <artifactId>agentark-parent</artifactId>
+        <artifactId>agentark-foundation</artifactId>
         <version>0.1.0</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>agentark-starter-storage</artifactId>
     <name>AgentArk Starter Storage</name>
-    <description>对象存储能力 Starter 占位，计划在 Phase 04 开始实现</description>
+    <description>提供受控对象键、Local Object Store 与 S3 兼容扩展契约</description>
 
+    <dependencies>
+        <!-- 复用不可变 ObjectRef 与 Checksum，不复制 Kernel 契约。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-kernel</artifactId>
+        </dependency>
+
+        <!-- 提供条件化自动配置和类型安全配置属性。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- 提供 ApplicationContextRunner、AssertJ 和 JUnit 5 测试能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

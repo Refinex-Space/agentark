@@ -1118,7 +1118,7 @@ agentark-gateway-server                -> agentark-control / agentark-runtime / 
 
 - 聚合且只聚合批准的 Maven 模块；
 - 锁定 JDK Release、编码、UTC 和 Reproducible Build；
-- 固定 Maven Compiler、Surefire、Failsafe、Enforcer、JaCoCo、Spotless、License 和 CycloneDX 插件版本及生命周期；
+- 固定 Maven Compiler、Surefire、Failsafe、Enforcer、JaCoCo、License 和 CycloneDX 插件版本及生命周期；
 - 执行 Java/Maven 版本、Dependency Convergence、Upper Bound、重复类、Release Dependency 和根许可文件门禁。
 
 **`agentark-bom` 职责**

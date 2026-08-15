@@ -73,7 +73,7 @@ Phase 03 曾启用 `license-maven-plugin` 的默认文件头处理器，但该�
 
 Phase 03 手工维护的生产代码、测试代码、POM 配置与 OpenAPI/AsyncAPI YAML 已补齐中文说明。JSON Schema 不写非法注释，统一通过中文 `description` 元数据解释字段与定义；`ChineseDocumentationTest` 使用 JDK 编译器语法树持续检查仓库 Java 类型、显式构造器、方法、字段、枚举值和 Record 组件，后续代码继续遵循 `AGENTS.md` 和 `docs/standards/coding.md` 的中文注释标准。
 
-当前 65 个 Java 具名类型均声明唯一的 `@author refinex`。仓库新增 `tools/harness/format_code.sh` 作为任务收尾的唯一格式化入口，IDE 快捷键和 Agent Hook 只允许调用该入口，不再维护独立格式化规则。
+当前 65 个 Java 具名类型均声明唯一的 `@author refinex`。仓库不绑定自动 Java 格式化器；IDE 和 Agent 必须保持相邻源码风格，不得批量格式化无关文件。
 
 全部 20 份 Maven POM 的 `description` 已改为中文表达，37 个依赖、19 个插件和 7 个插件执行块均具有紧邻中文职责说明。知识门禁会持续校验这些 POM 文档约束，但不改变任何依赖坐标、版本、作用域或插件生命周期配置。
 
@@ -85,7 +85,7 @@ Phase 03 手工维护的生产代码、测试代码、POM 配置与 OpenAPI/Asyn
 - Kernel Unit/Contract/Architecture Test：46 tests，0 failures，0 errors，0 skipped；
 - Snapshot、Runtime Event、Problem Detail Golden File 均通过 Draft 2020-12 Schema；
 - Snapshot 明文凭据、Runtime Event 缺少 `runId`、Domain → Adapter Fixture 均被负例测试拒绝；
-- Spotless 与知识门禁的标准 Java License Header 检查通过。
+- 知识门禁的标准 Java License Header 检查通过。
 
 最终验收结果：
 

@@ -66,8 +66,6 @@
         <maven-failsafe-plugin.version>3.5.5</maven-failsafe-plugin.version>
         <maven-jar-plugin.version>3.4.2</maven-jar-plugin.version>
         <jacoco-maven-plugin.version>0.8.15</jacoco-maven-plugin.version>
-        <spotless-maven-plugin.version>3.9.0</spotless-maven-plugin.version>
-        <google-java-format.version>1.28.0</google-java-format.version>
         <cyclonedx-maven-plugin.version>2.9.3</cyclonedx-maven-plugin.version>
         <license-maven-plugin.version>2.7.1</license-maven-plugin.version>
     </properties>
@@ -122,13 +120,6 @@
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>${jacoco-maven-plugin.version}</version>
-                </plugin>
-
-                <!-- 统一管理 Spotless Maven Plugin，执行 Java 格式化与格式检查。 -->
-                <plugin>
-                    <groupId>com.diffplug.spotless</groupId>
-                    <artifactId>spotless-maven-plugin</artifactId>
-                    <version>${spotless-maven-plugin.version}</version>
                 </plugin>
 
                 <!-- 统一管理 CycloneDX Maven Plugin，生成聚合 SBOM。 -->
@@ -226,36 +217,6 @@
                                 </requireFilesExist>
                             </rules>
                         </configuration>
-                    </execution>
-                </executions>
-            </plugin>
-
-            <!-- 使用 google-java-format 统一格式化 Java 源码并在 validate 阶段检查。 -->
-            <plugin>
-                <groupId>com.diffplug.spotless</groupId>
-                <artifactId>spotless-maven-plugin</artifactId>
-                <configuration>
-                    <java>
-                        <includes>
-                            <include>src/main/java/**/*.java</include>
-                            <include>src/test/java/**/*.java</include>
-                        </includes>
-                        <googleJavaFormat>
-                            <version>${google-java-format.version}</version>
-                        </googleJavaFormat>
-                        <removeUnusedImports/>
-                        <trimTrailingWhitespace/>
-                        <endWithNewline/>
-                    </java>
-                </configuration>
-                <executions>
-                    <!-- 在 validate 阶段拒绝未按仓库规则格式化的 Java 源码。 -->
-                    <execution>
-                        <id>format-check</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>check</goal>
-                        </goals>
                     </execution>
                 </executions>
             </plugin>

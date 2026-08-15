@@ -23,11 +23,11 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 
 | ID | 候选源路径 | 分类 | 目标模块/Phase | Disposition 与行为门禁 |
 |---|---|---|---|---|
-| SVC-COM-01 | `service-common/web/api/error` | ADAPT | `agentark-kernel` + `agentark-starter-web` / P03–04 | 稳定错误码与 HTTP Problem Details 分离；覆盖 [ERR-01](behavior-baseline.md#err-01-错误映射) |
-| SVC-COM-02 | `service-common/web/auth` | ADAPT | `agentark-starter-security` + `agentark-control` / P04、P07 | 保留认证失败语义，替换 Shared Secret/JWT 设计 |
+| SVC-COM-01 | `service-common/web/api/error` | ADAPT | `agentark-kernel` + `agentark-starter-web` / P03–04 | P04 已按 RFC 9457 重写 HTTP 映射并保留稳定错误码；未知异常不回显原消息；覆盖 [ERR-01](behavior-baseline.md#err-01-错误映射) |
+| SVC-COM-02 | `service-common/web/auth` | ADAPT | `agentark-starter-security` + `agentark-control` / P04、P07 | P04 已替换为 HTTPS Issuer/JWK、Audience、服务身份和严格 JWT Principal 转换；User/Role/Membership 生命周期仍归 P07 |
 | SVC-COM-03 | `service-common/runtime/config` | ADAPT | `agentark-control`、`agentark-scheduling` / P08、P15 | 按资产 Owner 拆分，不保留共享配置对象 |
 | SVC-COM-04 | `service-common/web/catalog*` | ADAPT | `agentark-control` + Provider / P08、P10、P12 | Spec 语义进入不可变 Snapshot；Codec 留在防腐层 |
-| SVC-COM-05 | `service-common/web/coord` | ADAPT | `agentark-runtime` + `agentark-scheduling` / P11、P13、P15 | 按 Owner 拆 Lease/HITL/Queue/Cron；必须增加 fencing |
+| SVC-COM-05 | `service-common/web/coord` | ADAPT | Redis Starter + `agentark-runtime` + `agentark-scheduling` / P04、P11、P13、P15 | P04 已提供原子 Lease/Fencing/Idempotency/Rate Limit 基础；HITL、Queue、Cron 和持久事实仍按 Owner 留给后续阶段 |
 | SVC-COM-06 | `service-common/web/managed*` | ADAPT | Control/Runtime Contract Adapter / P09–13 | DTO 按契约重建，禁止 shared DTO 包 |
 | SVC-COM-07 | `service-common/web/persistence/jpa` | REJECT | 无 | 不迁入 JPA Entity、Repository、`ddl-auto=update` 或共享表 |
 | SVC-COM-08 | `service-common/web/share` | ADAPT | `agentark-control` / P07–10 | 资源级 ACL，不能只校验 Owner 字符串 |
@@ -85,7 +85,7 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 | ASF-07 | Harness Sandbox/Filesystem/DistributedStore | REFERENCE | Provider + Runtime Port / P12–13 | `DEPENDENCY`；存储实现必须服从 Runtime Owner |
 | ASF-08 | Harness Channel/Gateway | REFERENCE | Scheduling Adapter / P15 | 仅使用 Channel 抽象，不让 Scheduler 执行推理循环 |
 | ASF-09 | Model Provider Extensions | DEFER | Provider / P12 | 按产品支持清单逐个引入，禁止全量闭包 |
-| ASF-10 | MySQL/PostgreSQL/Redis/Object Store Extensions | DEFER | Foundation/Provider / P04、P12 | 按目标基础设施和并发契约选择，不自动复用 |
+| ASF-10 | MySQL/PostgreSQL/Redis/Object Store Extensions | DEFER | Foundation/Provider / P04、P12 | P04 已按 AgentArk 契约独立实现 MySQL/Redis/Local Object Store 基础，没有复制或依赖这些 Extension；Provider 级复用继续 DEFER 到 P12 |
 | ASF-11 | Sandbox Extensions | DEFER | Provider / P12、P20 | E2B/Daytona/K8s/AgentRun 分别做安全与许可评审 |
 | ASF-12 | RAG Extensions | DEFER | Knowledge / P14 | 根据 Qdrant/Embedding 目标逐个评估 |
 | ASF-13 | A2A/AG-UI/Agent Protocol | DEFER | API Compatibility / P21 | 公共契约、认证和恢复语义确定后引入 |
@@ -127,6 +127,19 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 9. 让 AgentScope Runtime 类型进入 Provider 外部或公共 API/持久化模型；
 10. 在 AgentScope 根 LICENSE/NOTICE 证据缺失时复制其源码。
 
-## 7. 变更协议
+## 7. Phase 04 实际处置
+
+| 范围 | 实际结果 | 仍未进入本阶段 |
+|---|---|---|
+| Error/Web | 独立实现 `ProblemDetail`、Request/Trace/Tenant Context、Jackson 强类型 ID 和 MVC/WebFlux 条件化配置 | 业务 Endpoint、业务 DTO、统一 `Result<T>` |
+| Security | 独立实现 OIDC/JWK/Audience Decoder、`AgentArkPrincipal`、Service Identity、Tenant Selection、API Key SPI 和 Method Security | User、Role、Membership、API Key 生命周期和资源授权 |
+| Persistence | 独立实现 MyBatis-Plus Boot 4 插件、UUIDv7/Instant/JSON TypeHandler、审计字段接口并复用 Boot Hikari/Flyway 基础 | 业务 Mapper/DO、DDL、Migration 和数据库账号 |
+| Redis | 独立实现类型化缓存、Key/TTL 规范及 Lua 原子 Lease/Fencing/Idempotency/Rate Limit | Durable Work、Approval、Job 或其他 MySQL 事实 |
+| Storage | 独立实现 Object Store SPI、服务端生成路径的 Local 实现与 S3-compatible Factory SPI | S3/OSS/COS SDK、生产凭据和部署配置 |
+| Observability | 独立实现 Micrometer/OTel 适配、W3C Trace、结构化日志、Span 约定、Tag 白名单和内容脱敏 | Exporter、Collector、告警和生产 Dashboard |
+
+以上代码均为 AgentArk 独立实现，只依据固定上游提炼行为语义；没有迁入上游实现文件、文件头、资源或第三方资产。
+
+## 8. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

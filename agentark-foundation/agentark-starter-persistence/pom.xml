@@ -4,13 +4,63 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>space.refinex.agentark</groupId>
-        <artifactId>agentark-parent</artifactId>
+        <artifactId>agentark-foundation</artifactId>
         <version>0.1.0</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>agentark-starter-persistence</artifactId>
     <name>AgentArk Starter Persistence</name>
-    <description>持久化工程约定 Starter 占位，计划在 Phase 04 开始实现</description>
+    <description>提供 MyBatis-Plus、事务、Flyway 与受控类型映射基线</description>
 
+    <dependencies>
+        <!-- 复用 UUIDv7 强类型标识和稳定值对象。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-kernel</artifactId>
+        </dependency>
+
+        <!-- 提供条件化自动配置和类型安全配置属性。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- 提供 MyBatis-Plus 的 Spring Boot 4 原生自动配置。 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-spring-boot4-starter</artifactId>
+        </dependency>
+
+        <!-- 提供分页和乐观锁拦截器使用的 SQL 解析能力。 -->
+        <dependency>
+            <groupId>com.baomidou</groupId>
+            <artifactId>mybatis-plus-jsqlparser</artifactId>
+        </dependency>
+
+        <!-- 提供 HikariCP、DataSource 和 Spring 事务基础设施。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <!-- 提供 Flyway 版本化迁移基础设施，不启用自动建表。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+
+        <!-- 提供受控 JSON TypeHandler 使用的 Jackson 3 映射能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jackson</artifactId>
+        </dependency>
+
+        <!-- 提供 ApplicationContextRunner、AssertJ 和 JUnit 5 测试能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

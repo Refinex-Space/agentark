@@ -25,10 +25,10 @@ referenced_by: AGENTS.md#knowledge-map
 - 手工维护的 XML、YAML 配置块和属性必须就近使用中文注释说明用途、范围、取值或所有者；生成物和机器维护文件不手工补注释。
 - JSON 等不支持注释的格式必须使用合法的 `title`、`description`、`$comment` 等标准元数据表达含义，禁止为满足注释要求破坏格式。
 
-## 格式化入口
+## 代码格式
 
-- 每次代码任务结束后必须在测试与知识门禁之前执行 `./tools/harness/format_code.sh`。
-- 该脚本调用 Maven Spotless，是仓库当前唯一格式化实现；IDE 快捷键或 Codex Hook 可以调用该脚本，但不得复制或覆盖仓库格式规则。
-- 当前脚本只处理 Maven Spotless 已纳管的 Java 生产与测试源码；新增其他语言时，由对应 PLAN 阶段扩展同一入口并补充验证。
+- 仓库不提供自动 Java 格式化脚本，也不在 Maven 生命周期绑定格式化插件。
+- 修改代码时保持相邻源码的缩进、换行、Import 和 Javadoc 风格，禁止借任务之机批量重排无关文件。
+- IDE 或 Agent 不得自动调用任何全仓 Java 格式化器；提交前仍须执行编译、测试、知识门禁和 `git diff HEAD --check`。
 
 具体模块边界以 [系统架构第 9 章](../architecture/overview.md) 为准。

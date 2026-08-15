@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phase 03 has established the provider-neutral Kernel and language-neutral contract skeletons; runnable applications still enter only through their matching `PLAN.md` phase.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phase 04 has established the provider-neutral Kernel, language-neutral contract skeletons, and six focused Foundation Starters; runnable applications still enter only through their matching `PLAN.md` phase.
 
 ## Authority
 
@@ -24,14 +24,13 @@ Run from the repository root:
 ```bash
 ./mvnw -version
 ./mvnw -N validate
-./tools/harness/format_code.sh
 ./mvnw verify
 python3 tools/harness/knowledge_gate.py
 python3 tools/harness/verify_upstreams.py --require-worktrees
 git diff HEAD --check
 ```
 
-The Maven reactor currently validates module boundaries, Kernel behavior, contract Schema, architecture rules, and build policy; a successful build does not imply that backend applications are runnable. pnpm, Compose, and Helm commands do not exist yet and must be introduced only by their owning PLAN phase.
+The Maven reactor currently validates module boundaries, Kernel behavior, contract Schema, Foundation auto-configuration, architecture rules, and build policy; a successful build does not imply that backend applications are runnable. pnpm, Compose, and Helm commands do not exist yet and must be introduced only by their owning PLAN phase.
 
 ## Workflow
 
@@ -39,7 +38,7 @@ The Maven reactor currently validates module boundaries, Kernel behavior, contra
 2. Preserve user changes and staging. Do not reformat or refactor unrelated files.
 3. For multi-file, architecture, API, database, dependency, CI, or infrastructure work, present a scoped plan before editing. Wait only for destructive/high-risk approval or a correctness-critical missing decision.
 4. Implement the smallest coherent slice. Update the normative document before or with a changed architecture, schema, contract, or config fact.
-5. After writing code, run `./tools/harness/format_code.sh`, then the smallest relevant tests, the knowledge gate, and `git diff HEAD --check`. The repository script is the formatting authority; IDE shortcuts and agent hooks may invoke it but must not implement separate rules.
+5. After writing code, run the smallest relevant tests, the knowledge gate, and `git diff HEAD --check`. The repository deliberately has no automatic Java formatter; preserve the surrounding style and do not perform unrelated mass formatting.
 6. Report changes, executed tests, risks, rollback, and the next directly related step. Never invent evidence.
 
 Do not commit, push, publish, delete branches, or modify upstream repositories without explicit user authorization.

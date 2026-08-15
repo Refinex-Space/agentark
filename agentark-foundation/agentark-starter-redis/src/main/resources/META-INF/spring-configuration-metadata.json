@@ -1,0 +1,28 @@
+{
+  "$comment": "AgentArk Redis Starter 配置元数据；连接、TLS、池化与超时继续使用 Spring Boot 标准 Redis 属性。",
+  "properties": [
+    {
+      "name": "agentark.foundation.redis.enabled",
+      "type": "java.lang.Boolean",
+      "description": "是否装配类型化缓存和原子协调语义；未显式配置时保持关闭。",
+      "defaultValue": false
+    },
+    {
+      "name": "agentark.foundation.redis.key-prefix",
+      "type": "java.lang.String",
+      "description": "AgentArk 平台级 Redis Key 小写前缀。",
+      "defaultValue": "agentark"
+    },
+    {
+      "name": "agentark.foundation.redis.application-name",
+      "type": "java.lang.String",
+      "description": "必填的服务或应用稳定小写名称，用于隔离 Redis Key。"
+    },
+    {
+      "name": "agentark.foundation.redis.max-ttl",
+      "type": "java.time.Duration",
+      "description": "业务 Cache、Lease、Idempotency 和 Rate Limit 允许请求的最大 TTL，最多 30 天。",
+      "defaultValue": "7d"
+    }
+  ]
+}

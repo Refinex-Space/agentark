@@ -4,13 +4,86 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>space.refinex.agentark</groupId>
-        <artifactId>agentark-parent</artifactId>
+        <artifactId>agentark-foundation</artifactId>
         <version>0.1.0</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>agentark-starter-web</artifactId>
     <name>AgentArk Starter Web</name>
-    <description>Web 工程约定 Starter 占位，计划在 Phase 04 开始实现</description>
+    <description>提供 Web 请求上下文、序列化、分页与标准错误映射</description>
 
+    <dependencies>
+        <!-- 复用稳定领域错误、强类型标识和租户维度，不复制 Kernel 契约。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-kernel</artifactId>
+        </dependency>
+
+        <!-- 提供条件化自动配置和配置属性基础设施。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- 提供 Jackson 3 JSON 映射及 Spring Boot 定制扩展点。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jackson</artifactId>
+        </dependency>
+
+        <!-- 提供 RFC 9457 ProblemDetail、HTTP 状态和公共 Web 契约。 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+        </dependency>
+
+        <!-- 仅在调用方选择 Servlet 栈时激活 MVC 请求过滤与异常处理。 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webmvc</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 提供 Servlet 6.1 编译契约；Tomcat 11 已内嵌该 API 且保持可选。 -->
+        <dependency>
+            <groupId>org.apache.tomcat.embed</groupId>
+            <artifactId>tomcat-embed-core</artifactId>
+            <optional>true</optional>
+            <exclusions>
+                <!-- 避免 Tomcat 自带注解 API 与 Spring Boot 管理的 Jakarta Annotation 重复类。 -->
+                <exclusion>
+                    <groupId>org.apache.tomcat</groupId>
+                    <artifactId>tomcat-annotations-api</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <!-- 仅在调用方选择 Reactive 栈时激活 WebFlux 请求过滤与异常处理。 -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-webflux</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 提供 Jakarta Bean Validation API、实现和标准约束异常映射。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- 提供 ApplicationContextRunner、AssertJ 和 JUnit 5 测试能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 Servlet WebApplicationContextRunner 测试所需的 MVC 运行时。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>

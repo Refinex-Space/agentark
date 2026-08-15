@@ -211,17 +211,12 @@ def require_maven_foundation(errors: list[str]) -> None:
         ROOT / "mvnw",
         ROOT / "mvnw.cmd",
         ROOT / ".mvn/wrapper/maven-wrapper.properties",
-        ROOT / "tools/harness/format_code.sh",
         ROOT / "LICENSE",
         ROOT / "NOTICE",
     )
     for path in required_files:
         if not path.is_file():
             errors.append(f"Maven foundation is missing {rel(path)}")
-
-    format_script = ROOT / "tools/harness/format_code.sh"
-    if format_script.is_file() and format_script.stat().st_mode & 0o111 == 0:
-        errors.append("tools/harness/format_code.sh must be executable")
 
     module_sets = (
         (root_pom, APPROVED_ROOT_MODULES),

@@ -257,7 +257,7 @@ agentark
 | `agentark-starter-security` | Starter | OIDC/JWT, service identity, API-key framework, method security |
 | `agentark-starter-persistence` | Starter | MyBatis-Plus, Flyway, transactions, type handlers, persistence conventions |
 | `agentark-starter-redis` | Starter | Typed cache, lease, fencing, idempotency, rate limiting |
-| `agentark-starter-storage` | Starter | Object-store SPI and Local/S3/OSS/COS adapters |
+| `agentark-starter-storage` | Starter | Object-store SPI, guarded Local adapter, and S3-compatible extension point |
 | `agentark-starter-observability` | Starter | OpenTelemetry, Micrometer, structured logging, agent telemetry conventions |
 | `agentark-control` | Domain/Application | IAM, Agent catalog, revisions, snapshots, deployments, governance |
 | `agentark-knowledge` | Domain/Application | Knowledge bases, ingestion, revisions, retrieval and RAG adapters |
@@ -411,7 +411,7 @@ Repository instructions route contributors to the normative source for each deci
 
 ## Development Status
 
-AgentArk currently follows an **architecture-first migration strategy**. Phase 02 provides the fixed upstream evidence baseline, Maven Wrapper, approved module reactor, dependency BOM, quality lifecycle, license/SBOM generation, and CI skeleton. Phase 03 provides the framework-free Kernel primitives, immutable Snapshot model, language-neutral contract skeletons, Golden Schema tests, and architecture gates. No business feature or runnable backend service has been implemented yet.
+AgentArk currently follows an **architecture-first migration strategy**. Phase 02 provides the fixed upstream evidence baseline, Maven Wrapper, approved module reactor, dependency BOM, quality lifecycle, license/SBOM generation, and CI skeleton. Phase 03 provides the framework-free Kernel primitives, immutable Snapshot model, language-neutral contract skeletons, Golden Schema tests, and architecture gates. Phase 04 provides six focused Foundation Starters for Web, Security, Persistence, Redis, Storage, and Observability. No business feature or runnable backend service has been implemented yet.
 
 The initial implementation will be derived from the useful service-plane capabilities in AgentScope Java's `agentscope-service`, while deliberately reshaping module boundaries and gradually replacing the Go control plane with Java.
 
@@ -436,7 +436,7 @@ The migration sequence is designed to avoid changing package names, modules, JDK
 
 | Milestone | Scope | Status |
 |---|---|---|
-| **A — Architecture & Engineering Foundation** | BOM, Kernel, starters, contracts, four service shells, CI, Compose | 🟡 In progress — build foundation established |
+| **A — Architecture & Engineering Foundation** | BOM, Kernel, starters, contracts, four service shells, CI, Compose | 🟡 In progress — Kernel and focused starters established |
 | **B — Control Plane MVP** | IAM, Agent catalog, assets, revisions, snapshots, deployments | ⚪ Planned |
 | **C — Runtime MVP** | Session, Turn, Run, events, SSE, AgentScope compiler, HITL, recovery | ⚪ Planned |
 | **D — Knowledge / RAG** | ingestion, Qdrant, Knowledge Revision, retrieval, citations | ⚪ Planned |
@@ -474,7 +474,7 @@ Validate the pinned toolchain and root build policy:
 ./mvnw -N validate
 ```
 
-Validate the complete 20-project reactor, run available unit/integration tests, check formatting and license headers, and generate dependency evidence:
+Validate the complete 20-project reactor, run available unit/integration tests, check license headers, and generate dependency evidence:
 
 ```bash
 ./mvnw verify
@@ -486,7 +486,7 @@ Install the current reactor into the local Maven repository without running test
 ./mvnw -DskipTests install
 ```
 
-The current Jar modules are intentionally empty Phase 02 placeholders. There is no Spring Boot main class, HTTP endpoint, `agentark-web` build, Compose profile, Helm chart, or runnable product stack yet. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
+The Kernel and six Foundation Starter Jar modules now contain verified implementation code. The business, provider, and server Jar modules remain planned placeholders. There is no Spring Boot main class, HTTP endpoint, `agentark-web` build, Compose profile, Helm chart, or runnable product stack yet. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
 
 ### Engineering Rules
 

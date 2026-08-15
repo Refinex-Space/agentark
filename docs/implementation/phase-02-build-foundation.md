@@ -25,7 +25,7 @@ referenced_by: docs/README.md#阶段执行证据
 - 补齐许可证来源、文件 Hash、源码一致性和 Java/Go/Frontend 原始测试证据；
 - 建立 AgentArk 根 Parent POM、BOM、Maven Wrapper 和全部批准的空模块 POM；
 - 锁定 JDK 21、Boot 4.1.0、Cloud 2025.1.2、AgentScope 2.0.2、MyBatis-Plus 3.5.17；
-- 建立 Enforcer、Surefire/Failsafe、JaCoCo、Spotless、License、CycloneDX 和 GitHub Actions 骨架；
+- 建立 Enforcer、Surefire/Failsafe、JaCoCo、License、CycloneDX 和 GitHub Actions 骨架；
 - 更新 README、Runbook、知识地图与 Root Parent/BOM 职责说明。
 
 ### Excluded
@@ -42,7 +42,7 @@ referenced_by: docs/README.md#阶段执行证据
 |---|---|---|---|
 | P02-A 机械迁入隔离基线 | DONE | `../agentark-upstream-baseline/upstream-baseline/` | [机械迁入报告](../migration/mechanical-import-report.md)、[文件 Hash](../migration/mechanical-import-files.sha256) |
 | P02-B Root Reactor/BOM | DONE | `pom.xml`、`agentark-bom/`、19 个子模块 POM、Wrapper | 20 Project Reactor 已通过 effective POM、validate、verify 和 install |
-| P02-C 质量与 CI | DONE | Enforcer/Spotless/License/JaCoCo/CycloneDX、Backend/Dependency/Docs Workflow | 本地生命周期、Actionlint、知识门禁和固定上游校验通过 |
+| P02-C 质量与 CI | DONE | Enforcer/License/JaCoCo/CycloneDX、Backend/Dependency/Docs Workflow | 本地生命周期、Actionlint、知识门禁和固定上游校验通过 |
 
 ## Mechanical Baseline
 
@@ -85,7 +85,6 @@ Root Reactor 精确包含 20 个 Project：Root Parent、BOM、Kernel、6 个 St
 | Gate | 生命周期 | 当前行为 |
 |---|---|---|
 | Enforcer | `validate` | JDK/Maven、Release Deps、Convergence、Upper Bound、重复依赖/类、根 LICENSE/NOTICE |
-| Spotless | `validate` | Java Google Java Format 1.28.0、Unused Import、空白与换行检查 |
 | License Header | `validate` | Java Main/Test 文件必须具备 Apache-2.0 Header |
 | Surefire | `test` | Unit Test；当前无源码/测试 |
 | Failsafe | `integration-test` + `verify` | Integration Test；当前无源码/测试 |

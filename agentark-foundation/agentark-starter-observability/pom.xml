@@ -4,13 +4,93 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>space.refinex.agentark</groupId>
-        <artifactId>agentark-parent</artifactId>
+        <artifactId>agentark-foundation</artifactId>
         <version>0.1.0</version>
-        <relativePath>../../pom.xml</relativePath>
+        <relativePath>../pom.xml</relativePath>
     </parent>
 
     <artifactId>agentark-starter-observability</artifactId>
     <name>AgentArk Starter Observability</name>
-    <description>可观测性工程约定 Starter 占位，计划在 Phase 04 开始实现</description>
+    <description>提供 OTel、Micrometer、W3C Trace 与安全结构化日志约定</description>
 
+    <dependencies>
+        <!-- 提供条件化自动配置和类型安全配置属性。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-autoconfigure</artifactId>
+        </dependency>
+
+        <!-- 提供 MeterRegistry、Counter 和指标标签基础能力。 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-core</artifactId>
+        </dependency>
+
+        <!-- 提供跨库 Observation 生命周期与上下文传播抽象。 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-observation</artifactId>
+        </dependency>
+
+        <!-- 提供厂商中立的 OpenTelemetry Tracer 和 Span API。 -->
+        <dependency>
+            <groupId>io.opentelemetry</groupId>
+            <artifactId>opentelemetry-api</artifactId>
+        </dependency>
+
+        <!-- 提供安全 JSON Structured Logging 使用的 Jackson 3 映射能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jackson</artifactId>
+        </dependency>
+
+        <!-- 提供 ApplicationContextRunner、AssertJ 和 JUnit 5 测试能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供跨 Foundation 模块禁止业务类型与循环依赖的架构断言。 -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 将 Web Starter 加入最终 Foundation 架构测试类路径。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-web</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 将 Security Starter 加入最终 Foundation 架构测试类路径。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-security</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 将 Persistence Starter 加入最终 Foundation 架构测试类路径。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-persistence</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 将 Redis Starter 加入最终 Foundation 架构测试类路径。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-redis</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 将 Storage Starter 加入最终 Foundation 架构测试类路径。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-storage</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 </project>
