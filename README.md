@@ -38,7 +38,7 @@
 ---
 
 > [!IMPORTANT]
-> **AgentArk is in early development.**  
+> **AgentArk is in early development.**
 > The target architecture and engineering boundaries are being established before the upstream service code is migrated and reshaped. Public APIs, module coordinates, deployment manifests, and operational behavior should be considered unstable until the first development milestone is announced.
 
 ## Overview
@@ -77,25 +77,25 @@ AgentArk is intentionally **not** a reimplementation of AgentScope. AgentScope o
 
 AgentArk is designed around a small set of non-negotiable architectural invariants.
 
-1. **Runtime executes immutable snapshots.**  
+1. **Runtime executes immutable snapshots.**
    A published `AgentRevision` produces an immutable `AgentRevisionSnapshot`. Runtime never rebuilds a live agent by reading whichever Prompt, MCP, Skill, or Knowledge version happens to be current.
 
-2. **Sessions are reproducible.**  
+2. **Sessions are reproducible.**
    A Session pins its Deployment, Revision, and Snapshot when it is created. Promoting a new revision affects new sessions, not existing ones.
 
-3. **Control and Runtime own different data.**  
+3. **Control and Runtime own different data.**
    No cross-plane table reads. Cross-plane collaboration happens through versioned contracts, immutable snapshots, and durable events.
 
-4. **AgentScope stays behind an anti-corruption layer.**  
-   AgentScope runtime types are restricted to the dedicated runtime adapter. They do not become AgentArk REST DTOs, persistence models, or platform-domain types.
+4. **AgentScope stays behind an anti-corruption layer.**
+   Provider-neutral runtime logic lives in `agentark-runtime`; AgentScope runtime types are restricted to `agentark-runtime-provider-agentscope`. They do not become AgentArk REST DTOs, persistence models, or platform-domain types.
 
-5. **No giant `common` module.**  
+5. **No giant `common` module.**
    Reusable infrastructure is split into focused starters; business persistence and domain logic stay with the owning module.
 
-6. **Four planes, not dozens of microservices.**  
+6. **Four planes, not dozens of microservices.**
    Gateway, Control, Runtime, and Scheduler are independent operational planes. Prompt, MCP, Skill, and Knowledge are domain capabilities, not microservices by default.
 
-7. **Infrastructure complexity is progressive.**  
+7. **Infrastructure complexity is progressive.**
    MySQL, Redis, and object storage form the core. Qdrant is added for RAG. Elasticsearch, Neo4j, and Kafka remain optional until a concrete workload requires them.
 
 ---
@@ -224,7 +224,8 @@ agentark
 │
 ├── agentark-control
 ├── agentark-knowledge
-├── agentark-runtime-agentscope
+├── agentark-runtime
+├── agentark-runtime-provider-agentscope
 ├── agentark-scheduling
 │
 ├── agentark-services
@@ -260,7 +261,8 @@ agentark
 | `agentark-starter-observability` | Starter | OpenTelemetry, Micrometer, structured logging, agent telemetry conventions |
 | `agentark-control` | Domain/Application | IAM, Agent catalog, revisions, snapshots, deployments, governance |
 | `agentark-knowledge` | Domain/Application | Knowledge bases, ingestion, revisions, retrieval and RAG adapters |
-| `agentark-runtime-agentscope` | Runtime/Adapter | Session, Turn, Run, events, HITL, recovery and AgentScope anti-corruption layer |
+| `agentark-runtime` | Runtime Domain/Application | Session, Turn, Run, durable work queue, events, Agent State, HITL, fencing and recovery |
+| `agentark-runtime-provider-agentscope` | Runtime Provider | Snapshot compiler, Harness execution, AgentState adapter, event/error mapping and AgentScope anti-corruption layer |
 | `agentark-scheduling` | Domain/Application | Triggers, durable jobs, retries, webhook/channel delivery, ingestion workers |
 | `agentark-*-server` | Applications | Thin Spring Boot composition and deployment units |
 | `agentark-web` | Web app | AgentArk product console |
@@ -279,7 +281,7 @@ AgentArk deliberately uses a conservative **LTS-first, production-oriented** bas
 | Area | Target |
 |---|---|
 | Java | **JDK 21 LTS** |
-| Agent Runtime | **AgentScope Java 2.0.1** initial compatibility baseline |
+| Agent Runtime | **AgentScope Java 2.0.1**, source evidence pinned by [ADR-0005](./docs/architecture/decisions/0005-upstream-and-technology-baseline.md) |
 | Spring Boot | **4.1.0** |
 | Spring Cloud | **2025.1.2** |
 | Persistence | **MyBatis-Plus 3.5.17** + Flyway |
@@ -357,6 +359,7 @@ Session
 Key runtime guarantees:
 
 - durable Session / Turn / Run metadata;
+- durable Work Item acceptance before returning `202 Accepted`;
 - append-only runtime events;
 - SSE reconnect with `Last-Event-ID`;
 - distributed lease **plus fencing token**;
@@ -364,6 +367,7 @@ Key runtime guarantees:
 - explicit cancellation and terminal states;
 - HITL pause / approve / reject / expire / resume;
 - snapshot-based recovery;
+- Agent State and Checkpoint authority in Runtime MySQL/Object Storage; Redis is never the sole state copy;
 - AgentScope event mapping behind stable AgentArk event contracts.
 
 ---
@@ -388,13 +392,17 @@ Security is part of the default architecture, not an optional enterprise add-on.
 
 ## Documentation
 
-The architecture documentation is the normative design source for implementation decisions.
+Repository instructions route contributors to the normative source for each decision; `PLAN.md` governs execution order but does not override architecture, ADRs, database models, contracts, or safety rules.
 
 | Document | Purpose |
 |---|---|
-| [`docs/harness/control-plane/system-architecture.md`](./docs/harness/control-plane/system-architecture.md) | Complete target system architecture, module boundaries, runtime, security, data, deployment, migration, and ADR summary |
-| `docs/adr/` | Individual Architecture Decision Records as implementation progresses |
-| `contracts/` | Versioned OpenAPI, AsyncAPI, and JSON Schema contracts |
+| [`AGENTS.md`](./AGENTS.md) | Repository safety rules, commands, boundaries, definition of done, and knowledge map |
+| [`docs/README.md`](./docs/README.md) | Documentation index and ownership routes |
+| [`docs/architecture/overview.md`](./docs/architecture/overview.md) | Complete target system architecture, module boundaries, runtime, security, data, deployment, migration, and ADR summary |
+| [`docs/architecture/decisions/`](./docs/architecture/decisions/) | Accepted Architecture Decision Records |
+| [`docs/database/`](./docs/database/) | MySQL conventions and Control/Runtime/Scheduler logical models |
+| [`PLAN.md`](./PLAN.md) | Canonical Phase 00–23 execution sequence and evidence gates |
+| `contracts/` | Versioned OpenAPI, AsyncAPI, and JSON Schema contracts once created by the corresponding phase |
 
 > [!TIP]
 > Start with the **System Architecture** document before introducing a new module, cross-plane dependency, storage technology, public contract, or runtime provider.
@@ -481,8 +489,8 @@ Before contributing implementation code:
 AgentArk builds on and learns from several open-source projects:
 
 - [AgentScope Java](https://github.com/agentscope-ai/agentscope-java) — primary Java Agent/Harness runtime.
-- [AgentScope Service](https://github.com/agentscope-ai/agentscope-java/tree/main/agentscope-service) — service-plane behavior and runtime-management reference.
-- [DeepSeek Harness](https://github.com/Refinex-Space/deepseek-harness) — frontend visual and interaction reference.
+- [AgentScope Service fixed source](https://github.com/agentscope-ai/agentscope-java/tree/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service) — service-plane behavior and runtime-management reference.
+- [DeepSeek Harness fixed reference](https://github.com/Refinex-Space/deepseek-harness/tree/47f943859bef60e4160492346772ded9b24f765a) — frontend visual and interaction reference.
 
 AgentArk maintains its own platform domain model, module architecture, UI system, deployment model, and long-term compatibility boundaries.
 

@@ -306,6 +306,3 @@ openapi-generator-cache/
 # Keep repository documentation, contracts, migrations, examples and lockfiles
 # explicit and version-controlled. Add project-specific generated directories here
 # only when they are reproducible and should never be committed.
-
-# Other Files
-PLANS.md

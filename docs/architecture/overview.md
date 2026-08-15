@@ -1,11 +1,11 @@
 ---
-title: AgentArk Harness 平台系统架构设计
-status: Target Architecture
-version: 1.0.0
-last_updated: 2026-08-14
-owners: AgentArk Architecture
+owner: refinex
+updated: 2026-08-15
+status: active
+referenced_by: AGENTS.md#knowledge-map
+title: AgentArk 系统架构
+version: 1.1.0
 scope: Agent Platform / Harness / Control Plane / Runtime Plane
-target_path: docs/harness/control-plane/system-architecture.md
 ---
 
 # AgentArk Harness 平台系统架构设计
@@ -16,11 +16,11 @@ target_path: docs/harness/control-plane/system-architecture.md
 
 | 项目 | 内容 |
 |---|---|
-| 文档状态 | 目标架构（Target Architecture） |
-| 文档版本 | 1.0.0 |
+| 文档状态 | 生效中的目标架构（Active Target Architecture） |
+| 文档版本 | 1.1.0 |
 | 适用范围 | AgentArk 后端、前端、运行时、控制面、调度面与基础设施 |
-| 基线日期 | 2026-08-14 |
-| 核心运行时 | AgentScope Java 2.x，初始锁定 2.0.1 |
+| 基线日期 | 2026-08-15 |
+| 核心运行时 | AgentScope Java 2.0.1，源码证据固定至 `35f52181fb37eed97cf0adacf2d1c13a63bbfb7d` |
 | 目标 Java 基线 | JDK 21 LTS |
 | 目标 Spring 基线 | Spring Boot 4.1.0、Spring Cloud 2025.1.2 |
 
@@ -62,7 +62,7 @@ AgentScope Java 2 负责 Agent 推理循环与 Harness Runtime 能力，包括�
 
 > **Control 与 Runtime 具有独立的数据所有权，任何跨平面协作必须通过版本化契约完成，禁止跨库读表。**
 
-> **AgentScope Runtime 类型只能进入 `agentark-runtime-agentscope` 的指定 Adapter 包；AgentScope RAG 类型只能进入 `agentark-knowledge` 的受控 Adapter 包，禁止扩散到 Kernel、控制面领域、数据库模型和公共 API。**
+> **AgentScope Runtime 类型只能进入 `agentark-runtime-provider-agentscope`；AgentScope RAG 类型只能进入 `agentark-knowledge` 的受控 Adapter 包，禁止扩散到 Kernel、中立 Runtime、控制面领域、数据库模型和公共 API。**
 
 ---
 
@@ -604,7 +604,7 @@ Platform
 | Agent Catalog | Agent、Draft、Prompt、Model、MCP、Skill、Profile | `agentark-control` / Control |
 | Release | Revision、Snapshot、Deployment、Environment | `agentark-control` / Control |
 | Knowledge | KnowledgeBase、Document、DocumentRevision、KnowledgeRevision | `agentark-knowledge` / Control + Scheduler + Runtime Read |
-| Runtime | Session、Turn、Run、Event、Approval、Checkpoint、Lease | `agentark-runtime-agentscope` / Runtime |
+| Runtime | Session、Turn、Run、Event、Approval、Checkpoint、Lease | `agentark-runtime` / Runtime |
 | Scheduling | Trigger、Job、Attempt、Delivery、DeadLetter | `agentark-scheduling` / Scheduler |
 | Governance | Audit、Quota、Usage、Evaluation、Policy | Control + 横切基础设施 |
 
@@ -960,7 +960,8 @@ agentark
 │
 ├── agentark-control
 ├── agentark-knowledge
-├── agentark-runtime-agentscope
+├── agentark-runtime
+├── agentark-runtime-provider-agentscope
 ├── agentark-scheduling
 │
 ├── agentark-services
@@ -1007,7 +1008,8 @@ flowchart BT
 
     CTRL["agentark-control"]
     KNOW["agentark-knowledge"]
-    ASRT["agentark-runtime-agentscope"]
+    RT["agentark-runtime"]
+    ASP["agentark-runtime-provider-agentscope"]
     SCH["agentark-scheduling"]
 
     GW["agentark-gateway-server"]
@@ -1035,11 +1037,14 @@ flowchart BT
     KNOW --> STOREST
     KNOW --> OBSST
 
-    ASRT --> K
-    ASRT --> KNOW
-    ASRT --> REDISST
-    ASRT --> STOREST
-    ASRT --> OBSST
+    RT --> K
+    RT --> WEBST
+    RT --> DBST
+    RT --> REDISST
+    RT --> STOREST
+    RT --> OBSST
+
+    ASP --> RT
 
     SCH --> K
     SCH --> KNOW
@@ -1055,17 +1060,20 @@ flowchart BT
 
     CPS --> CTRL
     CPS --> KNOW
-    RTS --> ASRT
+    RTS --> RT
+    RTS --> ASP
+    RTS --> KNOW
     SCS --> SCH
 ```
 
 图中箭头表示“依赖于”。以下关系明确禁止：
 
 ```text
-agentark-control              -> agentark-runtime-agentscope
-agentark-runtime-agentscope   -> agentark-control
-agentark-scheduling           -> agentark-runtime-agentscope
-agentark-gateway-server       -> agentark-control / agentark-runtime-agentscope
+agentark-control                       -> agentark-runtime / agentark-runtime-provider-agentscope
+agentark-runtime                       -> agentark-control implementation
+agentark-runtime-provider-agentscope   -> agentark-control implementation / persistence adapters
+agentark-scheduling                    -> agentark-runtime / agentark-runtime-provider-agentscope
+agentark-gateway-server                -> agentark-control / agentark-runtime / agentark-runtime-provider-agentscope
 任意业务模块                    -> 任意 *-server
 ```
 
@@ -1085,7 +1093,8 @@ agentark-gateway-server       -> agentark-control / agentark-runtime-agentscope
 | `agentark-starter-observability` | Spring Boot Starter | 否 | OpenTelemetry、Micrometer、结构化日志和 Agent 指标规范 |
 | `agentark-control` | Domain/Application Library | 否 | IAM、Catalog、Draft、Revision、Snapshot、Deployment、Secret Metadata、Audit |
 | `agentark-knowledge` | Domain/Application/Adapter Library | 否 | Knowledge、Document、Ingestion、Index、Retrieval 和受控 AgentScope RAG Adapter |
-| `agentark-runtime-agentscope` | Runtime Domain/Provider Library | 否 | Session、Turn、Event、HITL、Lease，以及 AgentArk → AgentScope 防腐层 |
+| `agentark-runtime` | Runtime Domain/Application/Adapter Library | 否 | Session、Turn、Run、Event、HITL、Lease、持久化工作队列和 Provider 中立端口 |
+| `agentark-runtime-provider-agentscope` | Runtime Provider Adapter | 否 | AgentArk → AgentScope 编译、执行、状态和事件防腐层 |
 | `agentark-scheduling` | Domain/Application Library | 否 | Trigger、Job、Retry、Delivery、Channel、Webhook、Ingestion Worker |
 | `agentark-gateway-server` | Spring Boot App | 是 | 公共入口、认证前置、路由、限流和 SSE 代理 |
 | `agentark-control-server` | Spring Boot App | 是 | Java 控制面和 Knowledge 管理 API |
@@ -1286,7 +1295,7 @@ OutboxPort
 
 Control 禁止：
 
-- 依赖 `agentark-runtime-agentscope`；
+- 依赖 `agentark-runtime` 或 `agentark-runtime-provider-agentscope`；
 - 创建 HarnessAgent；
 - 读取 Runtime/Scheduler 表；
 - 在发布事务中同步执行模型、MCP 或索引；
@@ -1336,9 +1345,9 @@ AgentScope Simple Knowledge / `VDBStoreBase` 可以在 `adapter.out.vector.agent
 - HTTP 请求内同步完成大文档 Embedding；
 - 为每个向量库复制一套业务模型。
 
-### 9.9 `agentark-runtime-agentscope`
+### 9.9 `agentark-runtime`
 
-该模块同时承载中立 Runtime Domain/Application 和 AgentScope Provider Adapter，但通过包边界严格隔离：
+该模块拥有 Provider 中立的 Runtime Domain/Application 和平台持久化 Adapter：
 
 ```text
 space.refinex.agentark.runtime
@@ -1348,6 +1357,7 @@ space.refinex.agentark.runtime
 │   ├── run
 │   ├── event
 │   ├── approval
+│   ├── state
 │   └── lease
 ├── application
 ├── port
@@ -1359,28 +1369,18 @@ space.refinex.agentark.runtime
         ├── persistence
         ├── redis
         ├── control
-        ├── storage
-        └── agentscope
+        └── storage
 ```
 
-**中立 Runtime 职责**
+**职责**
 
-- Session、Turn、Run、Event、Approval 状态机；
-- Lease/Fencing、Idempotency、Cancellation、Recovery；
-- Snapshot Load、Event Append/Read、Usage 等 Port；
-- `AgentExecutionEngine` 抽象；
-- Runtime Instance 协调；
-- 公共 Runtime Event 与 SSE 稳定映射。
+- Session、Turn、Run、Event、Approval 和 Agent State 状态机；
+- 持久化 Runtime Work Queue、Lease/Fencing、Idempotency、Cancellation 和 Recovery；
+- Snapshot Load、Event Append/Read、State/Checkpoint、Usage 等 Port；
+- Provider 中立的 `AgentExecutionEngine` 抽象；
+- Runtime Instance 协调和公共 Runtime Event/SSE 稳定映射。
 
-**AgentScope Adapter 职责**
-
-- Snapshot 到 AgentScope Model、Toolkit、MCP、Skill、Memory、Workspace、Sandbox、Sub-Agent 和 Permission Engine 的映射；
-- HarnessAgent 构建、缓存、执行和生命周期；
-- AgentScope Event 到 AgentArk Runtime Event 映射；
-- AgentScope 状态后端与 Session/Run 关联；
-- AgentScope 异常和能力版本标准化。
-
-只有 `..adapter.out.agentscope..` 可以导入 AgentScope Runtime 类型。Domain/Application 单元测试必须能使用 Fake `AgentExecutionEngine` 验证状态机，无需启动 AgentScope。
+该模块禁止导入任何 AgentScope Runtime 类型。Domain/Application 单元测试必须能使用 Fake `AgentExecutionEngine` 验证状态机，无需启动 AgentScope。
 
 核心接口示例：
 
@@ -1402,12 +1402,32 @@ public interface ControlPlaneClient {
 
 - 依赖 `agentark-control`；
 - 读取 Control Catalog 表；
-- Controller 直接操作 HarnessAgent；
-- 将 AgentScope 异常/Event 原样公开；
 - 将 Session 可变状态保存在共享 Agent 单例；
 - 在 Runtime 编辑 Prompt、MCP、Skill。
 
-### 9.10 `agentark-scheduling`
+### 9.10 `agentark-runtime-provider-agentscope`
+
+该模块是 AgentScope Java 2.0.1 的专用 Provider 防腐层，只包含：
+
+```text
+space.refinex.agentark.runtime.provider.agentscope
+├── compiler
+├── engine
+├── state
+├── event
+└── error
+```
+
+职责：
+
+- 将 Snapshot 映射为 AgentScope Model、Toolkit、MCP、Skill、Memory、Workspace、Sandbox、Sub-Agent 和 Permission Engine；
+- 构建并执行 HarnessAgent；
+- 通过 `agentark-runtime` 的 State/Checkpoint Port 适配 AgentScope 状态，不自行建表或启动 Auto-DDL；
+- 将 AgentScope Event、异常和能力声明映射为 AgentArk 稳定模型。
+
+只有本模块允许导入 AgentScope Runtime 类型。本模块只能依赖 `agentark-runtime` 的公开端口，禁止依赖 Control 实现、Runtime 持久化 Adapter 或任意 `*-server`。
+
+### 9.11 `agentark-scheduling`
 
 拥有：
 
@@ -1425,10 +1445,10 @@ public interface ControlPlaneClient {
 - 外部 Channel 回执与 Job 状态分离；
 - 触发 Agent 只通过 Runtime Internal API；
 - 可以依赖 `agentark-knowledge` Ingestion API；
-- 禁止依赖 `agentark-runtime-agentscope` 或运行 Harness 推理循环；
+- 禁止依赖 `agentark-runtime`、`agentark-runtime-provider-agentscope` 或运行 Harness 推理循环；
 - 禁止无限重试和无 Dead Letter 状态。
 
-### 9.11 四个启动服务
+### 9.12 四个启动服务
 
 #### `agentark-gateway-server`
 
@@ -1451,7 +1471,7 @@ public interface ControlPlaneClient {
 #### `agentark-runtime-server`
 
 - WebFlux/Reactor、AgentScope、Redis、Runtime MySQL、Object Storage；
-- 组合 `agentark-runtime-agentscope` 与 Knowledge 只读检索；
+- 组合 `agentark-runtime`、`agentark-runtime-provider-agentscope` 与 Knowledge 只读检索；
 - 负责 Session、Turn、Run、Event、SSE、HITL、Lease、Harness 执行；
 - 不因 Virtual Threads 强制改成阻塞；
 - 只通过 Internal Contract 获取 Snapshot；
@@ -1466,7 +1486,7 @@ public interface ControlPlaneClient {
 - 不包含 Harness 推理循环；
 - 本地默认端口 `8083`。
 
-### 9.12 统一包结构
+### 9.13 统一包结构
 
 推荐包前缀：`space.refinex.agentark`。在首次公开 Maven 坐标前，项目 MUST 确认对 `refinex.space` 命名空间具有可验证控制权；若没有，应一次性改用实际控制域名反写包名。
 
@@ -1507,29 +1527,30 @@ adapter implements port
 
 不是每个小功能都必须机械创建所有目录，但 Domain 禁止反向依赖 Adapter。
 
-### 9.13 服务与模块启动矩阵
+### 9.14 服务与模块启动矩阵
 
 | 运行单元 | 组合模块 | 基础设施 |
 |---|---|---|
 | Gateway Server | Web/Security/Redis/Observability Starter | Redis 可选但生产推荐 |
 | Control Server | Control + Knowledge + Foundation | Control MySQL、Redis、Object Storage；RAG 管理按需 Qdrant |
-| Runtime Server | Runtime AgentScope + Knowledge Retrieval + Foundation | Runtime MySQL、Redis、Object Storage、模型/MCP/向量服务 |
+| Runtime Server | Runtime + AgentScope Provider + Knowledge Retrieval + Foundation | Runtime MySQL、Redis、Object Storage、模型/MCP/向量服务 |
 | Scheduler Server | Scheduling + Knowledge Ingestion + Foundation | Scheduler MySQL、Redis、Object Storage；按任务 Qdrant |
 | AgentArk Web | 通过 OpenAPI Client 调用 | CDN 或独立静态托管 |
 
-### 9.14 自动化依赖规则
+### 9.15 自动化依赖规则
 
 CI 必须建立以下 ArchUnit/Maven 规则：
 
 ```text
 kernel must not depend on spring, persistence, redis, agentscope or vendor SDKs
 domain packages must not depend on adapter packages
-control must not depend on runtime-agentscope
-runtime-agentscope must not depend on control implementation or persistence
-scheduling must not depend on runtime-agentscope
+control must not depend on runtime or runtime-provider-agentscope
+runtime must not depend on control implementation or AgentScope
+runtime-provider-agentscope must depend only on runtime public ports
+scheduling must not depend on runtime or runtime-provider-agentscope
 server modules must not be dependencies of library modules
 gateway must not depend on control/runtime business implementation
-only runtime adapter.out.agentscope may import AgentScope Runtime types
+only runtime-provider-agentscope may import AgentScope Runtime types
 only knowledge adapter.out.vector.agentscope may import AgentScope RAG types
 no cycles between Maven modules
 no cross-domain mapper/DO imports
@@ -1552,13 +1573,13 @@ flowchart TB
     SESSION["Session / Turn / Run State Machine"]
     LEASE["Lease / Fencing / Idempotency"]
     SNAP["Snapshot Loader / Cache"]
-    COMPILER["AgentScope Snapshot Compiler"]
-    ENGINE["HarnessAgent Execution Engine"]
+    COMPILER["Provider Snapshot Compiler"]
+    ENGINE["Agent Execution Engine"]
     EVENT["Event Log / Stream"]
     APPROVAL["HITL Approval"]
     USAGE["Usage / Cost"]
     KNOW["Knowledge Retrieval"]
-    STATE["AgentScope State Backend"]
+    STATE["AgentArk State / Checkpoint Port"]
     STORE["Object Storage"]
     DB["Runtime MySQL"]
     REDIS["Redis"]
@@ -1648,7 +1669,7 @@ Session
 
 ### 10.4 Turn 接收与执行解耦
 
-公共 Turn API 推荐完成以下工作后返回 `202 Accepted`：
+公共 Turn API 必须完成以下工作并提交所属事务后才能返回 `202 Accepted`：
 
 - 身份与资源授权；
 - Session/Revision 校验；
@@ -1666,6 +1687,7 @@ sequenceDiagram
     actor Client
     participant Gateway
     participant RuntimeAPI
+    participant Worker
     participant DB as Runtime DB
     participant Redis
     participant Control
@@ -1676,28 +1698,33 @@ sequenceDiagram
 
     Client->>Gateway: POST turn + Idempotency-Key
     Gateway->>RuntimeAPI: Authenticated request
-    RuntimeAPI->>DB: Verify Session and idempotency
-    RuntimeAPI->>Redis: Acquire lease + fencing token
-    RuntimeAPI->>Control: Load snapshot on cache miss
-    Control-->>RuntimeAPI: Snapshot + ETag/contentHash
-    RuntimeAPI->>Compiler: Compile or load RuntimeHandle
-    Compiler-->>RuntimeAPI: RuntimeHandle
-    RuntimeAPI->>DB: Create Turn/Run and accepted event
+    RuntimeAPI->>DB: TX: verify Session/idempotency
+    RuntimeAPI->>DB: TX: create Turn/Run/WorkItem/accepted event
+    DB-->>RuntimeAPI: Commit durable acceptance
     RuntimeAPI-->>Client: 202 + runId / stream URL
 
-    RuntimeAPI->>Agent: Execute with Session state
+    Worker->>DB: Claim WorkItem with owner/lease epoch
+    Worker->>Redis: Acquire lease + fencing token
+    Worker->>DB: Persist current fencing token
+    Worker->>Control: Load pinned snapshot on cache miss
+    Control-->>Worker: Snapshot + ETag/contentHash
+    Worker->>Compiler: Compile or load RuntimeHandle
+    Compiler-->>Worker: RuntimeHandle
+    Worker->>Agent: Execute with persisted Agent state
     loop Agent events
         Agent->>External: Call
         External-->>Agent: Result/stream
-        Agent-->>RuntimeAPI: Engine event
-        RuntimeAPI->>DB: Append mapped event with fencing token
-        RuntimeAPI->>Stream: Notify
+        Agent-->>Worker: Engine event
+        Worker->>DB: Append mapped event with fencing token
+        Worker->>Stream: Notify committed sequence
         Stream-->>Client: SSE
     end
 
-    RuntimeAPI->>DB: Commit terminal state and usage
-    RuntimeAPI->>Redis: Release lease
+    Worker->>DB: Commit Agent state/checkpoint, terminal state and usage
+    Worker->>Redis: Release lease if owner/token still match
 ```
+
+`202 Accepted` 的唯一前提是 Turn、首个 Run、Runtime Work Item、Idempotency 结果和 `run.accepted` 事件已经在同一 Runtime MySQL 本地事务提交。Snapshot 获取、编译、Lease 和外部调用属于 Worker 阶段，任何失败都必须形成可重试或终态事件，不能使已返回的 `runId` 消失。
 
 ### 10.6 Lease 与 Fencing
 
@@ -1768,7 +1795,7 @@ SSE 约束：
 
 ```text
 session.created
-turn.accepted
+run.accepted
 run.started
 message.delta
 message.completed
@@ -1851,7 +1878,7 @@ Runtime 中“Brain”负责模型推理、工具选择和 Agent 状态；“Han
 |---|---|---|
 | Session/Turn/Run 元数据 | Runtime MySQL | 权威状态 |
 | Runtime Event | Runtime MySQL + Object Store Payload | 追加事实 |
-| Agent/Memory State | AgentScope 分布式 Backend | Redis/MySQL/Object Store 等兼容实现 |
+| Agent/Memory State | Runtime MySQL `runtime_agent_state` + Object Store Payload | AgentArk 管理 Schema/Flyway；Provider 仅经 State Port 读写，Redis 不得成为唯一副本 |
 | Lease/Fencing/短期协调 | Redis + DB Token | 可恢复协调 |
 | Workspace/Sandbox Artifact | Object Store | 有租户前缀、哈希和保留策略 |
 | 编译缓存 | Runtime Memory/受控 Cache | 可丢失优化 |
@@ -1924,127 +1951,26 @@ flowchart TB
 | Organization/Project/IAM | Control | Internal API/授权投影 |
 | Agent/Prompt/Model/MCP/Skill | Control | Snapshot |
 | Revision/Snapshot/Deployment | Control | Internal API/缓存/事件 |
-| Knowledge Metadata/Revision | Knowledge on Control DB | Internal Facade/Snapshot |
+| Knowledge Metadata/Revision | Knowledge on Control DB | Internal Facade/Snapshot；Scheduler 通过命令/API 回写状态，不直连 Control DB |
 | Session/Turn/Run/Event/Approval | Runtime | Runtime API/Event |
+| Runtime Work Item/Agent State/Checkpoint | Runtime | Runtime API/Event；Redis 只做协调和通知 |
 | Trigger/Job/Attempt/Delivery | Scheduler | Internal API/状态投影 |
 | Usage 明细 | 产生该用量的平面 | 异步聚合到 Governance |
 | Audit | Control/Governance | 专用审计查询 |
 | Redis Cache/Lease | 对应平面 | 不作为跨平面查询接口 |
 
-### 11.3 Control Schema 表族
+### 11.3 MySQL 逻辑模型的规范来源
 
-```text
-iam
-├── organization
-├── project
-├── environment
-├── user_identity
-├── service_account
-├── membership
-├── role
-├── permission
-├── role_binding
-└── api_key
+架构文档只定义数据所有权和跨平面约束。表、字段、索引、唯一约束、状态迁移和 Flyway 规则的唯一规范来源是：
 
-agent
-├── agent
-├── agent_draft
-├── agent_revision
-├── agent_revision_snapshot
-├── deployment
-└── deployment_revision
+- [MySQL 公共规范](../database/mysql-conventions.md)
+- [Control Schema](../database/control-schema.md)
+- [Runtime Schema](../database/runtime-schema.md)
+- [Scheduler Schema](../database/scheduler-schema.md)
 
-asset
-├── prompt
-├── prompt_version
-├── model_provider
-├── model_profile
-├── mcp_server
-├── mcp_server_version
-├── mcp_tool_descriptor
-├── skill
-├── skill_version
-├── memory_profile
-├── workspace_profile
-├── sandbox_profile
-└── permission_policy
+实现阶段 MUST 先更新对应逻辑模型，再提交所属平面的 Flyway Migration、Repository Adapter 和迁移测试。开发环境可以共用 MySQL 实例，但不得合并 Schema、账号或迁移历史。
 
-knowledge
-├── knowledge_base
-├── data_source
-├── document
-├── document_revision
-├── knowledge_revision
-└── retrieval_profile
-
-governance
-├── secret_metadata
-├── secret_binding
-├── quota_policy
-├── audit_event
-├── usage_aggregate
-└── control_outbox
-```
-
-### 11.4 Runtime Schema 表族
-
-```text
-runtime
-├── session
-├── turn
-├── run
-├── runtime_instance
-├── runtime_checkpoint
-├── approval
-├── runtime_event
-├── runtime_event_payload_ref
-├── usage_record
-├── idempotency_record
-└── runtime_outbox
-```
-
-```mermaid
-erDiagram
-    SESSION ||--o{ TURN : contains
-    TURN ||--o{ RUN : attempts
-    RUN ||--o{ RUNTIME_EVENT : emits
-    RUN ||--o{ APPROVAL : requests
-    RUN ||--o{ RUNTIME_CHECKPOINT : checkpoints
-    RUN ||--o{ USAGE_RECORD : consumes
-    RUNTIME_EVENT ||--o| EVENT_PAYLOAD_REF : may_reference
-```
-
-### 11.5 Scheduler Schema 表族
-
-```text
-scheduler
-├── trigger_definition
-├── trigger_cursor
-├── job
-├── job_attempt
-├── job_lease
-├── delivery
-├── dead_letter
-├── scheduler_outbox
-└── idempotency_record
-```
-
-### 11.6 表与字段规范
-
-- 主键：UUIDv7，MySQL `BINARY(16)`，对外标准 UUID；
-- 时间：UTC，`TIMESTAMP(6)` 或语义等价类型；
-- 乐观锁：`version BIGINT NOT NULL`；
-- 状态：可读字符串/代码，不使用 Java ordinal 或数据库 Enum；
-- JSON：用于 Snapshot、Provider 扩展、低频可演进 Payload；高频过滤字段规范化；
-- Blob/大文本：进入 Object Store；
-- 唯一约束包含租户边界；
-- 外部自然键不替代内部 ID；
-- 跨平面 ID 为逻辑引用，不建跨 Schema 外键；
-- 敏感字段分类并应用脱敏/导出权限；
-- 所有 Schema 变更通过所属平面 Flyway；
-- 禁止 Hibernate/MP 自动 DDL。
-
-### 11.7 MyBatis-Plus 约束
+### 11.4 持久化适配约束
 
 ```text
 Domain Aggregate
@@ -2066,7 +1992,7 @@ Persistence DO + Mapper + SQL
 - 生产 SQL 日志不记录敏感参数；
 - 软删除由聚合语义决定，不做全局默认。
 
-### 11.8 Redis 语义
+### 11.5 Redis 语义
 
 | 用途 | 允许 | 权威事实位置 |
 |---|:---:|---|
@@ -2075,7 +2001,7 @@ Persistence DO + Mapper + SQL
 | Rate Limit | 是 | 策略在 Control |
 | Idempotency | 是 | 关键结果在所属 DB |
 | Turn/Job Lease | 是 | DB 状态 + Fencing Token |
-| Session 完整状态唯一保存 | 否 | Runtime DB/AgentScope Backend |
+| Session/Agent State 唯一保存 | 否 | Runtime MySQL + Object Store Payload |
 | Job 唯一事实 | 否 | Scheduler DB |
 | Pub/Sub 通知 | 是 | Event/Job 事实在 DB |
 | Secret 明文缓存 | 原则禁止 | Secret Provider |
@@ -2096,7 +2022,7 @@ agentark:{environment}:{plane}:{organizationId}:{projectId}:{capability}:{resour
 - 不用分布式锁掩盖错误数据所有权；
 - 不以跨多个 Redis 主节点的非严格锁作为关键一致性基础。
 
-### 11.9 Object Storage
+### 11.6 Object Storage
 
 ```text
 /{organizationId}/{projectId}/
@@ -2120,7 +2046,7 @@ agentark:{environment}:{plane}:{organizationId}:{projectId}:{capability}:{resour
 - Object Key 不是授权凭据；
 - 不在数据库存长期公开 URL。
 
-### 11.10 跨服务一致性
+### 11.7 跨服务一致性
 
 AgentArk 不使用跨服务分布式事务：
 
@@ -2148,7 +2074,7 @@ sequenceDiagram
     Relay->>DB: Mark delivered or retry
 ```
 
-### 11.11 数据保留
+### 11.8 数据保留
 
 | 数据 | 默认策略 |
 |---|---|
@@ -2206,17 +2132,19 @@ sequenceDiagram
     autonumber
     actor User
     participant Control
+    participant ControlDB as Control DB
     participant Object as Object Store
     participant Scheduler
+    participant SchedulerDB as Scheduler DB
     participant Parser
     participant Embed as Embedding Provider
     participant Vector as Qdrant
-    participant DB as Knowledge Metadata
 
     User->>Control: Upload/Register data source
     Control->>Object: Store immutable source
-    Control->>DB: Create DocumentRevision + IndexJob
-    Control->>Scheduler: Enqueue ingestion
+    Control->>ControlDB: TX: create DocumentRevision/KnowledgeRevision + Outbox
+    Control->>Scheduler: Internal ingestion command (idempotency key)
+    Scheduler->>SchedulerDB: Create persistent Job/Attempt
     Scheduler->>Parser: Parse in restricted worker/sandbox
     Parser-->>Scheduler: Normalized sections/metadata
     Scheduler->>Scheduler: Apply versioned chunk strategy
@@ -2227,8 +2155,12 @@ sequenceDiagram
         Scheduler->>Vector: Upsert with mandatory metadata
     end
     Scheduler->>Vector: Verify count/checksum
-    Scheduler->>DB: Mark KnowledgeRevision READY
+    Scheduler->>SchedulerDB: Commit attempt result + delivery outbox
+    Scheduler->>Control: Complete/fail ingestion command
+    Control->>ControlDB: TX: validate transition + mark READY/FAILED + Outbox
 ```
+
+Scheduler 只拥有 Job、Attempt 和 Delivery 状态，不得直接写 Control DB。Control 是 Document/Knowledge Revision 状态机的唯一写入者；命令至少一次投递，双方以 `operation_id`/`idempotency_key` 去重。
 
 ### 12.4 Knowledge Revision 状态
 
@@ -3141,7 +3073,7 @@ flowchart TB
 - Object Store：版本化/复制/不可变备份；
 - Qdrant Snapshot 与 Knowledge Metadata 对齐；
 - Secret Provider 专用恢复；
-- Redis 如承担 AgentScope State Backend，按其语义配置持久化/复制；
+- Redis 只恢复 Cache/Lease/通知等可重建数据，不参与 Agent State 权威恢复；
 - Git 保存 Flyway、Contracts、Helm、配置和文档。
 
 恢复顺序：
@@ -3272,7 +3204,7 @@ agentark-web/src/
 
 ## 18. 最终技术栈与版本基线
 
-> 以下版本是截至 2026-08-14 的目标基线。生产必须通过 AgentArk CI 兼容矩阵后锁定，不自动跟随 `latest`。
+> 以下版本是截至 2026-08-15 的目标基线。AgentScope 源码证据固定到 Commit `35f52181fb37eed97cf0adacf2d1c13a63bbfb7d`，DeepSeek Harness 参考固定到 Commit `47f943859bef60e4160492346772ded9b24f765a`；完整来源规则见 [ADR-0005](decisions/0005-upstream-and-technology-baseline.md)。生产必须通过 AgentArk CI 兼容矩阵后锁定，不自动跟随 `latest`。
 
 ### 18.1 后端与运行时
 
@@ -3543,7 +3475,7 @@ End-to-End Tests
 |---|---|---|
 | `service-common` | Kernel + focused Starters + 各平面持久化 | 拆解，不保留 giant common |
 | `service-gateway` | `agentark-gateway-server` | 保留路由/SSE，移除业务耦合 |
-| `service-dataplane` | `agentark-runtime-agentscope` + `agentark-runtime-server` | Runtime Domain 与 AgentScope Adapter 在包级隔离 |
+| `service-dataplane` | `agentark-runtime` + `agentark-runtime-provider-agentscope` + `agentark-runtime-server` | Runtime Domain 与 AgentScope Provider 在 Maven 模块级隔离 |
 | `service-scheduler` | `agentark-scheduling` + `agentark-scheduler-server` | 保留“不拥有 inference loop” |
 | `aistio` | 过渡运行，最终 `agentark-control` + `agentark-control-server` | Internal Contract 绞杀替换 |
 | `frontend` | 功能/Event UX 参考 | 不作为最终视觉/代码架构 |
@@ -3575,7 +3507,21 @@ package rename
 - 保留上游来源和差异；
 - 不破坏已固定 Internal Contract。
 
-### 20.3 Phase 0：来源固化与基线
+架构 Wave 用于表达依赖顺序，不是可执行任务编号；唯一 Phase 编号和验收命令由根目录 [PLAN.md](../../PLAN.md) 定义：
+
+| 架构 Wave | 对应 PLAN Phase | 关注点 |
+|---|---|---|
+| Wave A | 00–01 | 来源、Harness、工程基线 |
+| Wave B | 02 | 机械迁入与行为等价 |
+| Wave C | 03–04 | 模块边界与 Snapshot 契约 |
+| Wave D | 05、10–13 | Java Control、发布、Knowledge、治理 |
+| Wave E | 02–05 | JDK/Spring 目标基线的渐进收敛 |
+| Wave F | 06–15 | MySQL/Flyway、Runtime、Scheduler、Gateway |
+| Wave G | 21 | Go Control 绞杀替换 |
+| Wave H | 16–18 | 契约与 Web 重建 |
+| Wave I | 19–20、22–23 | 可观测、安全、部署、Go/No-Go |
+
+### 20.3 Wave A：来源固化与基线
 
 任务：
 
@@ -3588,7 +3534,7 @@ package rename
 
 退出条件：未改变行为的上游基线可重复构建、启动和验证。
 
-### 20.4 Phase 1：机械迁入
+### 20.4 Wave B：机械迁入
 
 任务：
 
@@ -3600,13 +3546,13 @@ package rename
 
 退出条件：AgentArk 命名后的行为与上游 Golden Baseline 等价。
 
-### 20.5 Phase 2：最终模块边界
+### 20.5 Wave C：最终模块边界
 
 任务：
 
 - 建立 `agentark-kernel`；
 - 拆 Web/Security/Persistence/Redis/Storage/Observability Starter；
-- 将 Runtime 归入 `agentark-runtime-agentscope` 并限制 AgentScope Import；
+- 将中立 Runtime 归入 `agentark-runtime`，AgentScope 防腐层归入 `agentark-runtime-provider-agentscope`；
 - 将 Scheduler 归入 `agentark-scheduling`；
 - 业务 Entity/Repository 回归各域；
 - 引入 ArchUnit/Maven 依赖白名单；
@@ -3620,7 +3566,7 @@ package rename
 - Runtime 状态机可用 Fake Engine 测试；
 - Gateway 不依赖业务模块。
 
-### 20.6 Phase 3：Snapshot 与 Java Control 骨架
+### 20.6 Wave D：Snapshot 与 Java Control 骨架
 
 任务：
 
@@ -3639,7 +3585,7 @@ package rename
 - Go/Java 对同一输入生成语义等价 Snapshot；
 - 已发布 Agent 可仅凭 Snapshot 运行。
 
-### 20.7 Phase 4：JDK 与 Spring 升级
+### 20.7 Wave E：JDK 与 Spring 升级
 
 任务：
 
@@ -3652,7 +3598,7 @@ package rename
 
 退出条件：目标 Java/Spring 基线稳定，性能和行为无不可接受回归。
 
-### 20.8 Phase 5：持久化迁移
+### 20.8 Wave F：持久化迁移
 
 #### A. JPA → MyBatis-Plus，先保持 PostgreSQL
 
@@ -3674,7 +3620,7 @@ package rename
 
 退出条件：所有平面使用 MyBatis-Plus + MySQL 8.4，JPA/PostgreSQL 不再是默认生产依赖。
 
-### 20.9 Phase 6：Go Aistio 绞杀替换
+### 20.9 Wave G：Go Aistio 绞杀替换
 
 ```mermaid
 flowchart LR
@@ -3723,7 +3669,7 @@ flowchart LR
 
 退出条件：Java Control 全量承担功能，Runtime/Scheduler Client 不变，Go 从生产删除。
 
-### 20.10 Phase 7：AgentArk Web 重建
+### 20.10 Wave H：AgentArk Web 重建
 
 任务：
 
@@ -3736,7 +3682,7 @@ flowchart LR
 
 退出条件：Web 独立构建，Build → Release → Run → Govern 主链路完整。
 
-### 20.11 Phase 8：生产加固
+### 20.11 Wave I：生产加固
 
 - Kubernetes/Helm；
 - HA、备份、恢复；
@@ -3762,36 +3708,13 @@ flowchart LR
 
 | ADR | 决策 | 状态 |
 |---|---|---|
-| ADR-001 | AgentArk 是 AgentScope-based Agent Application Platform，而非 Service Fork | Accepted |
-| ADR-002 | 使用 Gateway、Control、Runtime、Scheduler 四平面/四服务 | Accepted |
-| ADR-003 | JDK 21 LTS 为基线 | Accepted |
-| ADR-004 | Spring Boot 4.1.0 + Cloud 2025.1.2 | Accepted |
-| ADR-005 | 发布产生不可变 AgentRevisionSnapshot | Accepted |
-| ADR-006 | Session 固定 Snapshot，不随 Catalog 漂移 | Accepted |
-| ADR-007 | Control/Runtime 数据所有权隔离，禁止 Runtime 读 Catalog 表 | Accepted |
-| ADR-008 | 删除 giant common，使用 Kernel + focused Starters | Accepted |
-| ADR-009 | AgentScope Runtime 通过 `agentark-runtime-agentscope` 防腐 | Accepted |
-| ADR-010 | AgentScope RAG 只存在于 Knowledge 受控 Adapter 包 | Accepted |
-| ADR-011 | 最终持久化 MyBatis-Plus + MySQL 8.4 | Accepted |
-| ADR-012 | Redis 只承担 Cache/Lease/Coordination | Accepted |
-| ADR-013 | Object Storage 是一等基础设施 | Accepted |
-| ADR-014 | Qdrant 默认；ES/Neo4j Optional | Accepted |
-| ADR-015 | v1 不强制 Kafka，使用 Outbox/持久 Job | Accepted |
-| ADR-016 | Go Aistio 通过语言中立 Contract 渐进 Java 化 | Accepted |
-| ADR-017 | 外部 OIDC/JWK，内部 mTLS/短时服务身份 | Accepted |
-| ADR-018 | Secret 以引用进入 Snapshot，运行时解析 | Accepted |
-| ADR-019 | Runtime Event 先持久化后分发，支持重放 | Accepted |
-| ADR-020 | 前端功能参考 AgentScope、视觉参考 DeepSeek Harness、代码独立 | Accepted |
-| ADR-021 | Kubernetes/DNS 满足前不引入 Nacos | Accepted |
-| ADR-022 | Evaluation 初期为 Governance 子域 | Accepted |
+| [ADR-0001](decisions/0001-platform-boundaries.md) | 四平面、四启动服务、Schema 所有权和跨平面契约边界 | Accepted |
+| [ADR-0002](decisions/0002-release-and-data-ownership.md) | 不可变 Revision/Snapshot、Session 固定版本和本地事务 + Outbox | Accepted |
+| [ADR-0003](decisions/0003-runtime-provider-isolation.md) | 中立 Runtime 与 AgentScope Provider 使用 Maven 模块隔离 | Accepted |
+| [ADR-0004](decisions/0004-storage-and-async-work.md) | 三 Schema、持久工作队列、Agent State 权威存储和异步写入边界 | Accepted |
+| [ADR-0005](decisions/0005-upstream-and-technology-baseline.md) | 上游证据 SHA 与技术版本基线 | Accepted |
 
-独立 ADR 文件建议存放：
-
-```text
-docs/adr/ADR-0001-...
-```
-
-当独立 ADR 与本文冲突时，必须更新本文版本和变更记录。
+ADR 只有在本文、知识地图和相关数据库/契约文档同步后才生效。发现冲突时必须先停止实现、修正文档并提升相应版本，不允许选择性引用。
 
 ---
 
@@ -3962,16 +3885,16 @@ docs/adr/ADR-0001-...
 实施时应固定具体 Commit/Tag，而不是长期依赖分支最新内容。
 
 1. [AgentArk Repository](https://github.com/Refinex-Space/agentark)
-2. [AgentScope Java Repository](https://github.com/agentscope-ai/agentscope-java)
-3. [AgentScope Service](https://github.com/agentscope-ai/agentscope-java/tree/main/agentscope-service)
-4. [AgentScope Service README](https://github.com/agentscope-ai/agentscope-java/blob/main/agentscope-service/README.md)
-5. [AgentScope Service Parent POM](https://github.com/agentscope-ai/agentscope-java/blob/main/agentscope-service/pom.xml)
-6. [AgentScope Service Common POM](https://github.com/agentscope-ai/agentscope-java/blob/main/agentscope-service/service-common/pom.xml)
-7. [AgentScope Service Dataplane POM](https://github.com/agentscope-ai/agentscope-java/blob/main/agentscope-service/service-dataplane/pom.xml)
-8. [AgentScope Service Frontend package.json](https://github.com/agentscope-ai/agentscope-java/blob/main/agentscope-service/frontend/package.json)
-9. [AgentScope Java 2 Release Notes](https://github.com/agentscope-ai/agentscope-java/blob/main/docs/v2/zh/docs/others/release-notes.md)
-10. [AgentScope Java Simple RAG](https://java.agentscope.io/v2/en/integration/rag/simple.html)
-11. [DeepSeek Harness Fork](https://github.com/Refinex-Space/deepseek-harness)
+2. [AgentScope Java 固定源码](https://github.com/agentscope-ai/agentscope-java/tree/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d)
+3. [AgentScope Service](https://github.com/agentscope-ai/agentscope-java/tree/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service)
+4. [AgentScope Service README](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service/README.md)
+5. [AgentScope Service Parent POM](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service/pom.xml)
+6. [AgentScope Service Common POM](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service/service-common/pom.xml)
+7. [AgentScope Service Dataplane POM](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service/service-dataplane/pom.xml)
+8. [AgentScope Service Frontend package.json](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/agentscope-service/frontend/package.json)
+9. [AgentScope Java 2 Release Notes](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/docs/v2/zh/docs/others/release-notes.md)
+10. [AgentScope Java Simple RAG 固定文档](https://github.com/agentscope-ai/agentscope-java/blob/35f52181fb37eed97cf0adacf2d1c13a63bbfb7d/docs/v2/en/integration/rag/simple.md)
+11. [DeepSeek Harness 固定参考](https://github.com/Refinex-Space/deepseek-harness/tree/47f943859bef60e4160492346772ded9b24f765a)
 12. [Spring Boot System Requirements](https://docs.spring.io/spring-boot/system-requirements.html)
 13. [Spring Cloud](https://spring.io/projects/spring-cloud)
 14. [MyBatis-Plus Spring Boot 4 Installation](https://baomidou.com/en/getting-started/install/)
@@ -4005,7 +3928,7 @@ docs/adr/ADR-0001-...
 
 - [ ] 是否新增了 giant common 或万能 Utils？
 - [ ] Kernel 是否保持无框架/无 AgentScope？
-- [ ] AgentScope Runtime Import 是否仅在指定 Adapter？
+- [ ] AgentScope Runtime Import 是否仅在 `agentark-runtime-provider-agentscope`？
 - [ ] AgentScope RAG Import 是否仅在 Knowledge Adapter？
 - [ ] Control 与 Runtime 是否无实现依赖？
 - [ ] Scheduler 是否无 Harness 推理循环？
