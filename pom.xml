@@ -20,9 +20,11 @@
     <artifactId>agentark-parent</artifactId>
     <version>0.1.0</version>
     <packaging>pom</packaging>
+
     <name>AgentArk Parent</name>
-    <description>AgentArk build reactor and engineering policy</description>
+    <description>AgentArk Maven Reactor 与工程治理策略</description>
     <url>https://github.com/Refinex-Space/agentark</url>
+
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -30,6 +32,7 @@
             <distribution>repo</distribution>
         </license>
     </licenses>
+
     <modules>
         <module>agentark-bom</module>
         <module>agentark-kernel</module>
@@ -41,6 +44,7 @@
         <module>agentark-scheduling</module>
         <module>agentark-services</module>
     </modules>
+
     <properties>
         <maven.compiler.release>21</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -48,6 +52,10 @@
         <project.build.outputTimestamp>2026-08-15T00:00:00Z</project.build.outputTimestamp>
         <agentark.version>${project.version}</agentark.version>
         <agentscope.version>2.0.2</agentscope.version>
+        <!-- ArchUnit 仅用于验证模块与包依赖边界。 -->
+        <archunit.version>1.5.0</archunit.version>
+        <!-- json-sKema 仅用于执行 JSON Schema Draft 2020-12 契约测试。 -->
+        <json-skema.version>0.31.0</json-skema.version>
         <spring-boot.version>4.1.0</spring-boot.version>
         <spring-cloud.version>2025.1.2</spring-cloud.version>
         <mybatis-plus.version>3.5.17</mybatis-plus.version>
@@ -63,9 +71,11 @@
         <cyclonedx-maven-plugin.version>2.9.3</cyclonedx-maven-plugin.version>
         <license-maven-plugin.version>2.7.1</license-maven-plugin.version>
     </properties>
+
     <build>
         <pluginManagement>
             <plugins>
+                <!-- 统一管理 Maven Compiler Plugin，固定 Java 21 编译参数。 -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
@@ -75,16 +85,22 @@
                         <parameters>true</parameters>
                     </configuration>
                 </plugin>
+
+                <!-- 统一管理 Maven Surefire Plugin，执行单元测试。 -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>${maven-surefire-plugin.version}</version>
                 </plugin>
+
+                <!-- 统一管理 Maven Failsafe Plugin，执行集成测试。 -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-failsafe-plugin</artifactId>
                     <version>${maven-failsafe-plugin.version}</version>
                 </plugin>
+
+                <!-- 统一管理 Maven JAR Plugin，生成可复现的模块制品。 -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-jar-plugin</artifactId>
@@ -93,26 +109,36 @@
                         <outputTimestamp>${project.build.outputTimestamp}</outputTimestamp>
                     </configuration>
                 </plugin>
+
+                <!-- 统一管理 Maven Enforcer Plugin，约束构建环境与依赖质量。 -->
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-enforcer-plugin</artifactId>
                     <version>${maven-enforcer-plugin.version}</version>
                 </plugin>
+
+                <!-- 统一管理 JaCoCo Maven Plugin，采集并生成测试覆盖率报告。 -->
                 <plugin>
                     <groupId>org.jacoco</groupId>
                     <artifactId>jacoco-maven-plugin</artifactId>
                     <version>${jacoco-maven-plugin.version}</version>
                 </plugin>
+
+                <!-- 统一管理 Spotless Maven Plugin，执行 Java 格式化与格式检查。 -->
                 <plugin>
                     <groupId>com.diffplug.spotless</groupId>
                     <artifactId>spotless-maven-plugin</artifactId>
                     <version>${spotless-maven-plugin.version}</version>
                 </plugin>
+
+                <!-- 统一管理 CycloneDX Maven Plugin，生成聚合 SBOM。 -->
                 <plugin>
                     <groupId>org.cyclonedx</groupId>
                     <artifactId>cyclonedx-maven-plugin</artifactId>
                     <version>${cyclonedx-maven-plugin.version}</version>
                 </plugin>
+
+                <!-- 统一管理 License Maven Plugin，汇总第三方依赖许可证。 -->
                 <plugin>
                     <groupId>org.codehaus.mojo</groupId>
                     <artifactId>license-maven-plugin</artifactId>
@@ -120,19 +146,26 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+
         <plugins>
+            <!-- 使用统一的 Java 21 参数编译全部模块生产与测试源码。 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
             </plugin>
+
+            <!-- 在测试阶段运行 JUnit Platform 单元测试。 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
             </plugin>
+
+            <!-- 在 integration-test 与 verify 阶段运行并校验集成测试。 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <executions>
+                    <!-- 将集成测试执行和结果校验绑定到 Maven 标准生命周期。 -->
                     <execution>
                         <id>integration-tests</id>
                         <goals>
@@ -142,14 +175,19 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- 生成时间戳稳定的可复现 JAR 制品。 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-jar-plugin</artifactId>
             </plugin>
+
+            <!-- 在 validate 阶段集中执行 JDK、Maven、依赖和必需文件约束。 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-enforcer-plugin</artifactId>
                 <dependencies>
+                    <!-- 扩展 Enforcer 的重复类检查等依赖治理规则。 -->
                     <dependency>
                         <groupId>org.codehaus.mojo</groupId>
                         <artifactId>extra-enforcer-rules</artifactId>
@@ -157,6 +195,7 @@
                     </dependency>
                 </dependencies>
                 <executions>
+                    <!-- 执行 AgentArk Maven 构建基线的全部强制规则。 -->
                     <execution>
                         <id>enforce-build-baseline</id>
                         <phase>validate</phase>
@@ -190,6 +229,8 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- 使用 google-java-format 统一格式化 Java 源码并在 validate 阶段检查。 -->
             <plugin>
                 <groupId>com.diffplug.spotless</groupId>
                 <artifactId>spotless-maven-plugin</artifactId>
@@ -208,6 +249,7 @@
                     </java>
                 </configuration>
                 <executions>
+                    <!-- 在 validate 阶段拒绝未按仓库规则格式化的 Java 源码。 -->
                     <execution>
                         <id>format-check</id>
                         <phase>validate</phase>
@@ -217,51 +259,55 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- 汇总 Reactor 第三方依赖许可证，不负责生成 Java 文件头。 -->
             <plugin>
                 <groupId>org.codehaus.mojo</groupId>
                 <artifactId>license-maven-plugin</artifactId>
                 <configuration>
+                    <!-- 仅用于第三方许可证汇总；标准 Java 文件头由知识门禁精确校验。 -->
+                    <!-- 声明本项目主许可证的插件内置标识。 -->
                     <licenseName>apache_v2</licenseName>
+                    <!-- 声明许可证汇总元数据中的版权主体。 -->
                     <copyrightOwners>refinex</copyrightOwners>
+                    <!-- 声明许可证汇总元数据中的组织名称。 -->
                     <organizationName>refinex</organizationName>
+                    <!-- 声明 AgentArk 首次发布年份。 -->
                     <inceptionYear>2026</inceptionYear>
-                    <failOnMissingHeader>true</failOnMissingHeader>
-                    <includes>
-                        <include>src/main/java/**/*.java</include>
-                        <include>src/test/java/**/*.java</include>
-                    </includes>
                 </configuration>
                 <executions>
-                    <execution>
-                        <id>check-java-license-headers</id>
-                        <phase>validate</phase>
-                        <goals>
-                            <goal>check-file-header</goal>
-                        </goals>
-                    </execution>
+                    <!-- 在全量验证阶段生成整个 Reactor 的第三方许可证清单。 -->
                     <execution>
                         <id>aggregate-third-party-licenses</id>
+                        <!-- 仅在 verify 阶段生成，避免日常编译产生额外输出。 -->
                         <phase>verify</phase>
                         <goals>
+                            <!-- 汇总所有模块解析出的第三方依赖许可证。 -->
                             <goal>aggregate-add-third-party</goal>
                         </goals>
                         <configuration>
+                            <!-- 将生成物隔离在仓库级 target 目录，禁止纳入版本控制。 -->
                             <outputDirectory>${maven.multiModuleProjectDirectory}/target/generated-resources/licenses</outputDirectory>
                         </configuration>
+                        <!-- 只允许父 POM 执行一次，子模块不得重复继承执行。 -->
                         <inherited>false</inherited>
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- 为单元测试注入 JaCoCo Agent，并在 verify 阶段生成覆盖率报告。 -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <executions>
+                    <!-- 在单元测试前准备 JaCoCo Java Agent。 -->
                     <execution>
                         <id>prepare-unit-tests</id>
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
                     </execution>
+                    <!-- 在 verify 阶段读取覆盖率数据并生成模块报告。 -->
                     <execution>
                         <id>report-unit-tests</id>
                         <phase>verify</phase>
@@ -271,6 +317,8 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- 在父 Reactor 的 verify 阶段生成 JSON 格式 CycloneDX 聚合 SBOM。 -->
             <plugin>
                 <groupId>org.cyclonedx</groupId>
                 <artifactId>cyclonedx-maven-plugin</artifactId>
@@ -284,6 +332,7 @@
                     <includeTestScope>false</includeTestScope>
                 </configuration>
                 <executions>
+                    <!-- 聚合全部生产与运行时依赖并生成仓库级 SBOM。 -->
                     <execution>
                         <id>aggregate-sbom</id>
                         <phase>verify</phase>

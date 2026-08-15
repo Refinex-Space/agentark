@@ -1,0 +1,36 @@
+# 声明本文档遵循 AsyncAPI 3.0.0。
+asyncapi: 3.0.0
+# 描述 Runtime 事件契约的稳定身份信息。
+info:
+  # 标识 AgentArk 语言中立的 Runtime 事件族。
+  title: AgentArk Runtime Events
+  # 声明该事件契约骨架的语义版本。
+  version: 1.0.0
+  # 说明本阶段只固定事件信封，不提前定义通道。
+  description: Provider-neutral runtime event contract skeleton.
+  # 声明契约文档采用的开源许可证。
+  license:
+    # 提供便于阅读的 SPDX 许可证名称。
+    name: Apache-2.0
+    # 提供 Apache-2.0 许可证正文地址。
+    url: https://www.apache.org/licenses/LICENSE-2.0
+# 固定未单独声明时使用的消息内容类型。
+defaultContentType: application/json
+# Phase 03 不提前虚构消息通道，通道由 Runtime 所有者阶段补充。
+channels: {}
+# Phase 03 不提前虚构发布或订阅操作。
+operations: {}
+# 汇总可复用的消息组件。
+components:
+  # 注册 Runtime 事件消息类型。
+  messages:
+    # 定义 AgentArk Runtime Event Envelope 消息。
+    RuntimeEvent:
+      # 提供稳定的机器可识别消息名称。
+      name: RuntimeEvent
+      # 提供带版本的可读消息标题。
+      title: AgentArk Runtime Event Envelope v1
+      # 定义消息负载 Schema。
+      payload:
+        # 引用版本化的 Runtime Event JSON Schema。
+        $ref: ../schemas/runtime-event/v1.json

@@ -8,10 +8,12 @@
         <version>0.1.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-foundation</artifactId>
     <packaging>pom</packaging>
     <name>AgentArk Foundation</name>
-    <description>Focused infrastructure starter aggregation; implementation begins in Phase 04</description>
+    <description>聚合职责单一的基础设施 Starter，计划在 Phase 04 开始实现</description>
+
     <modules>
         <module>agentark-starter-web</module>
         <module>agentark-starter-security</module>

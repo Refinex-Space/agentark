@@ -402,7 +402,7 @@ Repository instructions route contributors to the normative source for each deci
 | [`docs/architecture/decisions/`](./docs/architecture/decisions/) | Accepted Architecture Decision Records |
 | [`docs/database/`](./docs/database/) | MySQL conventions and Control/Runtime/Scheduler logical models |
 | [`PLAN.md`](./PLAN.md) | Canonical Phase 00–23 execution sequence and evidence gates |
-| `contracts/` | Versioned OpenAPI, AsyncAPI, and JSON Schema contracts once created by the corresponding phase |
+| [`contracts/`](./contracts/) | Versioned OpenAPI 3.1 and AsyncAPI 3.0 skeletons plus Snapshot, Runtime Event, and Problem Detail JSON Schemas |
 
 > [!TIP]
 > Start with the **System Architecture** document before introducing a new module, cross-plane dependency, storage technology, public contract, or runtime provider.
@@ -411,7 +411,7 @@ Repository instructions route contributors to the normative source for each deci
 
 ## Development Status
 
-AgentArk currently follows an **architecture-first migration strategy**. The Phase 02 build foundation is present: the fixed upstream evidence baseline, Maven Wrapper, approved empty module reactor, dependency BOM, quality lifecycle, license/SBOM generation, and CI skeleton can be verified. No business feature or runnable backend service has been implemented yet.
+AgentArk currently follows an **architecture-first migration strategy**. Phase 02 provides the fixed upstream evidence baseline, Maven Wrapper, approved module reactor, dependency BOM, quality lifecycle, license/SBOM generation, and CI skeleton. Phase 03 provides the framework-free Kernel primitives, immutable Snapshot model, language-neutral contract skeletons, Golden Schema tests, and architecture gates. No business feature or runnable backend service has been implemented yet.
 
 The initial implementation will be derived from the useful service-plane capabilities in AgentScope Java's `agentscope-service`, while deliberately reshaping module boundaries and gradually replacing the Go control plane with Java.
 

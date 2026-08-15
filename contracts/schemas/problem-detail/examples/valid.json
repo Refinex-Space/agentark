@@ -1,0 +1,17 @@
+{
+  "type": "https://docs.agentark.dev/problems/agent-publish-validation-failed",
+  "title": "Agent publish validation failed",
+  "status": 422,
+  "detail": "The draft contains an unresolved secret reference.",
+  "instance": "/api/v1/agents/0198a4b0-1234-7abc-8def-0123456789ab/revisions",
+  "code": "ARK-CONTROL-AGENT-42201",
+  "requestId": "req_01",
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "violations": [
+    {
+      "path": "model.credential.secretRef",
+      "code": "SECRET_NOT_ACCESSIBLE",
+      "message": "The selected secret is not available in the target environment."
+    }
+  ]
+}

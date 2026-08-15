@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. The Maven build foundation exists, but Phase 02 deliberately contains no business source or runnable application; implementation enters only through the matching `PLAN.md` phase.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phase 03 has established the provider-neutral Kernel and language-neutral contract skeletons; runnable applications still enter only through their matching `PLAN.md` phase.
 
 ## Authority
 
@@ -24,13 +24,14 @@ Run from the repository root:
 ```bash
 ./mvnw -version
 ./mvnw -N validate
+./tools/harness/format_code.sh
 ./mvnw verify
 python3 tools/harness/knowledge_gate.py
 python3 tools/harness/verify_upstreams.py --require-worktrees
 git diff HEAD --check
 ```
 
-The Maven reactor currently validates empty module boundaries and build policy; a successful build does not imply that backend applications are runnable. pnpm, Compose, and Helm commands do not exist yet and must be introduced only by their owning PLAN phase.
+The Maven reactor currently validates module boundaries, Kernel behavior, contract Schema, architecture rules, and build policy; a successful build does not imply that backend applications are runnable. pnpm, Compose, and Helm commands do not exist yet and must be introduced only by their owning PLAN phase.
 
 ## Workflow
 
@@ -38,7 +39,7 @@ The Maven reactor currently validates empty module boundaries and build policy; 
 2. Preserve user changes and staging. Do not reformat or refactor unrelated files.
 3. For multi-file, architecture, API, database, dependency, CI, or infrastructure work, present a scoped plan before editing. Wait only for destructive/high-risk approval or a correctness-critical missing decision.
 4. Implement the smallest coherent slice. Update the normative document before or with a changed architecture, schema, contract, or config fact.
-5. Run the smallest relevant tests, then the knowledge gate and `git diff HEAD --check`.
+5. After writing code, run `./tools/harness/format_code.sh`, then the smallest relevant tests, the knowledge gate, and `git diff HEAD --check`. The repository script is the formatting authority; IDE shortcuts and agent hooks may invoke it but must not implement separate rules.
 6. Report changes, executed tests, risks, rollback, and the next directly related step. Never invent evidence.
 
 Do not commit, push, publish, delete branches, or modify upstream repositories without explicit user authorization.
@@ -54,6 +55,17 @@ Do not commit, push, publish, delete branches, or modify upstream repositories w
 - Return `202 Accepted` only after the owning MySQL transaction durably creates the work and idempotency result.
 - Published revisions, snapshots, events, and migration history are immutable.
 - Never store plaintext secrets, tokens, credentials, or connection strings in source, docs, logs, fixtures, events, or snapshots.
+
+## 中文注释规范
+
+- 手工维护的 Java 源码中，每个类、接口、记录、枚举、构造器和方法，无论可见性如何，都必须具有准确的中文 Javadoc；每个具名类型必须且只能声明 `@author refinex`。
+- 每个字段、常量、枚举值和记录组件都必须有中文说明。记录组件通过记录类型 Javadoc 中的中文 `@param` 说明，普通字段和常量使用相邻中文 Javadoc。
+- 方法注释必须说明职责，并按实际情况说明参数、返回值、单位、不变量、副作用、异常、安全约束、并发或空值语义。禁止只复述标识符或添加没有信息量的注释。
+- 重写方法也必须用中文说明当前实现契约，不能只写 `{@inheritDoc}`。
+- 每个手工维护的 XML、YAML 配置块和属性都必须具有相邻中文注释，说明用途、范围、允许值或所有者。禁止修改生成文件或向机器维护的输出复制注释。
+- JSON 等不支持注释的格式必须通过 `title`、`description`、`$comment` 等标准元数据表达同等信息，禁止为满足注释要求破坏文件合法性。
+- 测试代码遵循相同的类型、字段、夹具和方法注释要求。测试注释说明所证明的行为或边界，不复述实现步骤。
+- License Header 是法律元数据，不能替代 API、类型、方法、字段或配置注释。
 
 ## Definition of Done
 

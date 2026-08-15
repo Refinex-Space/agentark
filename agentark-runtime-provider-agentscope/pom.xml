@@ -8,11 +8,14 @@
         <version>0.1.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-runtime-provider-agentscope</artifactId>
     <name>AgentArk Runtime Provider AgentScope</name>
-    <description>AgentScope dependency boundary; adapter implementation begins in Phase 12</description>
+    <description>隔离 AgentScope 依赖的 Runtime Provider 适配器，计划在 Phase 12 开始实现</description>
+
     <dependencyManagement>
         <dependencies>
+            <!-- 导入 AgentArk BOM，统一约束 AgentScope 与内部模块依赖版本。 -->
             <dependency>
                 <groupId>space.refinex.agentark</groupId>
                 <artifactId>agentark-bom</artifactId>
@@ -22,11 +25,15 @@
             </dependency>
         </dependencies>
     </dependencyManagement>
+
     <dependencies>
+        <!-- 提供 AgentScope Message、Agent 与 Runtime 基础能力，仅允许在 Provider 边界使用。 -->
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-core</artifactId>
         </dependency>
+
+        <!-- 提供 AgentScope HarnessAgent 与执行编排能力，仅允许在 Provider 边界使用。 -->
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-harness</artifactId>

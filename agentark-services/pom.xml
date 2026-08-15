@@ -11,7 +11,7 @@
     <artifactId>agentark-services</artifactId>
     <packaging>pom</packaging>
     <name>AgentArk Services</name>
-    <description>Exactly four backend deployment-unit placeholders; shells begin in Phase 05</description>
+    <description>聚合四个后端部署单元，计划在 Phase 05 建立应用壳</description>
     <modules>
         <module>agentark-gateway-server</module>
         <module>agentark-control-server</module>

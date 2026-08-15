@@ -8,7 +8,74 @@
         <version>0.1.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-kernel</artifactId>
     <name>AgentArk Kernel</name>
-    <description>Provider-neutral domain primitives; implementation begins in Phase 03</description>
+    <description>运行时供应商中立的领域基础类型与契约模型</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 导入 AgentArk BOM，统一约束 Kernel 测试依赖版本。 -->
+            <dependency>
+                <groupId>space.refinex.agentark</groupId>
+                <artifactId>agentark-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- 提供 Kernel 单元测试和参数化测试运行能力。 -->
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 Kernel 测试的流式断言能力。 -->
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 验证 Kernel、Domain、Adapter 与 Server 的依赖边界。 -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 按 Draft 2020-12 校验 Snapshot、Event 和 Problem Detail Schema。 -->
+        <dependency>
+            <groupId>com.github.erosb</groupId>
+            <artifactId>json-sKema</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 以安全模式解析 OpenAPI 与 AsyncAPI YAML 骨架。 -->
+        <dependency>
+            <groupId>org.yaml</groupId>
+            <artifactId>snakeyaml</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <!-- 向契约测试传递 Maven Reactor 的根目录。 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <!-- 提供 contracts/ 目录解析所需的稳定仓库根路径。 -->
+                        <agentark.root>${maven.multiModuleProjectDirectory}</agentark.root>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
 </project>

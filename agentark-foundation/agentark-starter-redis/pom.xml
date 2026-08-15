@@ -8,7 +8,9 @@
         <version>0.1.0</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-starter-redis</artifactId>
     <name>AgentArk Starter Redis</name>
-    <description>Redis coordination starter placeholder; implementation begins in Phase 04</description>
+    <description>Redis 协调能力 Starter 占位，计划在 Phase 04 开始实现</description>
+
 </project>

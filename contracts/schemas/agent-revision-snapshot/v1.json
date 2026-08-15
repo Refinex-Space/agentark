@@ -1,0 +1,307 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.agentark.dev/agent-revision-snapshot/v1.json",
+  "title": "AgentRevisionSnapshot v1",
+  "description": "供 AgentArk Runtime 消费的不可变、运行时供应商中立依赖闭包。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "organizationId",
+    "projectId",
+    "snapshotId",
+    "agentId",
+    "revisionId",
+    "revisionNumber",
+    "createdAt",
+    "contentHash",
+    "runtimeProvider",
+    "agent",
+    "model",
+    "prompts",
+    "mcpServers",
+    "skills",
+    "knowledge",
+    "memory",
+    "workspace",
+    "sandbox",
+    "permissions",
+    "limits"
+  ],
+  "properties": {
+    "schemaVersion": { "description": "Snapshot Schema 版本，v1 固定为 1。", "const": 1 },
+    "organizationId": { "description": "Snapshot 所属组织标识。", "$ref": "#/$defs/uuidV7" },
+    "projectId": { "description": "Snapshot 所属项目标识。", "$ref": "#/$defs/uuidV7" },
+    "snapshotId": { "description": "当前不可变 Snapshot 标识。", "$ref": "#/$defs/uuidV7" },
+    "agentId": { "description": "Snapshot 所冻结的 Agent 标识。", "$ref": "#/$defs/uuidV7" },
+    "revisionId": { "description": "Snapshot 所冻结的 Agent Revision 标识。", "$ref": "#/$defs/uuidV7" },
+    "revisionNumber": { "description": "同一 Agent 内从 1 开始递增的修订序号。", "type": "integer", "minimum": 1 },
+    "createdAt": { "description": "Snapshot 冻结完成时间，采用 RFC 3339 date-time。", "type": "string", "format": "date-time" },
+    "contentHash": { "description": "Snapshot 规范化内容的 SHA-256 校验和。", "$ref": "#/$defs/checksum" },
+    "runtimeProvider": { "description": "执行该 Snapshot 所需的运行时供应商能力标识。", "$ref": "#/$defs/providerName" },
+    "agent": { "description": "冻结的 Agent 身份与入口规范。", "$ref": "#/$defs/agent" },
+    "model": { "description": "冻结的模型、参数和凭证引用规范。", "$ref": "#/$defs/model" },
+    "prompts": {
+      "description": "按消费顺序冻结的版本化提示词集合。",
+      "type": "array",
+      "maxItems": 1000,
+      "items": { "$ref": "#/$defs/prompt" }
+    },
+    "mcpServers": {
+      "description": "冻结的 MCP Server 连接与工具授权集合。",
+      "type": "array",
+      "maxItems": 1000,
+      "items": { "$ref": "#/$defs/mcp" }
+    },
+    "skills": {
+      "description": "冻结的 Skill 版本及不可变制品引用集合。",
+      "type": "array",
+      "maxItems": 1000,
+      "items": { "$ref": "#/$defs/skill" }
+    },
+    "knowledge": {
+      "description": "冻结的知识修订及检索策略集合。",
+      "type": "array",
+      "maxItems": 1000,
+      "items": { "$ref": "#/$defs/knowledge" }
+    },
+    "memory": { "description": "冻结的 Memory Profile 版本引用。", "$ref": "#/$defs/profile" },
+    "workspace": { "description": "冻结的 Workspace Profile 版本引用。", "$ref": "#/$defs/profile" },
+    "sandbox": { "description": "冻结的 Sandbox Profile 版本引用。", "$ref": "#/$defs/profile" },
+    "permissions": { "description": "运行时默认权限决策与覆盖规则。", "$ref": "#/$defs/permissions" },
+    "limits": { "description": "单次运行的超时、工具调用和子 Agent 上限。", "$ref": "#/$defs/limits" }
+  },
+  "$defs": {
+    "uuidV7": {
+      "description": "符合 RFC 9562 的小写规范 UUIDv7 文本。",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "checksum": {
+      "description": "带 sha256 前缀的小写 SHA-256 校验和。",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "stableName": {
+      "description": "以小写字母开头、可稳定用于契约标识的名称。",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+    },
+    "providerName": {
+      "description": "运行时或模型供应商的稳定小写标识。",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+    },
+    "capability": {
+      "description": "运行时必须支持的单项能力标识。",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64,
+      "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$"
+    },
+    "agent": {
+      "description": "Agent 的稳定名称、执行入口和所需能力。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "entrypoint", "requiredCapabilities"],
+      "properties": {
+        "name": { "description": "Agent 的稳定机器名称。", "$ref": "#/$defs/stableName" },
+        "entrypoint": { "description": "Agent 执行入口，v1 固定为 harness。", "const": "harness" },
+        "requiredCapabilities": {
+          "description": "Runtime 在接收 Snapshot 前必须满足的能力集合。",
+          "type": "array",
+          "uniqueItems": true,
+          "maxItems": 100,
+          "items": { "$ref": "#/$defs/capability" }
+        }
+      }
+    },
+    "credential": {
+      "description": "只保存 Secret 引用和解析策略的凭证规范，禁止明文 Secret。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["secretRef", "resolutionPolicy"],
+      "properties": {
+        "secretRef": {
+          "description": "指向 Secret 管理系统逻辑键的 secret:// 引用。",
+          "type": "string",
+          "pattern": "^secret://[A-Za-z0-9._-]+/[A-Za-z0-9._~!$&'()*+,;=:@%/-]+$"
+        },
+        "resolutionPolicy": { "description": "运行时解析最新启用版本或已固定版本的策略。", "enum": ["LATEST_ENABLED", "PINNED_VERSION"] }
+      }
+    },
+    "model": {
+      "description": "模型供应商、模型名称、推理参数和凭证引用。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "modelName", "parameters", "credential"],
+      "properties": {
+        "provider": { "description": "模型供应商稳定标识。", "$ref": "#/$defs/providerName" },
+        "modelName": { "description": "供应商侧模型名称。", "type": "string", "minLength": 1, "maxLength": 128 },
+        "parameters": {
+          "description": "冻结的通用模型推理参数。",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["temperature", "maxTokens"],
+          "properties": {
+            "temperature": { "description": "模型采样温度，取值范围为 0 到 2。", "type": "number", "minimum": 0, "maximum": 2 },
+            "maxTokens": { "description": "单次模型输出允许的最大 Token 数。", "type": "integer", "minimum": 1 }
+          }
+        },
+        "credential": { "description": "访问模型供应商所需的 Secret 引用。", "$ref": "#/$defs/credential" }
+      }
+    },
+    "prompt": {
+      "description": "冻结的版本化提示词内容及完整性校验和。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["role", "promptVersionId", "contentHash", "content"],
+      "properties": {
+        "role": { "description": "提示词进入模型上下文时采用的消息角色。", "enum": ["system", "user", "assistant"] },
+        "promptVersionId": { "description": "不可变提示词版本标识。", "$ref": "#/$defs/uuidV7" },
+        "contentHash": { "description": "提示词 UTF-8 内容的 SHA-256 校验和。", "$ref": "#/$defs/checksum" },
+        "content": { "description": "已冻结且必须与 contentHash 一致的提示词正文。", "type": "string", "minLength": 1, "maxLength": 1000000 }
+      }
+    },
+    "mcp": {
+      "description": "MCP Server 版本、传输端点、凭证引用和工具白名单。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mcpServerVersionId", "transport", "endpoint", "allowedTools"],
+      "properties": {
+        "mcpServerVersionId": { "description": "不可变 MCP Server 配置版本标识。", "$ref": "#/$defs/uuidV7" },
+        "transport": { "description": "Runtime 建立 MCP 连接时采用的传输类型。", "enum": ["streamable-http", "stdio"] },
+        "endpoint": {
+          "description": "不含用户信息、查询参数和片段的 MCP 端点。",
+          "type": "string",
+          "format": "uri",
+          "pattern": "^(?:https?|stdio)://[^@?#]+$"
+        },
+        "credential": { "description": "MCP Server 需要认证时使用的可选 Secret 引用。", "$ref": "#/$defs/credential" },
+        "allowedTools": {
+          "description": "该 Snapshot 明确允许调用的 MCP 工具名称白名单。",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10000,
+          "uniqueItems": true,
+          "items": {
+            "description": "单个稳定 MCP 工具名称。",
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9][a-zA-Z0-9._-]{0,127}$"
+          }
+        }
+      },
+      "allOf": [
+        {
+          "description": "根据 transport 限制 endpoint 必须使用匹配的 URI 协议。",
+          "if": { "properties": { "transport": { "description": "判定是否使用 Streamable HTTP。", "const": "streamable-http" } } },
+          "then": { "properties": { "endpoint": { "description": "Streamable HTTP 仅允许 http 或 https 端点。", "pattern": "^https?://[^@?#]+$" } } },
+          "else": { "properties": { "endpoint": { "description": "stdio 传输仅允许 stdio 端点。", "pattern": "^stdio://[^@?#]+$" } } }
+        }
+      ]
+    },
+    "objectRef": {
+      "description": "带完整性、大小和媒体类型元数据的不可变对象引用。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri", "checksum", "size", "mediaType"],
+      "properties": {
+        "uri": {
+          "description": "不含授权信息、查询参数和片段的对象存储 URI。",
+          "type": "string",
+          "format": "uri",
+          "pattern": "^(?:object|s3|oss|cos)://[^@?#]+$"
+        },
+        "checksum": { "description": "对象二进制内容的 SHA-256 校验和。", "$ref": "#/$defs/checksum" },
+        "size": { "description": "对象二进制内容大小，单位为字节。", "type": "integer", "minimum": 0 },
+        "mediaType": {
+          "description": "对象内容的标准媒体类型。",
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]*/[a-zA-Z0-9][a-zA-Z0-9!#$&^_.+-]*$"
+        }
+      }
+    },
+    "skill": {
+      "description": "不可变 Skill 版本及其可校验制品引用。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["skillVersionId", "artifact"],
+      "properties": {
+        "skillVersionId": { "description": "不可变 Skill 版本标识。", "$ref": "#/$defs/uuidV7" },
+        "artifact": { "description": "Runtime 加载的 Skill 制品引用。", "$ref": "#/$defs/objectRef" }
+      }
+    },
+    "knowledge": {
+      "description": "不可变知识修订及该修订对应的检索策略。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["knowledgeRevisionId", "retrievalProfile"],
+      "properties": {
+        "knowledgeRevisionId": { "description": "不可变知识修订标识。", "$ref": "#/$defs/uuidV7" },
+        "retrievalProfile": {
+          "description": "Runtime 查询知识修订时采用的冻结检索参数。",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["topK", "scoreThreshold", "reranker"],
+          "properties": {
+            "topK": { "description": "初步检索保留的最大候选数量。", "type": "integer", "minimum": 1, "maximum": 1000 },
+            "scoreThreshold": { "description": "候选文档必须达到的最小相关性分数。", "type": "number", "minimum": 0, "maximum": 1 },
+            "reranker": { "description": "对候选文档执行重排的稳定实现标识。", "type": "string", "minLength": 1, "maxLength": 128 }
+          }
+        }
+      }
+    },
+    "profile": {
+      "description": "Memory、Workspace 或 Sandbox 的不可变 Profile 版本引用。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileVersionId"],
+      "properties": {
+        "profileVersionId": { "description": "目标 Profile 的不可变版本标识。", "$ref": "#/$defs/uuidV7" }
+      }
+    },
+    "permissions": {
+      "description": "未命中规则时的默认权限决策和有序覆盖规则。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaultDecision", "rules"],
+      "properties": {
+        "defaultDecision": { "description": "没有规则匹配资源时采用的默认权限决策。", "enum": ["ALLOW", "ASK", "DENY"] },
+        "rules": {
+          "description": "按声明顺序匹配资源的权限覆盖规则集合。",
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "description": "针对单个资源模式的权限决策。",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["resource", "decision"],
+            "properties": {
+              "resource": {
+                "description": "采用资源类型和资源模式组成的稳定权限目标。",
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9_-]*:[a-zA-Z0-9][a-zA-Z0-9._*-]{0,126}$"
+              },
+              "decision": { "description": "资源命中当前规则时采用的权限决策。", "enum": ["ALLOW", "ASK", "DENY"] }
+            }
+          }
+        }
+      }
+    },
+    "limits": {
+      "description": "单次运行的时间、工具调用和子 Agent 资源上限。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["turnTimeoutSeconds", "maxToolCalls", "maxSubAgents"],
+      "properties": {
+        "turnTimeoutSeconds": { "description": "单个 Turn 允许运行的最长时间，单位为秒。", "type": "integer", "minimum": 1, "maximum": 86400 },
+        "maxToolCalls": { "description": "单个 Run 允许发起的最大工具调用次数。", "type": "integer", "minimum": 0, "maximum": 100000 },
+        "maxSubAgents": { "description": "单个 Run 允许同时创建的最大子 Agent 数量。", "type": "integer", "minimum": 0, "maximum": 1000 }
+      }
+    }
+  }
+}

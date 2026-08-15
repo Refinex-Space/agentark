@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "eventId": "0198a4b0-1001-7101-8101-000000000001",
+  "sequence": 42,
+  "eventType": "tool.call.completed",
+  "occurredAt": "2026-08-14T08:01:02.123Z",
+  "organizationId": "0198a4b0-0001-7001-8001-000000000001",
+  "projectId": "0198a4b0-0002-7002-8002-000000000002",
+  "sessionId": "0198a4b0-1002-7102-8102-000000000002",
+  "turnId": "0198a4b0-1003-7103-8103-000000000003",
+  "runId": "0198a4b0-1004-7104-8104-000000000004",
+  "traceId": "4bf92f3577b34da6a3ce929d0e0e4736",
+  "payload": {
+    "toolCallId": "0198a4b0-1005-7105-8105-000000000005",
+    "toolName": "repository.read",
+    "durationMs": 381,
+    "status": "SUCCEEDED"
+  }
+}

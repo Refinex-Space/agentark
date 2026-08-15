@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.agentark.dev/runtime-event/v1.json",
+  "title": "AgentArk Runtime Event Envelope v1",
+  "description": "稳定的运行时事件关联信封；事件专属数据统一放入 payload。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "eventId",
+    "sequence",
+    "eventType",
+    "occurredAt",
+    "organizationId",
+    "projectId",
+    "sessionId",
+    "turnId",
+    "runId",
+    "traceId",
+    "payload"
+  ],
+  "properties": {
+    "schemaVersion": { "description": "运行时事件信封 Schema 版本，v1 固定为 1。", "const": 1 },
+    "eventId": { "description": "全局唯一且按时间有序的事件标识。", "$ref": "#/$defs/uuidV7" },
+    "sequence": { "description": "同一 Run 内从 1 开始单调递增的事件序号。", "type": "integer", "minimum": 1 },
+    "eventType": {
+      "description": "使用点号分段的稳定事件类型名称。",
+      "type": "string",
+      "minLength": 3,
+      "maxLength": 128,
+      "pattern": "^[a-z][a-z0-9]*(?:[.][a-z][a-z0-9]*)+$"
+    },
+    "occurredAt": { "description": "事件事实发生时间，采用 RFC 3339 date-time。", "type": "string", "format": "date-time" },
+    "organizationId": { "description": "事件所属组织标识。", "$ref": "#/$defs/uuidV7" },
+    "projectId": { "description": "事件所属项目标识。", "$ref": "#/$defs/uuidV7" },
+    "sessionId": { "description": "事件关联的会话标识。", "$ref": "#/$defs/uuidV7" },
+    "turnId": { "description": "事件关联的轮次标识。", "$ref": "#/$defs/uuidV7" },
+    "runId": { "description": "事件关联的运行标识。", "$ref": "#/$defs/uuidV7" },
+    "traceId": { "description": "用于跨服务追踪的 16 字节小写十六进制标识。", "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "payload": { "description": "由 eventType 决定结构的事件专属负载。", "type": "object" }
+  },
+  "$defs": {
+    "uuidV7": {
+      "description": "符合 RFC 9562 的小写规范 UUIDv7 文本。",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    }
+  }
+}

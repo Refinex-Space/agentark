@@ -8,7 +8,9 @@
         <version>0.1.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-scheduling</artifactId>
     <name>AgentArk Scheduling</name>
-    <description>Scheduling domain placeholder; implementation begins in Phase 15</description>
+    <description>Scheduling 领域模块占位，计划在 Phase 15 开始实现</description>
+
 </project>

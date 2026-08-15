@@ -1,0 +1,40 @@
+# 声明本文档遵循 OpenAPI 3.1.0。
+openapi: 3.1.0
+# 描述内部 Runtime API 的稳定身份信息。
+info:
+  # 标识仅供服务间调用的 Runtime API。
+  title: AgentArk Internal Runtime API
+  # 声明该契约骨架的语义版本。
+  version: 1.0.0
+  # 声明契约文档采用的开源许可证。
+  license:
+    # 提供便于阅读的 SPDX 许可证名称。
+    name: Apache-2.0
+    # 提供机器可识别的 SPDX 许可证标识。
+    identifier: Apache-2.0
+# 固定所有内联 Schema 使用 JSON Schema Draft 2020-12 方言。
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+# Phase 03 不提前虚构业务端点，端点由其所有者阶段补充。
+paths: {}
+# 汇总可复用的 Schema 与响应组件。
+components:
+  # 注册公共 Schema 引用。
+  schemas:
+    # 暴露 AgentArk 公共 Problem Detail 错误结构。
+    ProblemDetail:
+      # 引用版本化的公共错误 JSON Schema。
+      $ref: ../schemas/problem-detail/v1.json
+  # 注册公共 HTTP 响应模板。
+  responses:
+    # 定义采用 application/problem+json 的错误响应。
+    ProblemResponse:
+      # 说明该响应承载 AgentArk Problem Detail。
+      description: AgentArk problem detail
+      # 列出该错误响应支持的媒体类型。
+      content:
+        # 固定 RFC 9457 风格错误的媒体类型。
+        application/problem+json:
+          # 描述该媒体类型的响应体 Schema。
+          schema:
+            # 复用版本化的公共错误 JSON Schema。
+            $ref: ../schemas/problem-detail/v1.json

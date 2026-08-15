@@ -720,6 +720,8 @@ RuntimeInstance.compilerVersion
 ```json
 {
   "schemaVersion": 1,
+  "organizationId": "0198...",
+  "projectId": "0198...",
   "snapshotId": "0198...",
   "agentId": "0198...",
   "revisionId": "0198...",
@@ -729,7 +731,8 @@ RuntimeInstance.compilerVersion
   "runtimeProvider": "agentscope-java-2",
   "agent": {
     "name": "code-review-agent",
-    "entrypoint": "harness"
+    "entrypoint": "harness",
+    "requiredCapabilities": ["tool-calling", "structured-output"]
   },
   "model": {
     "provider": "dashscope",
@@ -757,7 +760,8 @@ RuntimeInstance.compilerVersion
       "transport": "streamable-http",
       "endpoint": "https://mcp.example.com",
       "credential": {
-        "secretRef": "secret://project/mcp-prod"
+        "secretRef": "secret://project/mcp-prod",
+        "resolutionPolicy": "PINNED_VERSION"
       },
       "allowedTools": ["repository.read", "pull_request.comment"]
     }
@@ -765,8 +769,12 @@ RuntimeInstance.compilerVersion
   "skills": [
     {
       "skillVersionId": "0198...",
-      "artifactUri": "s3://agentark-skills/...",
-      "artifactHash": "sha256:..."
+      "artifact": {
+        "uri": "s3://agentark-skills/...",
+        "checksum": "sha256:...",
+        "size": 4096,
+        "mediaType": "application/gzip"
+      }
     }
   ],
   "knowledge": [
@@ -807,7 +815,7 @@ RuntimeInstance.compilerVersion
 
 Snapshot 约束：
 
-- 使用规范化 JSON 计算 SHA-256 `contentHash`；
+- 使用 RFC 8785 规范化 JSON 计算 SHA-256 `contentHash`；计算输入为除顶层 `contentHash` 字段外的完整 Snapshot，禁止使用 Java 对象序列化或包含该字段自身形成循环定义；
 - 使用独立 JSON Schema，禁止 Java 原生序列化；
 - 数据只追加，不覆盖；
 - Runtime 至少支持当前 Schema 与前一版本；
@@ -2627,7 +2635,8 @@ contracts/
 └── schemas/
     ├── agent-revision-snapshot/v1.json
     ├── runtime-event/v1.json
-    └── outbox-event/v1.json
+    ├── problem-detail/v1.json
+    └── outbox-event/v1.json       # Phase 08 建立 Outbox 时创建
 ```
 
 CI 执行：

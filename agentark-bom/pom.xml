@@ -8,12 +8,15 @@
         <version>0.1.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-bom</artifactId>
     <packaging>pom</packaging>
     <name>AgentArk BOM</name>
-    <description>Approved AgentArk platform and internal module versions</description>
+    <description>统一管理 AgentArk 平台依赖与内部模块版本</description>
+
     <dependencyManagement>
         <dependencies>
+            <!-- 导入 Spring Boot BOM，统一管理基础框架及其生态依赖版本。 -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
@@ -21,6 +24,8 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- 导入 Spring Cloud BOM，统一管理微服务组件依赖版本。 -->
             <dependency>
                 <groupId>org.springframework.cloud</groupId>
                 <artifactId>spring-cloud-dependencies</artifactId>
@@ -28,6 +33,8 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- 导入 MyBatis-Plus BOM，统一管理持久化增强组件版本。 -->
             <dependency>
                 <groupId>com.baomidou</groupId>
                 <artifactId>mybatis-plus-bom</artifactId>
@@ -35,115 +42,169 @@
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+
+            <!-- 统一管理 AgentScope Core 运行时基础能力版本。 -->
             <dependency>
                 <groupId>io.agentscope</groupId>
                 <artifactId>agentscope-core</artifactId>
                 <version>${agentscope.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentScope Harness Agent 执行框架版本。 -->
             <dependency>
                 <groupId>io.agentscope</groupId>
                 <artifactId>agentscope-harness</artifactId>
                 <version>${agentscope.version}</version>
             </dependency>
-            <!-- Spring Boot 4.1.0 still manages the legacy OkHttp coordinate at 4.12.0,
-                 while AgentScope 2.0.2 uses the multiplatform OkHttp 5.3.2 pair. Keep both
-                 coordinates and Okio on one line to prevent duplicate classes at the provider
-                 boundary. Revalidate this explicit compatibility pin on either upstream upgrade. -->
+
+            <!-- 统一管理 Kernel 架构测试使用的 ArchUnit 版本。 -->
+            <dependency>
+                <groupId>com.tngtech.archunit</groupId>
+                <artifactId>archunit</artifactId>
+                <version>${archunit.version}</version>
+            </dependency>
+
+            <!-- 统一管理契约 Schema 测试使用的 json-sKema 版本。 -->
+            <dependency>
+                <groupId>com.github.erosb</groupId>
+                <artifactId>json-sKema</artifactId>
+                <version>${json-skema.version}</version>
+            </dependency>
+
+            <!-- 锁定 OkHttp 公共坐标版本，避免 Spring Boot 与 AgentScope 依赖线产生重复类。 -->
             <dependency>
                 <groupId>com.squareup.okhttp3</groupId>
                 <artifactId>okhttp</artifactId>
                 <version>5.3.2</version>
             </dependency>
+
+            <!-- 锁定 OkHttp JVM 实现版本，与 AgentScope 2.0.2 的多平台依赖保持一致。 -->
             <dependency>
                 <groupId>com.squareup.okhttp3</groupId>
                 <artifactId>okhttp-jvm</artifactId>
                 <version>5.3.2</version>
             </dependency>
+
+            <!-- 锁定 Okio 公共坐标版本，与 OkHttp 5.3.2 的传递依赖保持一致。 -->
             <dependency>
                 <groupId>com.squareup.okio</groupId>
                 <artifactId>okio</artifactId>
                 <version>3.16.4</version>
             </dependency>
+
+            <!-- 锁定 Okio JVM 实现版本，防止 Provider 边界出现重复类。 -->
             <dependency>
                 <groupId>com.squareup.okio</groupId>
                 <artifactId>okio-jvm</artifactId>
                 <version>3.16.4</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Kernel 模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-kernel</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Web Starter 模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-starter-web</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Security Starter 模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-starter-security</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Persistence Starter 模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-starter-persistence</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Redis Starter 模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-starter-redis</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Storage Starter 模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-starter-storage</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Observability Starter 模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-starter-observability</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Control 领域模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-control</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Knowledge 领域模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-knowledge</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Runtime 领域模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-runtime</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk AgentScope Runtime Provider 模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-runtime-provider-agentscope</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Scheduling 领域模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-scheduling</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Gateway Server 部署单元版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-gateway-server</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Control Server 部署单元版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-control-server</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Runtime Server 部署单元版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-runtime-server</artifactId>
                 <version>${project.version}</version>
             </dependency>
+
+            <!-- 统一管理 AgentArk Scheduler Server 部署单元版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>
                 <artifactId>agentark-scheduler-server</artifactId>

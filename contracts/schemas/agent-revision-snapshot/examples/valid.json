@@ -1,0 +1,93 @@
+{
+  "schemaVersion": 1,
+  "organizationId": "0198a4b0-0001-7001-8001-000000000001",
+  "projectId": "0198a4b0-0002-7002-8002-000000000002",
+  "snapshotId": "0198a4b0-0003-7003-8003-000000000003",
+  "agentId": "0198a4b0-0004-7004-8004-000000000004",
+  "revisionId": "0198a4b0-0005-7005-8005-000000000005",
+  "revisionNumber": 12,
+  "createdAt": "2026-08-14T08:00:00Z",
+  "contentHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "runtimeProvider": "agentscope-java-2",
+  "agent": {
+    "name": "code-review-agent",
+    "entrypoint": "harness",
+    "requiredCapabilities": ["tool-calling", "structured-output"]
+  },
+  "model": {
+    "provider": "dashscope",
+    "modelName": "qwen-plus",
+    "parameters": {
+      "temperature": 0.2,
+      "maxTokens": 8192
+    },
+    "credential": {
+      "secretRef": "secret://project/model-dashscope-prod",
+      "resolutionPolicy": "LATEST_ENABLED"
+    }
+  },
+  "prompts": [
+    {
+      "role": "system",
+      "promptVersionId": "0198a4b0-0006-7006-8006-000000000006",
+      "contentHash": "sha256:835428baec6ea603cb469dc78f1c8954679d04d0fa30730223c55b44ccba6ec0",
+      "content": "Review changes for correctness, security, and maintainability."
+    }
+  ],
+  "mcpServers": [
+    {
+      "mcpServerVersionId": "0198a4b0-0007-7007-8007-000000000007",
+      "transport": "streamable-http",
+      "endpoint": "https://mcp.example.com",
+      "credential": {
+        "secretRef": "secret://project/mcp-prod",
+        "resolutionPolicy": "PINNED_VERSION"
+      },
+      "allowedTools": ["repository.read", "pull_request.comment"]
+    }
+  ],
+  "skills": [
+    {
+      "skillVersionId": "0198a4b0-0008-7008-8008-000000000008",
+      "artifact": {
+        "uri": "s3://agentark-skills/code-review/1.0.0.tgz",
+        "checksum": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+        "size": 4096,
+        "mediaType": "application/gzip"
+      }
+    }
+  ],
+  "knowledge": [
+    {
+      "knowledgeRevisionId": "0198a4b0-0009-7009-8009-000000000009",
+      "retrievalProfile": {
+        "topK": 8,
+        "scoreThreshold": 0.72,
+        "reranker": "default-reranker"
+      }
+    }
+  ],
+  "memory": {
+    "profileVersionId": "0198a4b0-0010-7010-8010-000000000010"
+  },
+  "workspace": {
+    "profileVersionId": "0198a4b0-0011-7011-8011-000000000011"
+  },
+  "sandbox": {
+    "profileVersionId": "0198a4b0-0012-7012-8012-000000000012"
+  },
+  "permissions": {
+    "defaultDecision": "ASK",
+    "rules": [
+      {
+        "resource": "tool:filesystem.write",
+        "decision": "DENY"
+      }
+    ]
+  },
+  "limits": {
+    "turnTimeoutSeconds": 600,
+    "maxToolCalls": 64,
+    "maxSubAgents": 8
+  }
+}

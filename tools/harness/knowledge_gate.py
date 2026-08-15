@@ -22,6 +22,7 @@ STALE_TOKENS = (
     "PLANS.md",
 )
 LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
+CHINESE_RE = re.compile(r"[\u3400-\u9fff]")
 MAVEN_NAMESPACE = {"m": "http://maven.apache.org/POM/4.0.0"}
 APPROVED_ROOT_MODULES = (
     "agentark-bom",
@@ -48,6 +49,44 @@ APPROVED_SERVICE_MODULES = (
     "agentark-runtime-server",
     "agentark-scheduler-server",
 )
+REQUIRED_CONTRACTS = (
+    "contracts/openapi/public-control-v1.yaml",
+    "contracts/openapi/public-runtime-v1.yaml",
+    "contracts/openapi/internal-control-v1.yaml",
+    "contracts/openapi/internal-runtime-v1.yaml",
+    "contracts/openapi/internal-scheduler-v1.yaml",
+    "contracts/asyncapi/runtime-events-v1.yaml",
+    "contracts/schemas/agent-revision-snapshot/v1.json",
+    "contracts/schemas/runtime-event/v1.json",
+    "contracts/schemas/problem-detail/v1.json",
+)
+SERVER_ARTIFACTS = frozenset(APPROVED_SERVICE_MODULES)
+KERNEL_FORBIDDEN_IMPORTS = (
+    "org.springframework",
+    "jakarta.persistence",
+    "com.baomidou",
+    "io.agentscope",
+    "com.fasterxml",
+    "org.redisson",
+    "redis.clients",
+)
+JAVA_LICENSE_HEADER = """/*
+ * Copyright 2026 refinex.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+"""
 
 
 def rel(path: Path) -> str:
@@ -139,6 +178,30 @@ def pom_modules(path: Path, errors: list[str]) -> tuple[str, ...]:
     )
 
 
+def require_pom_documentation(path: Path, errors: list[str]) -> None:
+    lines = read(path).splitlines()
+    descriptions = [line.strip() for line in lines if line.strip().startswith("<description>")]
+    if len(descriptions) != 1 or not CHINESE_RE.search(descriptions[0]):
+        errors.append(f"POM description must be a single Chinese line: {rel(path)}")
+
+    for index, line in enumerate(lines):
+        element = line.strip()
+        if element not in {"<dependency>", "<plugin>", "<execution>"}:
+            continue
+        previous = index - 1
+        while previous >= 0 and not lines[previous].strip():
+            previous -= 1
+        comment = lines[previous].strip() if previous >= 0 else ""
+        if not (
+            comment.startswith("<!--")
+            and comment.endswith("-->")
+            and CHINESE_RE.search(comment)
+        ):
+            errors.append(
+                f"{element[1:-1]} lacks an adjacent Chinese comment: {rel(path)}:{index + 1}"
+            )
+
+
 def require_maven_foundation(errors: list[str]) -> None:
     root_pom = ROOT / "pom.xml"
     if not root_pom.is_file():
@@ -148,12 +211,17 @@ def require_maven_foundation(errors: list[str]) -> None:
         ROOT / "mvnw",
         ROOT / "mvnw.cmd",
         ROOT / ".mvn/wrapper/maven-wrapper.properties",
+        ROOT / "tools/harness/format_code.sh",
         ROOT / "LICENSE",
         ROOT / "NOTICE",
     )
     for path in required_files:
         if not path.is_file():
             errors.append(f"Maven foundation is missing {rel(path)}")
+
+    format_script = ROOT / "tools/harness/format_code.sh"
+    if format_script.is_file() and format_script.stat().st_mode & 0o111 == 0:
+        errors.append("tools/harness/format_code.sh must be executable")
 
     module_sets = (
         (root_pom, APPROVED_ROOT_MODULES),
@@ -189,6 +257,57 @@ def require_maven_foundation(errors: list[str]) -> None:
             groups = pom.findall(".//m:dependency/m:groupId", MAVEN_NAMESPACE)
             if any(group.text and group.text.strip() == "io.agentscope" for group in groups):
                 errors.append(f"AgentScope dependency escapes provider boundary: {rel(path)}")
+
+    server_roots = {
+        (ROOT / "agentark-services" / module).resolve() for module in APPROVED_SERVICE_MODULES
+    }
+    for path in ROOT.rglob("pom.xml"):
+        if "target" in path.parts or ".agentark" in path.parts:
+            continue
+        require_pom_documentation(path, errors)
+        try:
+            pom = ET.parse(path).getroot()
+        except (ET.ParseError, OSError):
+            continue
+        is_server = any(root in path.resolve().parents for root in server_roots)
+        if is_server:
+            continue
+        dependencies = pom.findall("./m:dependencies/m:dependency", MAVEN_NAMESPACE)
+        for dependency in dependencies:
+            artifact = dependency.find("m:artifactId", MAVEN_NAMESPACE)
+            if artifact is not None and artifact.text and artifact.text.strip() in SERVER_ARTIFACTS:
+                errors.append(f"library POM depends on server module: {rel(path)}")
+
+
+def require_phase03_boundaries(errors: list[str]) -> None:
+    for name in REQUIRED_CONTRACTS:
+        path = ROOT / name
+        if not path.is_file() or path.stat().st_size == 0:
+            errors.append(f"Phase 03 contract is missing or empty: {name}")
+
+    kernel_source = ROOT / "agentark-kernel/src/main/java"
+    if kernel_source.is_dir():
+        for path in kernel_source.rglob("*.java"):
+            text = read(path)
+            for token in KERNEL_FORBIDDEN_IMPORTS:
+                if token in text:
+                    errors.append(f"Kernel dependency boundary violation {token}: {rel(path)}")
+
+    services_root = (ROOT / "agentark-services").resolve()
+    server_roots = {
+        (services_root / module).resolve() for module in APPROVED_SERVICE_MODULES
+    }
+    for path in ROOT.rglob("*.java"):
+        if "target" in path.parts or ".agentark" in path.parts:
+            continue
+        text = read(path)
+        if not text.startswith(JAVA_LICENSE_HEADER):
+            errors.append(f"Java file does not use the standard Apache-2.0 header: {rel(path)}")
+        if "@SpringBootApplication" not in text:
+            continue
+        resolved = path.resolve()
+        if not any(root in resolved.parents for root in server_roots):
+            errors.append(f"@SpringBootApplication outside a server module: {rel(path)}")
 
 
 def main() -> int:
@@ -267,6 +386,7 @@ def main() -> int:
 
     require_docs_with_sensitive_changes(changed_paths(args.base), errors)
     require_maven_foundation(errors)
+    require_phase03_boundaries(errors)
 
     if errors:
         print(f"knowledge gate failed: {len(errors)} error(s)")

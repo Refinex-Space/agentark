@@ -8,7 +8,9 @@
         <version>0.1.0</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-scheduler-server</artifactId>
     <name>AgentArk Scheduler Server</name>
-    <description>Scheduler deployment-unit placeholder; shell begins in Phase 05</description>
+    <description>Scheduler 后端部署单元占位，计划在 Phase 05 建立应用壳</description>
+
 </project>

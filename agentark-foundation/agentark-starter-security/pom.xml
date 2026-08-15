@@ -8,7 +8,9 @@
         <version>0.1.0</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-starter-security</artifactId>
     <name>AgentArk Starter Security</name>
-    <description>Security conventions starter placeholder; implementation begins in Phase 04</description>
+    <description>安全工程约定 Starter 占位，计划在 Phase 04 开始实现</description>
+
 </project>

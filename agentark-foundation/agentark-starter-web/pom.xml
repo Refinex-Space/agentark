@@ -8,7 +8,9 @@
         <version>0.1.0</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-starter-web</artifactId>
     <name>AgentArk Starter Web</name>
-    <description>Web conventions starter placeholder; implementation begins in Phase 04</description>
+    <description>Web 工程约定 Starter 占位，计划在 Phase 04 开始实现</description>
+
 </project>

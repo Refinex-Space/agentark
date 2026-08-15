@@ -435,7 +435,7 @@ flowchart LR
 | 00 | DONE | 2026-08-15 | `docs/implementation/phase-00-execution-baseline.md` | 固定上游、工具链和仓库规范已验收 |
 | 01 | DONE | 2026-08-15 | `docs/implementation/phase-01-upstream-audit.md` | 固定上游结构、行为、迁移分类与许可边界已验收 |
 | 02 | DONE | 2026-08-15 | `docs/implementation/phase-02-build-foundation.md` | 机械迁入证据、Maven/BOM、质量生命周期与 CI 已验收 |
-| 03 | NOT_STARTED | — | `docs/implementation/phase-03-kernel-contracts.md` | |
+| 03 | DONE | 2026-08-15 | `docs/implementation/phase-03-kernel-contracts.md` | Kernel、Snapshot/Event/API 契约与架构门禁已完成验收 |
 | 04 | NOT_STARTED | — | `docs/implementation/phase-04-foundation-starters.md` | |
 | 05 | NOT_STARTED | — | `docs/implementation/phase-05-service-shells.md` | |
 | 06 | NOT_STARTED | — | `docs/implementation/phase-06-persistence-baseline.md` | |
@@ -904,38 +904,38 @@ $AGENTSCOPE_ROOT/docs/
 
 #### Kernel
 
-- [ ] 建立包前缀 `space.refinex.agentark`；
-- [ ] 实现 UUIDv7 强类型 ID 基础；
-- [ ] 实现 `OrganizationId`、`ProjectId`、`EnvironmentId`；
-- [ ] 实现 `AgentId`、`RevisionId`、`SnapshotId`、`DeploymentId`；
-- [ ] 实现 `KnowledgeRevisionId`；
-- [ ] 实现 `SessionId`、`TurnId`、`RunId`、`ApprovalId`、`JobId`；
-- [ ] 实现 `SchemaVersion`、`Checksum`、`SecretRef`、`ObjectRef`；
-- [ ] 实现稳定 Domain Error Code、Violation、DomainException；
-- [ ] 建立 Agent/Model/Prompt/MCP/Skill/Knowledge/Memory/Workspace/Sandbox/Permission Snapshot Spec；
-- [ ] 建立 `AgentRevisionSnapshot` 领域模型；
-- [ ] Kernel 不引入 Jackson；序列化属于 Adapter；
-- [ ] 时间使用 `Instant`；
-- [ ] 参数构造时强校验，避免非法对象。
+- [x] 建立包前缀 `space.refinex.agentark`；
+- [x] 实现 UUIDv7 强类型 ID 基础；
+- [x] 实现 `OrganizationId`、`ProjectId`、`EnvironmentId`；
+- [x] 实现 `AgentId`、`RevisionId`、`SnapshotId`、`DeploymentId`；
+- [x] 实现 `KnowledgeRevisionId`；
+- [x] 实现 `SessionId`、`TurnId`、`RunId`、`ApprovalId`、`JobId`；
+- [x] 实现 `SchemaVersion`、`Checksum`、`SecretRef`、`ObjectRef`；
+- [x] 实现稳定 Domain Error Code、Violation、DomainException；
+- [x] 建立 Agent/Model/Prompt/MCP/Skill/Knowledge/Memory/Workspace/Sandbox/Permission Snapshot Spec；
+- [x] 建立 `AgentRevisionSnapshot` 领域模型；
+- [x] Kernel 不引入 Jackson；序列化属于 Adapter；
+- [x] 时间使用 `Instant`；
+- [x] 参数构造时强校验，避免非法对象。
 
 #### Contracts
 
-- [ ] 创建 `contracts/openapi/`；
-- [ ] 创建 `contracts/asyncapi/`；
-- [ ] 创建 `contracts/schemas/agent-revision-snapshot/v1.json`；
-- [ ] 创建 `contracts/schemas/runtime-event/v1.json`；
-- [ ] 创建 Contract Lint/Schema Test；
-- [ ] 定义 Snapshot 的 `schemaVersion`、`runtimeProvider`、`contentHash`；
-- [ ] 定义 Runtime Event Envelope 的稳定字段；
-- [ ] OpenAPI 只建立骨架和通用 Error，不提前虚构所有业务 Endpoint。
+- [x] 创建 `contracts/openapi/`；
+- [x] 创建 `contracts/asyncapi/`；
+- [x] 创建 `contracts/schemas/agent-revision-snapshot/v1.json`；
+- [x] 创建 `contracts/schemas/runtime-event/v1.json`；
+- [x] 创建 Contract Lint/Schema Test；
+- [x] 定义 Snapshot 的 `schemaVersion`、`runtimeProvider`、`contentHash`；
+- [x] 定义 Runtime Event Envelope 的稳定字段；
+- [x] OpenAPI 只建立骨架和通用 Error，不提前虚构所有业务 Endpoint。
 
 #### 架构治理
 
-- [ ] 建立 ArchUnit 测试；
-- [ ] Kernel 禁止 Spring、Persistence、Redis、AgentScope、厂商 SDK；
-- [ ] Domain 禁止依赖 Adapter；
-- [ ] Server 不得被 Library 依赖；
-- [ ] 只有 Server 包含 `@SpringBootApplication` 的规则先建立并在后续启用。
+- [x] 建立 ArchUnit 测试；
+- [x] Kernel 禁止 Spring、Persistence、Redis、AgentScope、厂商 SDK；
+- [x] Domain 禁止依赖 Adapter；
+- [x] Server 不得被 Library 依赖；
+- [x] 只有 Server 包含 `@SpringBootApplication` 的规则先建立并在后续启用。
 
 ### 产物
 
@@ -951,14 +951,14 @@ docs/implementation/phase-03-kernel-contracts.md
 
 ### 验收条件
 
-- [ ] Kernel 依赖树无 Spring/AgentScope/ORM/Redis/Jackson；
-- [ ] 所有 ID、Ref、Checksum、SchemaVersion 有单元测试；
-- [ ] Snapshot 不能携带明文 Secret；
-- [ ] Snapshot JSON Schema 可校验 Golden File；
-- [ ] Runtime Event Schema 有版本字段和稳定关联 ID；
-- [ ] ArchUnit 对故意违规 Fixture 能失败；
-- [ ] 无通用 `BaseEntity`、`BaseService`、万能 Utils；
-- [ ] `./mvnw -pl agentark-kernel -am verify` 通过。
+- [x] Kernel 依赖树无 Spring/AgentScope/ORM/Redis/Jackson；
+- [x] 所有 ID、Ref、Checksum、SchemaVersion 有单元测试；
+- [x] Snapshot 不能携带明文 Secret；
+- [x] Snapshot JSON Schema 可校验 Golden File；
+- [x] Runtime Event Schema 有版本字段和稳定关联 ID；
+- [x] ArchUnit 对故意违规 Fixture 能失败；
+- [x] 无通用 `BaseEntity`、`BaseService`、万能 Utils；
+- [x] `./mvnw -pl agentark-kernel -am verify` 通过。
 
 ### 验收命令
 

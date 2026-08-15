@@ -8,7 +8,9 @@
         <version>0.1.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-knowledge</artifactId>
     <name>AgentArk Knowledge</name>
-    <description>Knowledge domain placeholder; implementation begins in Phase 09</description>
+    <description>Knowledge 领域模块占位，计划在 Phase 09 开始实现</description>
+
 </project>

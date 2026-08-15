@@ -8,7 +8,9 @@
         <version>0.1.0</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
+
     <artifactId>agentark-runtime</artifactId>
     <name>AgentArk Runtime</name>
-    <description>Provider-neutral runtime placeholder; implementation begins in Phase 11</description>
+    <description>运行时供应商中立的 Runtime 模块占位，计划在 Phase 11 开始实现</description>
+
 </project>
