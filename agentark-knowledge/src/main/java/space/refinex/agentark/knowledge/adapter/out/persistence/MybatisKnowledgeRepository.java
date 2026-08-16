@@ -411,6 +411,15 @@ public final class MybatisKnowledgeRepository implements KnowledgeRepository {
     }
 
     /**
+     * 仅供已认证 Internal Service 按全局请求标识读取可信租户范围。
+     */
+    @Override
+    public Optional<IngestionJobDescriptor> findIngestionRequestInternal(
+        IngestionRequestId requestId) {
+        return mapper.findIngestionRequestInternal(requestId.value()).map(this::ingestion);
+    }
+
+    /**
      * 读取并转换 Knowledge Base 行。
      *
      * @param row 数据库行

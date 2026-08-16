@@ -20,7 +20,7 @@ import java.util.Set;
 import space.refinex.agentark.foundation.persistence.testing.AbstractMySqlMigrationIT;
 
 /**
- * 验证组合类路径中的 Control V1 到 V5 可从空库和 V3 升级，并持久化全部中文表字段注释。
+ * 验证组合类路径中的 Control V1 到 V6 可从空库和 V5 升级，并持久化全部中文表字段注释。
  *
  * @author refinex
  */
@@ -52,17 +52,17 @@ class KnowledgeMySqlMigrationIT extends AbstractMySqlMigrationIT {
     /** 返回 Knowledge 迁移测试使用的固定配置。 */
     @Override
     protected String expectedVersion() {
-        return "5";
+        return "6";
     }
 
     /** 返回 Knowledge 迁移测试使用的固定配置。 */
     @Override
     protected String previousVersion() {
-        return "3";
+        return "5";
     }
 
     /**
-     * 声明 Phase 07 到 Phase 10 组合类路径允许存在的全部 Control 业务表。
+     * 声明 Phase 07 到 Phase 14 组合类路径允许存在的全部 Control 业务表。
      *
      * @return IAM、Catalog、Secret、Knowledge 与 Release 表集合
      */
@@ -79,6 +79,7 @@ class KnowledgeMySqlMigrationIT extends AbstractMySqlMigrationIT {
             "knowledge_base", "data_source", "document", "document_acl", "document_revision",
             "parser_profile", "chunk_profile", "embedding_profile", "retrieval_profile",
             "knowledge_revision", "knowledge_revision_document", "knowledge_ingestion_request",
+            "knowledge_ingestion_result",
             "agent_draft", "agent_draft_component", "validation_report", "agent_revision",
             "agent_revision_snapshot", "publish_operation", "deployment", "deployment_revision",
             "control_outbox");

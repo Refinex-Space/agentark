@@ -320,3 +320,14 @@ Phase 11 没有迁入上游源码、JPA Entity、Go Store、AgentScope Event 或
 | RT-09 | 常驻 Worker Claim 持久 Work Queue；Checkpoint 孤儿恢复、不可恢复新 Attempt、取消/超时终态和接单后准备失败可查询已覆盖 | Self-hosted Hands Worker 与 Dead Letter 运维归 P21 |
 
 Phase 13 保持 Control、Runtime 和 Provider 边界：Control 只经 Internal Contract 提供不可变 Snapshot；Runtime MySQL/Object Storage 保存权威事实；Provider 只编译和执行，不创建表或泄漏 AgentScope Event。
+
+## 10. Phase 14 Knowledge/RAG 行为落地
+
+| 上游基线 | Phase 14 实际覆盖 | AgentArk 增强与拒绝项 |
+|---|---|---|
+| `SimpleKnowledge` 组合 Reader、Chunk、Embedding、Store | 专用 Worker 异步执行安全扫描、进程 Parser、版本切分、批次 Embedding、Upsert、Count/Checksum 和结果提交 | 拒绝 HTTP 同步大文档处理；Control 状态机、租户和不可变 Revision 不交给 Provider |
+| `QdrantStore`/`VDBStoreBase` 提供基础向量操作 | Qdrant 1.18.3 E2E 覆盖写入、检索、重启初始化和删除 | 强制 Organization/Project/Revision/Document Payload 与 Filter；客户端不能移除 ACL，Collection 不是租户 |
+| Knowledge Tool/Hook 把检索接入 Agent | `knowledge_retrieve` Tool 映射固定 AgentArk Retrieval Port | 模型只能给查询文本，不能切换 Revision、租户、ACL 或预算；不泄漏 AgentScope Event |
+| 上游 Reader/Store 测试覆盖基础成功/错误 | AgentArk 增加恶意文件/ZIP 边界、Qdrant 不可用失败结果、删除顺序、Citation/Trace 和跨租户 E2E | Provider 故障显式失败，不能伪装为无结果或 READY |
+
+Control Internal Command 的计划和结果使用显式 Wire DTO；Worker 无 Control DataSource，Scheduler Schema 账号隔离继续由 Phase 06 MySQL 权限测试证明。Phase 14 只交付可调度管线，Phase 15 才负责持久 Job/Attempt 和生产 Handler 装配。

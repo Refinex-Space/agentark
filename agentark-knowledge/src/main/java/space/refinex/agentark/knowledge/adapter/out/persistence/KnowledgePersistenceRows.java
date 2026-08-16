@@ -306,4 +306,79 @@ final class KnowledgePersistenceRows {
         Instant requestedAt,
         String requestedBy) {
     }
+
+    /**
+     * @param id                  结果 UUIDv7
+     * @param requestId           摄取请求 UUIDv7
+     * @param organizationId      组织 UUIDv7
+     * @param projectId           项目 UUIDv7
+     * @param knowledgeRevisionId 知识修订 UUIDv7
+     * @param schedulerJobId      调度任务 UUIDv7
+     * @param attemptId           摄取 Attempt UUIDv7
+     * @param idempotencyKey      Internal Command 幂等键
+     * @param documentCount       已处理文档数
+     * @param chunkCount          已验证 Chunk 数
+     * @param checksum            清单 SHA-256 原始 32 字节
+     * @param artifactRefsJson    不可变制品引用 JSON
+     * @param status              结果状态
+     * @param failureCode         可选稳定失败代码
+     * @param completedAt         Worker 完成时间
+     * @param createdAt           Control 接收时间
+     * @param createdBy           内部服务主体
+     * @author refinex
+     */
+    record IngestionResultRow(
+        UUID id,
+        UUID requestId,
+        UUID organizationId,
+        UUID projectId,
+        UUID knowledgeRevisionId,
+        UUID schedulerJobId,
+        UUID attemptId,
+        String idempotencyKey,
+        int documentCount,
+        int chunkCount,
+        byte[] checksum,
+        String artifactRefsJson,
+        String status,
+        String failureCode,
+        Instant completedAt,
+        Instant createdAt,
+        String createdBy) {
+
+        /**
+         * 复制可变摘要字节。
+         *
+         * @param id                  结果 UUID
+         * @param requestId           请求 UUID
+         * @param organizationId      组织 UUID
+         * @param projectId           项目 UUID
+         * @param knowledgeRevisionId Knowledge Revision UUID
+         * @param schedulerJobId      Scheduler Job UUID
+         * @param attemptId           Attempt UUID
+         * @param idempotencyKey      幂等键
+         * @param documentCount       文档数
+         * @param chunkCount          Chunk 数
+         * @param checksum            摘要字节
+         * @param artifactRefsJson    制品 JSON
+         * @param status              结果状态
+         * @param failureCode         失败代码
+         * @param completedAt         完成时间
+         * @param createdAt           创建时间
+         * @param createdBy           创建主体
+         */
+        IngestionResultRow {
+            checksum = checksum.clone();
+        }
+
+        /**
+         * 返回摘要字节副本。
+         *
+         * @return 摘要字节副本
+         */
+        @Override
+        public byte[] checksum() {
+            return checksum.clone();
+        }
+    }
 }

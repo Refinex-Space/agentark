@@ -26,6 +26,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.io.ByteArrayInputStream;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -65,7 +66,10 @@ import space.refinex.agentark.control.iam.application.port.TenantCatalogReposito
 import space.refinex.agentark.control.iam.domain.Project;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
 import space.refinex.agentark.foundation.security.PrincipalType;
+import space.refinex.agentark.foundation.security.ServiceIdentity;
+import space.refinex.agentark.kernel.id.JobId;
 import space.refinex.agentark.knowledge.application.KnowledgeApplicationService;
+import space.refinex.agentark.knowledge.application.KnowledgeIngestionControlService;
 import space.refinex.agentark.knowledge.application.KnowledgePermissions;
 import space.refinex.agentark.knowledge.application.KnowledgeProjectContext;
 import space.refinex.agentark.knowledge.application.port.KnowledgeAccessPort;
@@ -73,6 +77,11 @@ import space.refinex.agentark.knowledge.application.port.KnowledgeAuditPort;
 import space.refinex.agentark.knowledge.application.port.KnowledgeRepository;
 import space.refinex.agentark.knowledge.domain.DataSourceType;
 import space.refinex.agentark.knowledge.domain.KnowledgeProfileStatus;
+import space.refinex.agentark.knowledge.domain.KnowledgeRevisionStatus;
+import space.refinex.agentark.knowledge.application.IngestionModels.ArtifactKind;
+import space.refinex.agentark.knowledge.application.IngestionModels.ArtifactReference;
+import space.refinex.agentark.knowledge.application.IngestionModels.IngestionResult;
+import space.refinex.agentark.knowledge.application.IngestionModels.ResultStatus;
 import space.refinex.agentark.kernel.ref.Checksum;
 
 /**
@@ -125,6 +134,10 @@ class KnowledgeTenancyIT {
     /** Knowledge 应用服务。 */
     @Autowired
     private KnowledgeApplicationService knowledgeService;
+
+    /** Internal 摄取结果 Control 服务。 */
+    @Autowired
+    private KnowledgeIngestionControlService ingestionControlService;
 
     /** Knowledge 持久化端口。 */
     @Autowired
@@ -210,6 +223,18 @@ class KnowledgeTenancyIT {
         var revision = knowledgeService.createKnowledgeRevision(
             ownerA, projectA.id(), knowledgeBase.id(), List.of(documentRevision.id()), parser.id(),
             chunk.id(), embedding.id(), retrieval.id());
+        var ingestionRequest = knowledgeService.requestIngestion(
+            ownerA, projectA.id(), revision.id(), "knowledge-it:request:0001");
+        JobId schedulerJobId = JobId.generate();
+        UUID attemptId = JobId.generate().value();
+        IngestionResult ingestionResult = new IngestionResult(
+            JobId.generate().value(), ingestionRequest.id(), organizationA.id(), projectA.id(),
+            revision.id(), schedulerJobId, attemptId, "knowledge-it:result:0001", 1, 1,
+            Checksum.sha256("knowledge-it-manifest"), List.of(new ArtifactReference(
+                ArtifactKind.CHUNKS, documentRevision.objectRef())), ResultStatus.SUCCEEDED, "",
+            Instant.now());
+        ingestionControlService.acceptResult(schedulerService(), ingestionResult);
+        ingestionControlService.acceptResult(schedulerService(), ingestionResult);
 
         assertThat(documentRevision.objectRef().checksum()).isEqualTo(Checksum.sha256(content));
         assertThat(knowledgeRepository.findKnowledgeBase(projectB.id(), knowledgeBase.id())).isEmpty();
@@ -228,6 +253,15 @@ class KnowledgeTenancyIT {
         assertThat(jdbcTemplate.queryForObject(
             "SELECT COUNT(*) FROM document_revision WHERE project_id = UUID_TO_BIN(?)",
             Integer.class, projectA.id().asString())).isOne();
+        assertThat(jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM knowledge_ingestion_result WHERE project_id = UUID_TO_BIN(?)",
+            Integer.class, projectA.id().asString())).isOne();
+        assertThat(jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM control_outbox "
+                + "WHERE aggregate_type = 'knowledge_revision' AND aggregate_id = ?",
+            Integer.class, revision.id().asString())).isOne();
+        assertThat(knowledgeRepository.findKnowledgeRevision(projectA.id(), revision.id())
+            .orElseThrow().status()).isEqualTo(KnowledgeRevisionStatus.READY);
         assertThatThrownBy(() -> knowledgeService.listKnowledgeBases(ownerB, projectA.id(), null, 50))
             .isInstanceOf(AccessDeniedException.class);
 
@@ -244,7 +278,7 @@ class KnowledgeTenancyIT {
                 projectA.id().asString(), knowledgeBase.id().asString())
                 .with(authentication(springAuthentication(ownerA))))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.items[0].status").value("CREATED"))
+            .andExpect(jsonPath("$.items[0].status").value("READY"))
             .andExpect(jsonPath("$.items[0].contentHash").isString());
 
         mockMvc.perform(get("/api/v1/projects/{projectId}/knowledge-bases", projectA.id().asString())
@@ -263,6 +297,18 @@ class KnowledgeTenancyIT {
         return new AgentArkPrincipal(
             "https://issuer.example.test", subject, PrincipalType.USER,
             Set.of(PermissionRegistry.ORGANIZATION_CREATE), Optional.empty(), Optional.empty());
+    }
+
+    /**
+     * 创建具备 Control Audience 的 Scheduler 服务身份，不携带数据库凭据。
+     *
+     * @return 内部 Scheduler 服务主体
+     */
+    private static AgentArkPrincipal schedulerService() {
+        return new AgentArkPrincipal(
+            "https://issuer.example.test", "knowledge-scheduler", PrincipalType.SERVICE,
+            Set.of(), Optional.empty(), Optional.of(new ServiceIdentity(
+                "agentark-scheduler", Set.of(KnowledgeIngestionControlService.CONTROL_AUDIENCE))));
     }
 
     /**

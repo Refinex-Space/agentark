@@ -92,6 +92,78 @@ paths:
         "403": { $ref: "#/components/responses/ProblemResponse" }
         # Deployment 不存在。
         "404": { $ref: "#/components/responses/ProblemResponse" }
+  # 按摄取请求加载已固定 Revision、Document 和 Profile 的不可变计划。
+  /internal/v1/knowledge/ingestions/{requestId}/plan:
+    # 注册摄取请求路径参数。
+    parameters:
+      # 摄取请求标识 UUIDv7。
+      - { $ref: "#/components/parameters/IngestionRequestId" }
+    # 获取不包含凭据值的摄取计划。
+    get:
+      # 固定操作标识。
+      operationId: getKnowledgeIngestionPlan
+      # Internal Knowledge 功能分组。
+      tags: [InternalKnowledge]
+      # 声明固定计划响应。
+      responses:
+        # 返回语言中立摄取计划。
+        "200":
+          # 说明计划只含不可变引用和 SecretRef。
+          description: Knowledge 摄取固定计划
+          # 声明响应内容。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 引用版本化摄取计划 Schema。
+              schema: { $ref: "#/components/schemas/KnowledgeIngestionPlan" }
+        # 服务身份无权访问。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 摄取请求或固定资源不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 摄取计划资源绑定冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 幂等提交单个摄取 Attempt 的完整结果。
+  /internal/v1/knowledge/ingestions/{requestId}:complete:
+    # 注册摄取请求路径参数。
+    parameters:
+      # 摄取请求标识 UUIDv7。
+      - { $ref: "#/components/parameters/IngestionRequestId" }
+    # 提交结果并由 Control 校验后转换 Revision 状态。
+    post:
+      # 固定操作标识。
+      operationId: completeKnowledgeIngestion
+      # Internal Knowledge 功能分组。
+      tags: [InternalKnowledge]
+      # 声明结果命令请求体。
+      requestBody:
+        # Worker 必须提交完整结果。
+        required: true
+        # 声明请求内容。
+        content:
+          # 固定 JSON 媒体类型。
+          application/json:
+            # 引用版本化摄取结果 Schema。
+            schema: { $ref: "#/components/schemas/KnowledgeIngestionResult" }
+      # 声明幂等命令响应。
+      responses:
+        # 返回新写入或已存在的相同结果。
+        "200":
+          # 说明响应可安全用于重试判定。
+          description: Control 已接受的幂等摄取结果
+          # 声明响应内容。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 响应沿用同一结果 Schema。
+              schema: { $ref: "#/components/schemas/KnowledgeIngestionResult" }
+        # 请求结构或路径绑定无效。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 服务身份无权访问。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 摄取请求不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 幂等键重用、租户绑定或状态校验冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
 # 汇总可复用的 Schema、参数、响应与认证组件。
 components:
   # 注册公共 Schema 引用。
@@ -146,6 +218,14 @@ components:
           uniqueItems: true
       # 禁止返回未声明的 Control 字段。
       additionalProperties: false
+    # 暴露 Scheduler Worker 读取的语言中立摄取计划。
+    KnowledgeIngestionPlan:
+      # 引用版本化 Internal Schema 中的计划定义。
+      $ref: ../schemas/knowledge-ingestion-internal/v1.json#/$defs/IngestionPlan
+    # 暴露 Scheduler Worker 幂等提交的语言中立摄取结果。
+    KnowledgeIngestionResult:
+      # 引用版本化 Internal Schema 中的结果定义。
+      $ref: ../schemas/knowledge-ingestion-internal/v1.json#/$defs/IngestionResult
     # UUIDv7 文本标识。
     UuidV7:
       # 引用 Release 公共契约中的 UUIDv7 定义。
@@ -166,6 +246,16 @@ components:
     DeploymentId:
       # 参数名称。
       name: deploymentId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # Knowledge 摄取请求标识路径参数。
+    IngestionRequestId:
+      # 参数名称。
+      name: requestId
       # 参数位置。
       in: path
       # 路径参数不可省略。

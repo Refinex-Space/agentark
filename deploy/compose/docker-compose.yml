@@ -170,6 +170,18 @@ services:
       - "127.0.0.1:${AGENTARK_QDRANT_HTTP_PORT:-6333}:6333"
       # Qdrant gRPC API 宿主端口。
       - "127.0.0.1:${AGENTARK_QDRANT_GRPC_PORT:-6334}:6334"
+    # 通过容器内 TCP 探测确认 REST 监听端口已就绪，不依赖宿主端口映射。
+    healthcheck:
+      # Qdrant 镜像内使用 Bash TCP 设备检测 6333 监听状态。
+      test: ["CMD-SHELL", "bash -c ':> /dev/tcp/127.0.0.1/6333'"]
+      # 每十秒检查一次。
+      interval: 10s
+      # 单次检查最多等待五秒。
+      timeout: 5s
+      # 启动期间允许二十次失败。
+      retries: 20
+      # 首次启动给予十秒索引恢复时间。
+      start_period: 10s
     # 只加入 AgentArk 本地内部网络。
     networks:
       # 使用固定的 Core 网络名称。

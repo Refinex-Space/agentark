@@ -265,4 +265,13 @@ public interface KnowledgeRepository {
      */
     Optional<IngestionJobDescriptor> findIngestionRequest(
         ProjectId projectId, IngestionRequestId requestId);
+
+    /**
+     * 仅供已认证 Internal Service 按全局 UUIDv7 加载摄取计划，不得暴露到 Public API。
+     *
+     * @param requestId 摄取请求标识
+     * @return 摄取请求及其可信租户范围
+     */
+    Optional<IngestionJobDescriptor> findIngestionRequestInternal(
+        IngestionRequestId requestId);
 }

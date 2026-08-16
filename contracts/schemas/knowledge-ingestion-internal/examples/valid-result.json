@@ -1,0 +1,27 @@
+{
+  "resultId": "0198a4b0-2001-7101-8101-000000000001",
+  "requestId": "0198a4b0-2002-7102-8102-000000000002",
+  "organizationId": "0198a4b0-2003-7103-8103-000000000003",
+  "projectId": "0198a4b0-2004-7104-8104-000000000004",
+  "revisionId": "0198a4b0-2005-7105-8105-000000000005",
+  "schedulerJobId": "0198a4b0-2006-7106-8106-000000000006",
+  "attemptId": "0198a4b0-2007-7107-8107-000000000007",
+  "idempotencyKey": "ingestion:revision-0001:attempt-0001",
+  "documentCount": 1,
+  "chunkCount": 2,
+  "checksum": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "artifacts": [
+    {
+      "kind": "CHUNKS",
+      "ref": {
+        "uri": "object://knowledge/chunks/revision-0001.ndjson",
+        "checksum": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "size": 1024,
+        "mediaType": "application/x-ndjson"
+      }
+    }
+  ],
+  "status": "SUCCEEDED",
+  "failureCode": "",
+  "completedAt": "2026-08-16T10:00:00Z"
+}

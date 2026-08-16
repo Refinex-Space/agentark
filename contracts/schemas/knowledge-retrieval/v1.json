@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/knowledge-retrieval/v1.json",
+  "title": "AgentArk Knowledge Retrieval Citation 与 Trace 契约",
+  "description": "表达固定 Knowledge Revision 检索返回的正文片段、可信 Citation 和不采集原文的执行 Trace。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["items", "trace"],
+  "properties": {
+    "items": {
+      "description": "经过 ACL、去重、Rerank 和上下文预算后的有序检索结果。",
+      "type": "array",
+      "items": { "$ref": "#/$defs/RetrievalItem" }
+    },
+    "trace": { "description": "本次检索的固定 Revision、数量、用量和耗时轨迹。", "$ref": "#/$defs/RetrievalTrace" }
+  },
+  "$defs": {
+    "UuidV7": {
+      "description": "AgentArk 强类型标识在线路上的 UUIDv7 字符串表示。",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "Citation": {
+      "description": "将返回片段追踪到固定文档修订和 Chunk，并显式标记外部内容不可信。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["documentId", "documentRevisionId", "chunkKey", "title", "sourceTrust"],
+      "properties": {
+        "documentId": { "description": "稳定 Document 标识。", "$ref": "#/$defs/UuidV7" },
+        "documentRevisionId": { "description": "命中内容所属的不可变 Document Revision 标识。", "$ref": "#/$defs/UuidV7" },
+        "chunkKey": { "description": "Profile 算法在文档修订内生成的稳定 Chunk Key。", "type": "string", "minLength": 1, "maxLength": 255 },
+        "title": { "description": "经授权读取的文档展示标题。", "type": "string", "minLength": 1, "maxLength": 255 },
+        "sourceTrust": { "description": "固定为 UNTRUSTED_EXTERNAL，提示 Runtime 不得把文档指令当成系统指令。", "type": "string", "const": "UNTRUSTED_EXTERNAL" }
+      }
+    },
+    "RetrievalItem": {
+      "description": "一个预算内检索片段、归一化相关性分数及其 Citation。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "score", "citation"],
+      "properties": {
+        "text": { "description": "返回给 Runtime 的文档片段正文。", "type": "string", "minLength": 1 },
+        "score": { "description": "归一化到 0 至 1 的最终相关性分数。", "type": "number", "minimum": 0, "maximum": 1 },
+        "citation": { "description": "片段的不可变来源引用与信任标记。", "$ref": "#/$defs/Citation" }
+      }
+    },
+    "RetrievalTrace": {
+      "description": "不包含查询或文档正文的检索统计、用量和固定 Revision 关联。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "traceId", "knowledgeRevisionId", "vectorCandidates", "hybridCandidates",
+        "deduplicatedCount", "returnedCount", "queryCharacters", "contextCharacters",
+        "durationMillis", "completedAt"
+      ],
+      "properties": {
+        "traceId": { "description": "检索轨迹全局标识。", "$ref": "#/$defs/UuidV7" },
+        "knowledgeRevisionId": { "description": "Runtime Snapshot 固定的 READY Knowledge Revision 标识。", "$ref": "#/$defs/UuidV7" },
+        "vectorCandidates": { "description": "向量召回候选数量。", "type": "integer", "minimum": 0 },
+        "hybridCandidates": { "description": "可选 Hybrid Port 补充的候选数量。", "type": "integer", "minimum": 0 },
+        "deduplicatedCount": { "description": "按文档修订和 Chunk Key 去重后的候选数量。", "type": "integer", "minimum": 0 },
+        "returnedCount": { "description": "最终返回结果数量。", "type": "integer", "minimum": 0 },
+        "queryCharacters": { "description": "查询文本字符数，不记录查询正文。", "type": "integer", "minimum": 0 },
+        "contextCharacters": { "description": "最终返回片段正文字符总数。", "type": "integer", "minimum": 0 },
+        "durationMillis": { "description": "从接收检索请求到完成结果的毫秒数。", "type": "integer", "minimum": 0 },
+        "completedAt": { "description": "检索完成的 UTC 时间。", "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

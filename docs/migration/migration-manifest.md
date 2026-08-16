@@ -87,7 +87,7 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 | ASF-09 | Model Provider Extensions | DEFER | Provider / P12 | 按产品支持清单逐个引入，禁止全量闭包 |
 | ASF-10 | MySQL/PostgreSQL/Redis/Object Store Extensions | DEFER | Foundation/Provider / P04、P12 | P04 已按 AgentArk 契约独立实现 MySQL/Redis/Local Object Store 基础，没有复制或依赖这些 Extension；Provider 级复用继续 DEFER 到 P12 |
 | ASF-11 | Sandbox Extensions | DEFER | Provider / P12、P20 | E2B/Daytona/K8s/AgentRun 分别做安全与许可评审 |
-| ASF-12 | RAG Extensions | DEFER | Knowledge / P14 | 根据 Qdrant/Embedding 目标逐个评估 |
+| ASF-12 | RAG Extensions | REFERENCE | Knowledge / P14 | 已逐项审计 Qdrant/Reader/Embedding/Knowledge/Tool；不复制 Store 或旧 Knowledge 类型 |
 | ASF-13 | A2A/AG-UI/Agent Protocol | DEFER | API Compatibility / P21 | 公共契约、认证和恢复语义确定后引入 |
 | ASF-14 | AgentScope Framework 核心源码复制 | REJECT | 无 | 依赖优先，禁止维护私有 Fork |
 
@@ -160,11 +160,12 @@ Phase 08 新增代码均为 AgentArk 独立实现，没有迁入固定上游源�
 | Core deprecated `rag/Knowledge`、Document 模型 | `REFERENCE` | 只提炼检索能力边界；AgentArk 独立建立 KnowledgeBase、Document/Revision、ACL 与不可变 KnowledgeRevision | 不复制旧类型，不让其进入 Domain/API |
 | RAG Simple `SimpleKnowledge` | `REFERENCE` | 独立拆出 Parser、Chunk、Embedding、VectorIndex、Retriever、Reranker Ports 与 Fake Adapter | 不直接组合 Provider 实现，不同步执行大文档摄取 |
 | Reader/Chunker/Embedding | `REFERENCE/DEFER` | Phase 09 只建立中立 Port 和版本化 Profile | PDF/Word/Tika、真实 Embedding 与模型 SDK 延后 P14 |
-| Qdrant/Elasticsearch/Milvus/PgVector Store | `DEFER` | `VectorIndex` 显式要求可信 `ProjectId + KnowledgeRevisionId` | 不引入客户端依赖，不把 Collection 名当授权机制 |
+| Qdrant Store | `ADAPT` | `adapter.out.vector.qdrant.QdrantKnowledgeVectorStore` | 使用中立 Port/JDK REST；强制 Organization/Project/Revision/Document Filter、Payload Index、Count/Checksum 和删除；不复制上游实现 |
+| Elasticsearch/Milvus/PgVector Store | `DEFER` | 仅保留中立 `KnowledgeVectorStore` Port | 没有实际工作负载和安全 E2E，不引入客户端依赖 |
 | Bailian/Dify/Haystack/RAGFlow | `DEFER/REJECT` | 仅记录托管检索和 Rerank 语义 | P14 未逐个做安全、许可和产品决策前不得进入运行闭包 |
 | AgentScope Service/Aistio/Frontend Knowledge | `REFERENCE` | 全量索引确认没有独立 Knowledge/Document 管理 API/UI 可迁移 | 不虚构上游 Service 功能或复制无关页面 |
 
-Phase 09 实现源码均为 AgentArk 独立实现。`agentark-knowledge` 的 Domain/Application 无 `io.agentscope`、Qdrant、Elasticsearch、Milvus 或 PgVector 类型；未来 AgentScope 适配只允许进入 `adapter.out.vector.agentscope`，且归 Phase 14 单独审计。
+Phase 09 实现源码均为 AgentArk 独立实现。Phase 14 保持 `agentark-knowledge` Domain/Application 无 `io.agentscope`、Qdrant、Elasticsearch、Milvus 或 PgVector 类型；AgentScope 适配只进入 `adapter.out.vector.agentscope`，Qdrant 只进入 `adapter.out.vector.qdrant`。
 
 ## 10. Phase 10 实际处置
 
@@ -217,6 +218,18 @@ Phase 12 代码均为 AgentArk 独立防腐实现，只通过 Maven 依赖调用
 | Recovery / Usage / Provider Error | `ADAPT` | Checkpoint 孤儿接管、不可恢复新 Attempt、接单后准备失败可查询、原始 Token/Duration Usage 与 429/Timeout 分类 | 价格结算、跨区域容灾、Dead Letter UI 和生产演练延后 P19/P21/P22 |
 
 Phase 13 没有迁入上游实现代码或新增 Provider 私表。Runtime V2、ObjectRef 和 Outbox 继续是权威恢复链；AgentScope 只存在于独立 Provider 模块。
+
+## 14. Phase 14 实际处置
+
+| 候选能力 | 分类 | AgentArk 落点 | 明确边界 |
+|---|---|---|---|
+| `SimpleKnowledge`、Reader/Chunk 组合 | `REFERENCE/ADAPT` | 安全扫描、进程 Parser、Profile Chunk、异步 Worker | 不复制单体 Knowledge；状态机和租户授权仍由 AgentArk 拥有 |
+| `VDBStoreBase`、`QdrantStore` | `REFERENCE/ADAPT` | 中立 `KnowledgeVectorStore` 与 Qdrant REST Adapter | 不导出 Qdrant 类型；Collection 不是授权事实 |
+| AgentScope Knowledge/Hook/Tool 绑定 | `ADAPT` | `adapter.out.vector.agentscope.AgentScopeKnowledgeAdapter` | 使用正式 Toolkit Tool 扩展点；固定 Revision/ACL，拒绝旧 Knowledge 类型和 Provider 直读 Catalog |
+| AgentScope Embedding Provider | `REFERENCE/DEFER` | `EmbeddingProvider`、`QueryEmbeddingProvider` Port | Phase 14 测试使用 Fake；生产 Provider 和 Secret 装配按后续工作包交付 |
+| Scheduler 异步任务模式 | `REFERENCE/DEFER` | `KnowledgeIngestionWorker` 可复用管线 | 持久 Job/Attempt、Retry/Dead Letter 和 Handler 装配归 Phase 15 |
+
+Phase 14 未复制上游源码或第三方资产。新增 `agentscope-core` 依赖只用于正式 `Toolkit`/`@Tool` API，许可证继续由既有 SBOM/NOTICE 门禁跟踪；Qdrant 通过标准 REST 调用，没有引入 Qdrant SDK 依赖。
 
 ## 14. 变更协议
 

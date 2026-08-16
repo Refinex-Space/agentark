@@ -1,0 +1,27 @@
+{
+  "items": [
+    {
+      "text": "AgentArk 只按 Snapshot 固定的 Knowledge Revision 检索。",
+      "score": 0.93,
+      "citation": {
+        "documentId": "0198a4b0-3001-7101-8101-000000000001",
+        "documentRevisionId": "0198a4b0-3002-7102-8102-000000000002",
+        "chunkKey": "document-0001:000001",
+        "title": "AgentArk Runtime 规范",
+        "sourceTrust": "UNTRUSTED_EXTERNAL"
+      }
+    }
+  ],
+  "trace": {
+    "traceId": "0198a4b0-3003-7103-8103-000000000003",
+    "knowledgeRevisionId": "0198a4b0-3004-7104-8104-000000000004",
+    "vectorCandidates": 20,
+    "hybridCandidates": 0,
+    "deduplicatedCount": 20,
+    "returnedCount": 1,
+    "queryCharacters": 18,
+    "contextCharacters": 44,
+    "durationMillis": 32,
+    "completedAt": "2026-08-16T10:01:00Z"
+  }
+}

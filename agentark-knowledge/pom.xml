@@ -11,7 +11,7 @@
 
     <artifactId>agentark-knowledge</artifactId>
     <name>AgentArk Knowledge</name>
-    <description>提供 Knowledge 元数据、不可变版本、摄取端口与 Control 持久化边界</description>
+    <description>提供 Knowledge 元数据、不可变版本、安全摄取、Qdrant 检索与 Control 持久化边界</description>
 
     <dependencyManagement>
         <dependencies>
@@ -61,6 +61,12 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+
+        <!-- 仅供 adapter.out.vector.agentscope 把固定 Revision 检索注册为 Harness 只读 Tool。 -->
+        <dependency>
+            <groupId>io.agentscope</groupId>
+            <artifactId>agentscope-core</artifactId>
         </dependency>
 
         <!-- 仅在测试中提供真实 IAM 组合根与 Phase 08 Control 迁移，不进入 Knowledge 生产依赖。 -->

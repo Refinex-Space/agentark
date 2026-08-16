@@ -36,7 +36,9 @@ import java.util.UUID;
  *
  * @author refinex
  */
-@RestControllerAdvice(assignableTypes = KnowledgeController.class)
+@RestControllerAdvice(assignableTypes = {
+    KnowledgeController.class, KnowledgeIngestionInternalController.class
+})
 public final class KnowledgeProblemDetailAdvice {
 
     /**

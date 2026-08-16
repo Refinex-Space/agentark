@@ -16,7 +16,14 @@
 
 package space.refinex.agentark.scheduling.adapter.out.persistence;
 
+import org.junit.jupiter.api.Test;
 import space.refinex.agentark.foundation.persistence.testing.AbstractMySqlMigrationIT;
+
+import java.sql.Connection;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * 验证 Scheduler 只迁移 agentark_scheduler，并拒绝读取 Runtime Schema。
@@ -48,6 +55,22 @@ class SchedulerMySqlMigrationIT extends AbstractMySqlMigrationIT {
     @Override
     protected String forbiddenSchemaName() {
         return "agentark_runtime";
+    }
+
+    /**
+     * 证明使用 Scheduler Schema 账号运行的摄取 Worker 无法读取 Control Schema。
+     */
+    @Test
+    void rejectsControlSchemaAccessForIngestionWorker() {
+        assertThatThrownBy(
+                () -> {
+                    try (Connection connection = ownerConnection();
+                        Statement statement = connection.createStatement()) {
+                        statement.executeQuery(
+                            "SELECT id FROM agentark_control.ownership_sentinel");
+                    }
+                })
+            .isInstanceOf(SQLException.class);
     }
 
     /**

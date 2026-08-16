@@ -489,4 +489,18 @@ public interface KnowledgeMapper {
         """)
     Optional<IngestionRow> findIngestionRequestById(
         @Param("projectId") UUID projectId, @Param("id") UUID id);
+
+    /**
+     * 仅供已认证 Internal Service 按全局 UUIDv7 加载计划。
+     *
+     * @param id 请求 UUID
+     * @return 请求行及其可信租户范围
+     */
+    @Select("""
+        SELECT id, organization_id, project_id, knowledge_revision_id, idempotency_key, status,
+               requested_at, requested_by
+        FROM knowledge_ingestion_request
+        WHERE id = #{id,jdbcType=BINARY}
+        """)
+    Optional<IngestionRow> findIngestionRequestInternal(@Param("id") UUID id);
 }

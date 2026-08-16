@@ -24,13 +24,18 @@ import org.springframework.context.annotation.Configuration;
 import space.refinex.agentark.foundation.storage.ObjectStore;
 import space.refinex.agentark.foundation.web.RequestContextAccessor;
 import space.refinex.agentark.knowledge.adapter.in.web.KnowledgeController;
+import space.refinex.agentark.knowledge.adapter.in.web.KnowledgeIngestionInternalController;
 import space.refinex.agentark.knowledge.adapter.in.web.KnowledgeProblemDetailAdvice;
+import space.refinex.agentark.knowledge.adapter.out.persistence.KnowledgeIngestionResultMapper;
 import space.refinex.agentark.knowledge.adapter.out.persistence.KnowledgeMapper;
+import space.refinex.agentark.knowledge.adapter.out.persistence.MybatisKnowledgeIngestionResultRepository;
 import space.refinex.agentark.knowledge.adapter.out.persistence.MybatisKnowledgeRepository;
 import space.refinex.agentark.knowledge.application.KnowledgeApplicationService;
+import space.refinex.agentark.knowledge.application.KnowledgeIngestionControlService;
 import space.refinex.agentark.knowledge.application.KnowledgeRevisionResolver;
 import space.refinex.agentark.knowledge.application.port.KnowledgeAccessPort;
 import space.refinex.agentark.knowledge.application.port.KnowledgeAuditPort;
+import space.refinex.agentark.knowledge.application.port.KnowledgeIngestionResultRepository;
 import space.refinex.agentark.knowledge.application.port.KnowledgeRepository;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -70,6 +75,17 @@ public class KnowledgeConfiguration {
     }
 
     /**
+     * @param mapper     摄取结果 Mapper
+     * @param jsonMapper JSON Mapper
+     * @return MyBatis 摄取结果仓储
+     */
+    @Bean
+    public KnowledgeIngestionResultRepository knowledgeIngestionResultRepository(
+        KnowledgeIngestionResultMapper mapper, JsonMapper jsonMapper) {
+        return new MybatisKnowledgeIngestionResultRepository(mapper, jsonMapper);
+    }
+
+    /**
      * @param repository          Knowledge Repository
      * @param accessPort          组合根授权 Port
      * @param auditPort           组合根审计 Port
@@ -96,6 +112,33 @@ public class KnowledgeConfiguration {
     @Bean
     public KnowledgeRevisionResolver knowledgeRevisionResolver(KnowledgeRepository repository) {
         return new KnowledgeRevisionResolver(repository);
+    }
+
+    /**
+     * @param repository       Knowledge 元数据仓储
+     * @param resultRepository 摄取结果与 Outbox 仓储
+     * @param jsonMapper       JSON Mapper
+     * @param clock            UTC 时钟
+     * @return Internal 摄取 Control 服务
+     */
+    @Bean
+    public KnowledgeIngestionControlService knowledgeIngestionControlService(
+        KnowledgeRepository repository,
+        KnowledgeIngestionResultRepository resultRepository,
+        JsonMapper jsonMapper,
+        Clock clock) {
+        return new KnowledgeIngestionControlService(
+            repository, resultRepository, jsonMapper, clock);
+    }
+
+    /**
+     * @param service Internal 摄取 Control 服务
+     * @return Scheduler Worker Internal API
+     */
+    @Bean
+    public KnowledgeIngestionInternalController knowledgeIngestionInternalController(
+        KnowledgeIngestionControlService service) {
+        return new KnowledgeIngestionInternalController(service);
     }
 
     /**

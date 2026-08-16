@@ -1,0 +1,201 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/knowledge-ingestion-internal/v1.json",
+  "title": "AgentArk Knowledge 摄取内部契约",
+  "description": "约束 Control 与受信 Scheduler Worker 之间的固定摄取计划和幂等摄取结果，不承载任何明文凭据。",
+  "oneOf": [
+    { "$ref": "#/$defs/IngestionPlan" },
+    { "$ref": "#/$defs/IngestionResult" }
+  ],
+  "$defs": {
+    "UuidV7": {
+      "description": "AgentArk 强类型标识在线路上的 UUIDv7 字符串表示。",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "Checksum": {
+      "description": "使用 sha256 前缀表达的不可变内容摘要。",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "SecretRef": {
+      "description": "只定位外部凭据的 Secret 引用，不包含凭据值。",
+      "type": "string",
+      "pattern": "^secret://[^/?#]+/[^?#]+$"
+    },
+    "ObjectRef": {
+      "description": "指向受控对象存储制品并携带完整性和媒体元数据。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri", "checksum", "size", "mediaType"],
+      "properties": {
+        "uri": { "description": "平台授权后生成的对象 URI，调用方不能用它绕过对象权限。", "type": "string", "pattern": "^(object|s3|oss|cos)://[^/?#]+/[^?#]+$" },
+        "checksum": { "description": "对象内容 SHA-256 摘要。", "$ref": "#/$defs/Checksum" },
+        "size": { "description": "对象字节数，必须为非负整数。", "type": "integer", "minimum": 0 },
+        "mediaType": { "description": "对象的 IANA 媒体类型。", "type": "string", "minLength": 3, "maxLength": 255 }
+      }
+    },
+    "KnowledgeRevision": {
+      "description": "摄取计划固定的不可变 Knowledge Revision 及其 Profile 绑定。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "organizationId", "projectId", "knowledgeBaseId", "revisionNumber",
+        "documentRevisionIds", "parserProfileId", "chunkProfileId", "embeddingProfileId",
+        "retrievalProfileId", "contentHash", "status", "failureCode", "version",
+        "createdAt", "updatedAt"
+      ],
+      "properties": {
+        "id": { "description": "Knowledge Revision 标识。", "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "description": "Revision 所属组织标识。", "$ref": "#/$defs/UuidV7" },
+        "projectId": { "description": "Revision 所属项目标识。", "$ref": "#/$defs/UuidV7" },
+        "knowledgeBaseId": { "description": "Revision 所属 Knowledge Base 标识。", "$ref": "#/$defs/UuidV7" },
+        "revisionNumber": { "description": "Knowledge Base 内从 1 开始的版本号。", "type": "integer", "minimum": 1 },
+        "documentRevisionIds": {
+          "description": "本次摄取固定使用的文档修订标识集合。",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/UuidV7" }
+        },
+        "parserProfileId": { "description": "固定 Parser Profile 标识。", "$ref": "#/$defs/UuidV7" },
+        "chunkProfileId": { "description": "固定 Chunk Profile 标识。", "$ref": "#/$defs/UuidV7" },
+        "embeddingProfileId": { "description": "固定 Embedding Profile 标识。", "$ref": "#/$defs/UuidV7" },
+        "retrievalProfileId": { "description": "固定 Retrieval Profile 标识。", "$ref": "#/$defs/UuidV7" },
+        "contentHash": { "description": "Revision 全部不可变输入的规范摘要。", "$ref": "#/$defs/Checksum" },
+        "status": {
+          "description": "Revision 状态：CREATED 已创建；INGESTING 摄取中；VERIFYING 校验中；READY 可检索；FAILED 失败；DEPRECATED 已弃用；DELETING 删除中；DELETED 已删除。",
+          "type": "string",
+          "enum": ["CREATED", "INGESTING", "VERIFYING", "READY", "FAILED", "DEPRECATED", "DELETING", "DELETED"]
+        },
+        "failureCode": { "description": "失败时的稳定错误码；非失败状态为空字符串。", "type": "string", "pattern": "^(|[A-Z][A-Z0-9_]{0,63})$" },
+        "version": { "description": "数据库乐观锁版本。", "type": "integer", "minimum": 0 },
+        "createdAt": { "description": "Revision 的 UTC 创建时间。", "type": "string", "format": "date-time" },
+        "updatedAt": { "description": "Revision 的 UTC 最近更新时间。", "type": "string", "format": "date-time" }
+      }
+    },
+    "DocumentRevision": {
+      "description": "不可变原文对象及其租户和稳定文档身份。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "organizationId", "projectId", "knowledgeBaseId", "documentId",
+        "revisionNumber", "originalFileName", "objectRef", "createdAt"
+      ],
+      "properties": {
+        "id": { "description": "Document Revision 标识。", "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "description": "文档修订所属组织标识。", "$ref": "#/$defs/UuidV7" },
+        "projectId": { "description": "文档修订所属项目标识。", "$ref": "#/$defs/UuidV7" },
+        "knowledgeBaseId": { "description": "文档修订所属 Knowledge Base 标识。", "$ref": "#/$defs/UuidV7" },
+        "documentId": { "description": "稳定 Document 标识。", "$ref": "#/$defs/UuidV7" },
+        "revisionNumber": { "description": "Document 内从 1 开始的修订号。", "type": "integer", "minimum": 1 },
+        "originalFileName": { "description": "仅用于追踪和展示的原始文件名。", "type": "string", "minLength": 1, "maxLength": 255 },
+        "objectRef": { "description": "不可变原文对象引用。", "$ref": "#/$defs/ObjectRef" },
+        "createdAt": { "description": "文档修订的 UTC 创建时间。", "type": "string", "format": "date-time" }
+      }
+    },
+    "Profile": {
+      "description": "Parser、Chunk、Embedding 或 Retrieval 的不可变版本配置。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "organizationId", "projectId", "key", "versionNumber", "configJson",
+        "credentialSecretRef", "contentHash", "status", "createdAt"
+      ],
+      "properties": {
+        "id": { "description": "Profile 版本标识。", "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "description": "Profile 所属组织标识。", "$ref": "#/$defs/UuidV7" },
+        "projectId": { "description": "Profile 所属项目标识。", "$ref": "#/$defs/UuidV7" },
+        "key": { "description": "项目内稳定的 Profile Key。", "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+        "versionNumber": { "description": "同一 Profile Key 下从 1 开始的版本号。", "type": "integer", "minimum": 1 },
+        "configJson": { "description": "Provider 中立的版本化配置 JSON 文本，不允许包含明文凭据。", "type": "string", "minLength": 2, "maxLength": 65535 },
+        "credentialSecretRef": {
+          "description": "可选外部凭据引用；null 表示当前 Profile 不需要凭据。",
+          "oneOf": [
+            { "$ref": "#/$defs/SecretRef" },
+            { "type": "null" }
+          ]
+        },
+        "contentHash": { "description": "Profile 内容的规范摘要。", "$ref": "#/$defs/Checksum" },
+        "status": { "description": "Profile 状态：DRAFT 草稿；PUBLISHED 已发布可引用；DEPRECATED 已弃用。", "type": "string", "enum": ["DRAFT", "PUBLISHED", "DEPRECATED"] },
+        "createdAt": { "description": "Profile 版本的 UTC 创建时间。", "type": "string", "format": "date-time" }
+      }
+    },
+    "IngestionPlan": {
+      "description": "Control 根据摄取请求解析出的完整固定执行计划。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requestId", "organizationId", "projectId", "revision", "documents",
+        "parserProfile", "chunkProfile", "embeddingProfile", "retrievalProfile"
+      ],
+      "properties": {
+        "requestId": { "description": "Control 摄取请求标识。", "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "description": "可信组织标识。", "$ref": "#/$defs/UuidV7" },
+        "projectId": { "description": "可信项目标识。", "$ref": "#/$defs/UuidV7" },
+        "revision": { "description": "本次 Attempt 固定使用的 Knowledge Revision。", "$ref": "#/$defs/KnowledgeRevision" },
+        "documents": {
+          "description": "Revision 固定引用的不可变文档修订。",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/DocumentRevision" }
+        },
+        "parserProfile": { "description": "本次摄取固定的 Parser Profile。", "$ref": "#/$defs/Profile" },
+        "chunkProfile": { "description": "本次摄取固定的 Chunk Profile。", "$ref": "#/$defs/Profile" },
+        "embeddingProfile": { "description": "本次摄取固定的 Embedding Profile。", "$ref": "#/$defs/Profile" },
+        "retrievalProfile": { "description": "本次检索固定的 Retrieval Profile。", "$ref": "#/$defs/Profile" }
+      }
+    },
+    "Artifact": {
+      "description": "摄取 Attempt 生成且可审计的派生制品引用。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "ref"],
+      "properties": {
+        "kind": { "description": "制品类型：CHUNKS 为切分结果；VECTOR_MANIFEST 为向量清单。", "type": "string", "enum": ["CHUNKS", "VECTOR_MANIFEST"] },
+        "ref": { "description": "派生制品对象引用。", "$ref": "#/$defs/ObjectRef" }
+      }
+    },
+    "IngestionResult": {
+      "description": "Worker 对一个固定 Attempt 的幂等完成结果。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "resultId", "requestId", "organizationId", "projectId", "revisionId",
+        "schedulerJobId", "attemptId", "idempotencyKey", "documentCount", "chunkCount",
+        "checksum", "artifacts", "status", "failureCode", "completedAt"
+      ],
+      "properties": {
+        "resultId": { "description": "摄取结果全局标识。", "$ref": "#/$defs/UuidV7" },
+        "requestId": { "description": "对应 Control 摄取请求标识。", "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "description": "结果所属组织标识。", "$ref": "#/$defs/UuidV7" },
+        "projectId": { "description": "结果所属项目标识。", "$ref": "#/$defs/UuidV7" },
+        "revisionId": { "description": "本次 Attempt 固定的 Knowledge Revision 标识。", "$ref": "#/$defs/UuidV7" },
+        "schedulerJobId": { "description": "发起摄取的持久 Scheduler Job 标识。", "$ref": "#/$defs/UuidV7" },
+        "attemptId": { "description": "每次重试都不同的 Attempt 标识。", "$ref": "#/$defs/UuidV7" },
+        "idempotencyKey": { "description": "Control 用于绑定同一结果内容的幂等键。", "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$" },
+        "documentCount": { "description": "本 Attempt 成功处理的文档修订数。", "type": "integer", "minimum": 0 },
+        "chunkCount": { "description": "本 Attempt 生成并校验的 Chunk 数。", "type": "integer", "minimum": 0 },
+        "checksum": { "description": "文档、Chunk 与向量位模式清单的 SHA-256 摘要。", "$ref": "#/$defs/Checksum" },
+        "artifacts": { "description": "本 Attempt 生成的可追踪派生制品。", "type": "array", "items": { "$ref": "#/$defs/Artifact" } },
+        "status": { "description": "Attempt 结果：SUCCEEDED 成功且可进入 READY；FAILED 失败且必须携带失败码。", "type": "string", "enum": ["SUCCEEDED", "FAILED"] },
+        "failureCode": { "description": "失败时的稳定错误码；成功时必须为空字符串。", "type": "string", "pattern": "^(|[A-Z][A-Z0-9_]{0,63})$" },
+        "completedAt": { "description": "Worker 完成本 Attempt 的 UTC 时间。", "type": "string", "format": "date-time" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "status": { "const": "SUCCEEDED" } }, "required": ["status"] },
+          "then": {
+            "properties": {
+              "documentCount": { "minimum": 1 },
+              "chunkCount": { "minimum": 1 },
+              "artifacts": { "minItems": 1 },
+              "failureCode": { "const": "" }
+            }
+          },
+          "else": { "properties": { "failureCode": { "pattern": "^[A-Z][A-Z0-9_]{0,63}$" } } }
+        }
+      ]
+    }
+  }
+}

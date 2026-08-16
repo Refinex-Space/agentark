@@ -138,7 +138,7 @@ verify_server scheduler 8083
 
 verify_mysql_account \
     agentark_control agentark_control agentark_runtime agentark_scheduler \
-    "${secret_dir}/mysql-control-password" 5 48
+    "${secret_dir}/mysql-control-password" 6 54
 verify_mysql_account \
     agentark_runtime agentark_runtime agentark_control agentark_scheduler \
     "${secret_dir}/mysql-runtime-password" 2 13

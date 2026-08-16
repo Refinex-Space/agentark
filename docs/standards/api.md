@@ -90,4 +90,13 @@ Phase 13 增加以下托管 Runtime 契约约束：
 - Approval Public DTO 只暴露 Tool 名、Tool Call ID、参数摘要 Hash、策略引用、状态与版本，不暴露原始 Tool 参数。决策必须校验当前版本、权限和幂等结果，并在新 Lease/Fencing Token 下恢复执行；
 - Runtime 错误统一使用 Problem Detail 和稳定 `ARK-RUNTIME-*` 代码。401/403 不回显 Token、内部异常或租户细节；Provider 429、超时和不可恢复错误必须先转换为 AgentArk 分类后再进入 API/Event。
 
+Phase 14 增加以下 Knowledge 摄取与检索契约约束：
+
+- `knowledge-ingestion-internal/v1.json` 只表达 Control 解析的固定摄取计划和 Worker 幂等结果。线路上的标识、`Checksum`、`ObjectRef`、Profile 和 `SecretRef` 均为语言中立值；禁止直接序列化 Domain、MyBatis、Qdrant 或 AgentScope 对象；
+- `GET /internal/v1/knowledge/ingestions/{requestId}/plan` 与 `POST /internal/v1/knowledge/ingestions/{requestId}:complete` 只允许包含 `agentark-control` Audience 的 Service Identity。Worker 只能通过这两个端点读取计划和提交结果，不得持有 Control DataSource；
+- 摄取结果的 `idempotencyKey` 在 Project Scope 内永久绑定同一请求、Revision、Job、Attempt、数量、摘要、制品和终态；相同键异参必须返回稳定冲突，不能重复追加 Outbox；
+- `knowledge-retrieval/v1.json` 固定结果正文、Document/DocumentRevision/Chunk Citation、`UNTRUSTED_EXTERNAL` 信任标记和不采集查询或文档正文的 Trace/Usage；
+- Runtime 只能按不可变 Snapshot 固定的 `READY` Knowledge Revision 检索。调用方先把 Document ACL 解析为文档白名单；客户端或模型不能提交原始 Qdrant Filter、替换租户、Revision、Profile 或上下文预算；
+- Qdrant/Embedding/Parser 不可用必须形成显式失败结果或 Provider 错误，不能伪装成空检索或 `READY`。原文、Chunk Artifact、Vector Payload 和 Control Metadata 必须通过固定 Revision、Document Revision 与摘要相互追踪。
+
 Golden File、明文 Secret 负例和文档结构 Lint 由 `agentark-kernel` 测试执行，必需文件与 Kernel/Server 边界由知识门禁检查。首次发布后的修改必须增加 Breaking Change 检测；在不存在已发布前一版本的 Phase 03 不伪造兼容比较结果。

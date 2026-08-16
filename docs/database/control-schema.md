@@ -20,7 +20,7 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 | 08 | `V3__phase_08_asset_catalog.sql`：Agent、资产稳定身份与不可变版本、Secret Metadata 与 Environment Binding | 不包含发布 Revision/Snapshot；只保存外部 Secret 定位信息，不保存值 |
 | 09 | `V4__phase_09_knowledge_metadata.sql`：Knowledge Metadata、Document Revision、Knowledge Revision、Profile 与 Ingestion Request | 只描述摄取工作，不执行 Embedding 或向量写入；V4 由 `agentark-knowledge` 所有 |
 | 10 | `V5__phase_10_revision_deployment.sql`：Agent Draft、Validation、Revision、Snapshot、Publish Operation、Control Outbox、Deployment 与 Deployment Revision | 发布事务原子提交，Deployment 固定目标 Revision；独立 `agentark-control` 迁移测试按 V1/V2/V3/V5 运行，Control Server 组合迁移按 V1–V5 运行 |
-| 14 | Knowledge Ingestion Result、实际 Parser/Chunk/Embedding/Vector Adapter 和检索能力 | Scheduler 只提交命令结果，不写 Control 表 |
+| 14 | `V6__phase_14_knowledge_ingestion_result.sql`：Knowledge Ingestion Result，并扩展 Control Outbox 的 Knowledge Revision 聚合类型 | Scheduler 只经幂等 Internal Command 提交结果，不写 Control 表；Parser/Embedding/Vector Adapter 不拥有表 |
 | 19 | Secret 轮换治理、Quota、Audit、Usage/Cost、Evaluation、可靠性补齐 | 延续 Phase 08 Secret Owner，不保存 Secret 明文 |
 
 任何表提前、延后或转移 Owner 都必须先修改本模型；影响平台边界或发布一致性时同步提交 ADR。
@@ -105,11 +105,11 @@ Phase 08 建立 Secret 元数据、Environment Binding、Resolver Port 和开发
 | `knowledge_revision` | id, owner chain, knowledge_base_id, revision_number, 四类 Profile 引用, content_hash, status, failure_code, version, audit | `(knowledge_base_id, revision_number)` 和 `(project_id, content_hash)` 唯一；内容绑定不可更新，只有状态字段通过乐观锁转换 |
 | `knowledge_revision_document` | knowledge_revision_id, owner chain, document_revision_id, ordinal_value, audit | `(knowledge_revision_id, document_revision_id)` 主键且 ordinal 唯一；固定文档修订集合与顺序 |
 | `knowledge_ingestion_request` | id, owner chain, knowledge_revision_id, idempotency_key, status, requested_at/by | `(project_id, idempotency_key)` 唯一；Phase 09 只保存 `DESCRIBED/CANCELLED`，不代表 Scheduler Job 已创建 |
-| `knowledge_ingestion_result` | id, knowledge_revision_id, scheduler_job_id, attempt_id, idempotency_key, count, checksum, artifact_refs, status | Phase 14 实现；`(knowledge_revision_id, attempt_id)`、idempotency 唯一 |
+| `knowledge_ingestion_result` | id, request_id, owner chain, knowledge_revision_id, scheduler_job_id, attempt_id, idempotency_key, document_count, chunk_count, checksum, artifact_refs_json, status, failure_code, completed_at, audit | Phase 14 V6 实现；`(knowledge_revision_id, attempt_id)` 与 `(project_id, idempotency_key)` 唯一；成功必须有正计数和制品，失败必须有稳定代码 |
 
 V4 只创建前十二张 Phase 09 表及 `knowledge:read/manage/ingest` 权限，不创建 `knowledge_ingestion_result`。四类 Profile 与 Document Revision 均不可变；变更解析、切分、Embedding 或检索配置必须新建 Profile 和 Knowledge Revision。只有 `READY` Revision 可被 Agent Revision Resolver 引用。
 
-Scheduler 不写这些表。Phase 14 由 Scheduler 调用幂等完成命令；Control 校验 Result 后转换 Revision 状态并写 Outbox。Qdrant Collection、Embedding Provider 资源名和派生索引都不是租户授权依据，任何 Adapter 请求必须同时携带可信 `ProjectId` 与 `KnowledgeRevisionId`。
+Scheduler 不写这些表。Phase 14 由 Scheduler 调用幂等完成命令；Control 在同一本地事务内插入不可变 Result、转换 Revision 状态并写 `knowledge_revision` 类型 Outbox。相同幂等键只能重放完全相同结果；新失败重试必须使用新的 Attempt。Qdrant Collection、Embedding Provider 资源名和派生索引都不是租户授权依据，任何 Adapter 请求必须同时携带可信 Organization、Project、KnowledgeRevision 和已授权 Document 集合。
 
 ## Governance
 

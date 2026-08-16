@@ -61,6 +61,8 @@ REQUIRED_CONTRACTS = (
     "contracts/schemas/problem-detail/v1.json",
     "contracts/schemas/catalog-public/v1.json",
     "contracts/schemas/knowledge-public/v1.json",
+    "contracts/schemas/knowledge-ingestion-internal/v1.json",
+    "contracts/schemas/knowledge-retrieval/v1.json",
 )
 SERVER_ARTIFACTS = frozenset(APPROVED_SERVICE_MODULES)
 KERNEL_FORBIDDEN_IMPORTS = (
@@ -258,22 +260,37 @@ def require_maven_foundation(errors: list[str]) -> None:
 
     allowed_agentscope_poms = {
         ROOT / "agentark-bom/pom.xml",
+        ROOT / "agentark-knowledge/pom.xml",
         ROOT / "agentark-runtime-provider-agentscope/pom.xml",
     }
+    knowledge_agentscope_pom = ROOT / "agentark-knowledge/pom.xml"
     for module in APPROVED_ROOT_MODULES:
         module_root = ROOT / module
         if not module_root.is_dir():
             continue
         for path in module_root.rglob("pom.xml"):
-            if "target" in path.parts or path in allowed_agentscope_poms:
+            if "target" in path.parts:
                 continue
             try:
                 pom = ET.parse(path).getroot()
             except (ET.ParseError, OSError):
                 continue
-            groups = pom.findall(".//m:dependency/m:groupId", MAVEN_NAMESPACE)
-            if any(group.text and group.text.strip() == "io.agentscope" for group in groups):
-                errors.append(f"AgentScope dependency escapes provider boundary: {rel(path)}")
+            dependencies = pom.findall(".//m:dependency", MAVEN_NAMESPACE)
+            for dependency in dependencies:
+                group = dependency.find("m:groupId", MAVEN_NAMESPACE)
+                if group is None or not group.text or group.text.strip() != "io.agentscope":
+                    continue
+                artifact = dependency.find("m:artifactId", MAVEN_NAMESPACE)
+                artifact_id = artifact.text.strip() if artifact is not None and artifact.text else ""
+                if path not in allowed_agentscope_poms:
+                    errors.append(
+                        f"AgentScope dependency escapes provider boundary: {rel(path)}"
+                    )
+                elif path == knowledge_agentscope_pom and artifact_id != "agentscope-core":
+                    errors.append(
+                        "Knowledge AgentScope boundary only permits agentscope-core: "
+                        f"{artifact_id or '<missing>'}"
+                    )
 
     server_roots = {
         (ROOT / "agentark-services" / module).resolve() for module in APPROVED_SERVICE_MODULES

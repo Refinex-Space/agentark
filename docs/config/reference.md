@@ -9,7 +9,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2；Phase 08 已接入资产目录 V3、Skill Object Store 和开发 Local Secret Provider；Phase 09 已接入 Knowledge 元数据 V4、原文件 Object Store、不可变 Revision 与摄取意图描述；Phase 10 已接入 Draft、不可变 Snapshot、Deployment 和 Control Outbox V5；Phase 11 已接入 Runtime V2 权威表；Phase 13 已装配 Runtime API、持久 Worker、Redis/MySQL 双层 Lease、SSE 与 HITL。Scheduler 仍只有 Migration History，Gateway 尚无业务路由。生产 Object Store、云 Secret Provider 和真实 AgentScope Model/Component Provider 仍必须由部署方提供受支持 Adapter。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2；Phase 08 已接入资产目录 V3、Skill Object Store 和开发 Local Secret Provider；Phase 09 已接入 Knowledge 元数据 V4、原文件 Object Store、不可变 Revision 与摄取意图描述；Phase 10 已接入 Draft、不可变 Snapshot、Deployment 和 Control Outbox V5；Phase 11 已接入 Runtime V2 权威表；Phase 13 已装配 Runtime API、持久 Worker、Redis/MySQL 双层 Lease、SSE 与 HITL；Phase 14 已接入 Control V6 摄取结果、Qdrant Adapter、安全异步摄取管线、固定 Revision 检索和 AgentScope Tool 防腐层。Scheduler 仍只有 Migration History，Phase 15 才装配 Knowledge Job Handler；Gateway 尚无业务路由。生产 Object Store、恶意文件扫描、Embedding/Reranker、云 Secret 和真实 AgentScope Model/Component Provider 仍必须由部署方提供受支持 Adapter。
 
 ## Server 与本地 Profile
 
@@ -27,7 +27,7 @@ Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSo
 | Profile | 服务 | 固定镜像 | 用途 |
 |---|---|---|---|
 | `core` | MySQL、Redis、MinIO、四个 Server | `mysql:8.4.11`、`redis:8.10.0`、`minio/minio:RELEASE.2025-09-07T16-13-09Z`、`eclipse-temurin:21.0.10_7-jre-alpine-3.23` | 默认本地基础设施与空业务应用壳 |
-| `rag` | Core 全部服务 + Qdrant | 额外 `qdrant/qdrant:v1.18.3` | 显式开启的向量存储预留，默认不启动 |
+| `rag` | Core 全部服务 + Qdrant | 额外 `qdrant/qdrant:v1.18.3` | Phase 14 Qdrant Adapter 的本地集成 Profile，默认不启动；不自动启用摄取 Handler |
 
 Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334` 和四个 Server 端口均只绑定 `127.0.0.1`。宿主基础设施端口可在本地 `.env` 中使用 `deploy/compose/.env.example` 列出的非敏感变量覆盖；四个 Server 端口为 Phase 05 固定值。
 
@@ -131,7 +131,15 @@ MySQL Core 容器显式使用 `--log-bin-trust-function-creators=ON`，使最小
 | `agentark.foundation.storage.enabled` | `false`；`local` 为 `true` | Document 原文件上传必须有 ObjectStore | 本地与 Skill 共用受 Authority 隔离的 Local ObjectStore；生产必须提供受支持 Bean，数据库只保存带 Hash、大小和媒体类型的 `ObjectRef` |
 | `AGENTARK_LOCAL_OBJECT_ROOT` | `.agentark/data/objects` | `local` Storage 启用 | 原文件路径由服务端生成且保持在专用根目录；客户端文件名不能选择授权路径 |
 
-Knowledge 摄取 Endpoint 返回 `202` 只表示幂等请求已经记录且 Revision 进入 `INGESTING`，当前没有 Qdrant、Embedding Provider 或 Scheduler Worker 配置项。不得通过启用 `rag` Compose Profile 推断摄取已实现；真实 Provider、超时、重试、索引和清理配置必须在 Phase 14 Adapter 落地时另行登记。
+Knowledge 摄取 Endpoint 返回 `202` 只表示幂等请求已经记录且 Revision 进入 `INGESTING`。Phase 14 已实现 Qdrant Adapter、受限 Parser、安全扫描 Port、批次 Embedding/重试、校验、删除和 Retrieval 管线，但 Phase 15 前没有 Scheduler Job Handler 自动消费该请求。不得通过启用 `rag` Compose Profile 推断摄取 Worker 已装配。
+
+## Knowledge RAG Adapter 配置边界
+
+`QdrantProperties` 由 Phase 15 的 Scheduler Handler 或受控 Runtime Provider 装配，不由 Control Public API 构造。当前稳定非敏感字段为：Qdrant REST 根地址、平台受控 Collection 名、固定向量维度和单请求超时。远程 Endpoint 必须使用 HTTPS；只有 `localhost`、`127.0.0.1` 或 `::1` 可使用 HTTP。Endpoint 禁止 User Info、Query 和 Fragment，Collection 必须是 3–64 位小写受限名称，维度为 1–65536，超时大于零且不超过两分钟。
+
+本地建议值为 `http://qdrant:6333`、`agentark_knowledge`、与固定 Embedding Profile 一致的维度和显式超时。维度变化必须使用新 Collection/Deployment 配置和新 Knowledge Revision，不能修改既有 Collection 的向量语义。Qdrant API Key 只能由 Secret Provider 按请求解析，不能进入 `QdrantProperties`、YAML、环境变量示例、日志或缓存。生产恶意文件扫描器缺失时必须拒绝启用摄取 Handler，禁止配置“永远通过”的默认实现。
+
+摄取 Worker 的批次大小、最大尝试次数和退避由其 Owner 显式构造：批次 1–1024、尝试 1–10、基础退避 0–1 分钟。Parser 的进程 Heap、超时和 Classpath 必须由受控部署配置提供；生产还需叠加容器或平台 Sandbox。Qdrant Snapshot、恢复、删除和故障处理见 [Knowledge/RAG 运维](../guides/knowledge-operations.md)。
 
 ## Control Release 配置
 

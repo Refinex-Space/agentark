@@ -57,4 +57,24 @@ class KnowledgeArchitectureTest {
                 "com.pgvector..", "space.refinex.agentark.control..")
             .check(classes);
     }
+
+    /** 证明只有明确的 AgentScope 防腐包可以依赖 AgentScope Runtime 类型。 */
+    @Test
+    void confinesAgentScopeTypesToDedicatedAdapter() {
+        var classes = new ClassFileImporter().importPackages("space.refinex.agentark.knowledge");
+
+        noClasses().that().resideOutsideOfPackage("..adapter.out.vector.agentscope..")
+            .should().dependOnClassesThat().resideInAPackage("io.agentscope..")
+            .check(classes);
+    }
+
+    /** 证明只有明确的 Qdrant Adapter 包可以依赖 Qdrant 客户端类型。 */
+    @Test
+    void confinesQdrantTypesToDedicatedAdapter() {
+        var classes = new ClassFileImporter().importPackages("space.refinex.agentark.knowledge");
+
+        noClasses().that().resideOutsideOfPackage("..adapter.out.vector.qdrant..")
+            .should().dependOnClassesThat().resideInAPackage("io.qdrant..")
+            .check(classes);
+    }
 }

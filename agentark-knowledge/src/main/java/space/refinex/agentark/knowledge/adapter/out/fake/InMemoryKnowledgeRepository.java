@@ -423,6 +423,15 @@ public final class InMemoryKnowledgeRepository implements KnowledgeRepository {
     }
 
     /**
+     * 仅供已认证 Internal Service 按全局请求标识读取可信租户范围。
+     */
+    @Override
+    public Optional<IngestionJobDescriptor> findIngestionRequestInternal(
+        IngestionRequestId requestId) {
+        return Optional.ofNullable(ingestionRequests.get(requestId));
+    }
+
+    /**
      * 按项目过滤可选内存值。
      *
      * @param value            可为空的内存值

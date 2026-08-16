@@ -448,7 +448,7 @@ flowchart LR
 | 11 | DONE | 2026-08-16 | `docs/implementation/phase-11-runtime-domain.md` | 中立领域、状态机、MySQL V2、双 Sequence Event、Fencing、恢复与 Fake Engine 已验收 |
 | 12 | DONE | 2026-08-16 | `docs/implementation/phase-12-agentscope-adapter.md` | AgentScope 防腐层、Snapshot Compiler、Event/State 映射、执行引擎与兼容门禁已验收 |
 | 13 | DONE | 2026-08-16 | `docs/implementation/phase-13-runtime-api.md` | Runtime API、持久 Worker、SSE、HITL、Lease/Fencing、取消与恢复已验收 |
-| 14 | NOT_STARTED | — | `docs/implementation/phase-14-knowledge-rag.md` | |
+| 14 | DONE | 2026-08-16 | `docs/implementation/phase-14-knowledge-rag.md` | 安全异步摄取、Qdrant、固定 Revision 检索、Citation/Trace、AgentScope 防腐层与完整验收已完成 |
 | 15 | NOT_STARTED | — | `docs/implementation/phase-15-scheduler.md` | |
 | 16 | NOT_STARTED | — | `docs/implementation/phase-16-gateway.md` | |
 | 17 | NOT_STARTED | — | `docs/implementation/phase-17-web-foundation.md` | |
@@ -2402,54 +2402,54 @@ $AGENTSCOPE_ROOT/agentscope-service/service-scheduler/
 
 #### 摄取
 
-- [ ] 上传/注册 Data Source；
-- [ ] 原文不可变 Object；
-- [ ] Parser Worker；
-- [ ] 文件类型/大小/病毒/压缩炸弹检查接口；
-- [ ] Parser 在受限进程/Sandbox；
-- [ ] 规范化 Section；
-- [ ] Versioned Chunk Strategy；
-- [ ] Chunk Artifact；
-- [ ] Embedding Batch；
-- [ ] Rate Limit/Retry；
-- [ ] Qdrant Upsert；
-- [ ] Count/Checksum Verify；
-- [ ] 生成 `IngestionResult`（attempt/count/checksum/artifactRefs），通过幂等 Internal Command 提交 Control；
-- [ ] Control 校验后转换 KnowledgeRevision 为 READY/FAILED 并写 Outbox；Worker 不写 Control DB；
-- [ ] 失败重试与新 Attempt；
-- [ ] 删除传播。
+- [x] 上传/注册 Data Source；
+- [x] 原文不可变 Object；
+- [x] Parser Worker；
+- [x] 文件类型/大小/病毒/压缩炸弹检查接口；
+- [x] Parser 在受限进程/Sandbox；
+- [x] 规范化 Section；
+- [x] Versioned Chunk Strategy；
+- [x] Chunk Artifact；
+- [x] Embedding Batch；
+- [x] Rate Limit/Retry；
+- [x] Qdrant Upsert；
+- [x] Count/Checksum Verify；
+- [x] 生成 `IngestionResult`（attempt/count/checksum/artifactRefs），通过幂等 Internal Command 提交 Control；
+- [x] Control 校验后转换 KnowledgeRevision 为 READY/FAILED 并写 Outbox；Worker 不写 Control DB；
+- [x] 失败重试与新 Attempt；
+- [x] 删除传播。
 
 #### Qdrant
 
-- [ ] Qdrant 1.18.3 Profile；
-- [ ] Collection Strategy；
-- [ ] 强制 Payload：Organization/Project/KnowledgeRevision/Document；
-- [ ] Payload Index；
-- [ ] 服务端强制 Tenant Filter；
-- [ ] Revision 切换；
-- [ ] Snapshot/Backup 文档；
-- [ ] 不把 Collection 名当授权。
+- [x] Qdrant 1.18.3 Profile；
+- [x] Collection Strategy；
+- [x] 强制 Payload：Organization/Project/KnowledgeRevision/Document；
+- [x] Payload Index；
+- [x] 服务端强制 Tenant Filter；
+- [x] Revision 切换；
+- [x] Snapshot/Backup 文档；
+- [x] 不把 Collection 名当授权。
 
 #### Retrieval
 
-- [ ] Query Embedding；
-- [ ] Vector Search；
-- [ ] 可选 Hybrid Port；
-- [ ] Rerank；
-- [ ] Dedupe；
-- [ ] Context Budget；
-- [ ] Citation；
-- [ ] Retrieval Trace/Usage；
-- [ ] 无结果和失败策略；
-- [ ] Prompt Injection 信任标记；
-- [ ] Runtime 只按 Snapshot 固定 KnowledgeRevision 查询。
+- [x] Query Embedding；
+- [x] Vector Search；
+- [x] 可选 Hybrid Port；
+- [x] Rerank；
+- [x] Dedupe；
+- [x] Context Budget；
+- [x] Citation；
+- [x] Retrieval Trace/Usage；
+- [x] 无结果和失败策略；
+- [x] Prompt Injection 信任标记；
+- [x] Runtime 只按 Snapshot 固定 KnowledgeRevision 查询。
 
 #### AgentScope Adapter
 
-- [ ] 只在 `adapter.out.vector.agentscope` 使用 AgentScope RAG 类型；
-- [ ] 将 AgentArk Retrieval Port 映射到 Harness；
-- [ ] 不复制 AgentScope Vector 实现；
-- [ ] Provider Capability/版本兼容测试。
+- [x] 只在 `adapter.out.vector.agentscope` 使用 AgentScope RAG 类型；
+- [x] 将 AgentArk Retrieval Port 映射到 Harness；
+- [x] 不复制 AgentScope Vector 实现；
+- [x] Provider Capability/版本兼容测试。
 
 ### 产物
 
@@ -2465,19 +2465,19 @@ docs/implementation/phase-14-knowledge-rag.md
 
 ### 验收条件
 
-- [ ] 大文档摄取不在 HTTP 请求线程同步完成；
-- [ ] READY 前不可检索；
-- [ ] 新 Revision 构建不污染旧 Revision；
-- [ ] Tenant Filter 无法被客户端移除；
-- [ ] Document ACL 生效；
-- [ ] 原文、Chunk、Vector、Metadata 可追踪；
-- [ ] 删除能清理派生数据；
-- [ ] Qdrant 不可用有明确失败/降级 Event；
-- [ ] Retrieval 产生 Citation 和 Trace；
-- [ ] Runtime 查询固定 KnowledgeRevision；
-- [ ] 使用 Scheduler 数据库权限运行的摄取 Worker 无法连接或写入 Control Schema；
-- [ ] Domain/Application 无 Qdrant/AgentScope 类型；
-- [ ] Testcontainers Qdrant E2E 通过。
+- [x] 大文档摄取不在 HTTP 请求线程同步完成；
+- [x] READY 前不可检索；
+- [x] 新 Revision 构建不污染旧 Revision；
+- [x] Tenant Filter 无法被客户端移除；
+- [x] Document ACL 生效；
+- [x] 原文、Chunk、Vector、Metadata 可追踪；
+- [x] 删除能清理派生数据；
+- [x] Qdrant 不可用有明确失败/降级 Event；
+- [x] Retrieval 产生 Citation 和 Trace；
+- [x] Runtime 查询固定 KnowledgeRevision；
+- [x] 使用 Scheduler 数据库权限运行的摄取 Worker 无法连接或写入 Control Schema；
+- [x] Domain/Application 无 Qdrant/AgentScope 类型；
+- [x] Testcontainers Qdrant E2E 通过。
 
 ### 验收命令
 

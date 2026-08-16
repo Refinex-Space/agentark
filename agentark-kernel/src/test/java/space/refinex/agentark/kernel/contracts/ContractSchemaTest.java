@@ -74,6 +74,22 @@ class ContractSchemaTest {
         "schemas/knowledge-public/examples/valid-knowledge-revision.json");
   }
 
+  /** 验证 Knowledge 摄取 Internal Command Golden File 符合语言中立 Schema。 */
+  @Test
+  void knowledgeIngestionResultGoldenFileConformsToInternalSchema() throws IOException {
+    assertValid(
+        "schemas/knowledge-ingestion-internal/v1.json",
+        "schemas/knowledge-ingestion-internal/examples/valid-result.json");
+  }
+
+  /** 验证 Knowledge Retrieval Citation 与 Trace Golden File 符合版本化 Schema。 */
+  @Test
+  void knowledgeRetrievalGoldenFileConformsToRetrievalSchema() throws IOException {
+    assertValid(
+        "schemas/knowledge-retrieval/v1.json",
+        "schemas/knowledge-retrieval/examples/valid.json");
+  }
+
   /** 验证 Agent Revision Golden File 符合 Phase 10 Release 公共 Schema。 */
   @Test
   void releaseRevisionGoldenFileConformsToPublicSchema() throws IOException {
