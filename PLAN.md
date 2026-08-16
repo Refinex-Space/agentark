@@ -1763,50 +1763,50 @@ PublishOperation
 
 #### Agent 与 Draft
 
-- [ ] Agent 稳定身份；
-- [ ] Draft 聚合资产引用；
-- [ ] Draft 乐观锁；
-- [ ] Draft Validation；
-- [ ] Draft 不能用于生产 Runtime。
+- [x] Agent 稳定身份；
+- [x] Draft 聚合资产引用；
+- [x] Draft 乐观锁；
+- [x] Draft Validation；
+- [x] Draft 不能用于生产 Runtime。
 
 #### Publisher
 
-- [ ] `AgentPublisher`；
-- [ ] 解析 Prompt/Model/MCP/Skill/Knowledge/Profile/Policy Version；
-- [ ] 检查资产访问权限和状态；
-- [ ] 检查 Model Capability；
-- [ ] 检查 Secret Binding；
-- [ ] 检查 MCP Tool 冲突和风险；
-- [ ] 检查 Knowledge READY；
-- [ ] 生成 Canonical Snapshot；
-- [ ] SHA-256 Content Hash；
-- [ ] `schemaVersion=1`；
-- [ ] 本地事务写 Revision + Snapshot + Outbox；
-- [ ] Publish Idempotency；
-- [ ] 发布审计与 Diff Summary。
+- [x] `AgentPublisher`；
+- [x] 解析 Prompt/Model/MCP/Skill/Knowledge/Profile/Policy Version；
+- [x] 检查资产访问权限和状态；
+- [x] 检查 Model Capability；
+- [x] 检查 Secret Binding；
+- [x] 检查 MCP Tool 冲突和风险；
+- [x] 检查 Knowledge READY；
+- [x] 生成 Canonical Snapshot；
+- [x] SHA-256 Content Hash；
+- [x] `schemaVersion=1`；
+- [x] 本地事务写 Revision + Snapshot + Outbox；
+- [x] Publish Idempotency；
+- [x] 发布审计与 Diff Summary。
 
 #### Deployment
 
-- [ ] Environment 内稳定 Deployment；
-- [ ] `desiredRevisionId`；
-- [ ] `desiredStatus`；
-- [ ] 乐观锁；
-- [ ] Promote；
-- [ ] Rollback；
-- [ ] Disable/Enable；
-- [ ] Canary/Traffic Policy 先定义模型，最小实现可为全量切换；
-- [ ] 已发布 Revision 不可编辑；
-- [ ] 被 Session 引用的 Revision 不删除。
+- [x] Environment 内稳定 Deployment；
+- [x] `desiredRevisionId`；
+- [x] `desiredStatus`；
+- [x] 乐观锁；
+- [x] Promote；
+- [x] Rollback；
+- [x] Disable/Enable；
+- [x] Canary/Traffic Policy 先定义模型，最小实现可为全量切换；
+- [x] 已发布 Revision 不可编辑；
+- [x] 被 Session 引用的 Revision 不删除。
 
 #### Internal Contract
 
-- [ ] `/internal/v1/agent-revisions/{revisionId}/snapshot`；
-- [ ] ETag/If-None-Match；
-- [ ] Deployment Descriptor；
-- [ ] Runtime Provider/Schema Capability 校验；
-- [ ] Internal Service Authorization；
-- [ ] OpenAPI Client 生成或稳定手写 Client Contract；
-- [ ] Runtime 不读 Control DB。
+- [x] `/internal/v1/agent-revisions/{revisionId}/snapshot`；
+- [x] ETag/If-None-Match；
+- [x] Deployment Descriptor；
+- [x] Runtime Provider/Schema Capability 校验；
+- [x] Internal Service Authorization；
+- [x] OpenAPI Client 生成或稳定手写 Client Contract；
+- [x] Runtime 不读 Control DB。
 
 ### 产物
 
@@ -1821,18 +1821,18 @@ docs/implementation/phase-10-revision-deployment.md
 
 ### 验收条件
 
-- [ ] 发布同一请求幂等；
-- [ ] Snapshot 完整、有 Schema、Hash、Runtime Provider；
-- [ ] Snapshot 无明文 Secret；
-- [ ] 资产更新不改变旧 Snapshot；
-- [ ] Published Revision 数据库层不可更新；
-- [ ] Deployment Rollback 只改变指针；
-- [ ] Runtime Internal API 不暴露 Control Entity；
-- [ ] ETag 缓存语义正确；
-- [ ] Publish 失败不产生半成品 Revision；
-- [ ] Outbox 与 Revision/Snapshot 同事务；
-- [ ] 跨租户引用被拒绝；
-- [ ] Contract/Golden File/Integration/E2E 测试通过。
+- [x] 发布同一请求幂等；
+- [x] Snapshot 完整、有 Schema、Hash、Runtime Provider；
+- [x] Snapshot 无明文 Secret；
+- [x] 资产更新不改变旧 Snapshot；
+- [x] Published Revision 数据库层不可更新；
+- [x] Deployment Rollback 只改变指针；
+- [x] Runtime Internal API 不暴露 Control Entity；
+- [x] ETag 缓存语义正确；
+- [x] Publish 失败不产生半成品 Revision；
+- [x] Outbox 与 Revision/Snapshot 同事务；
+- [x] 跨租户引用被拒绝；
+- [x] Contract/Golden File/Integration/E2E 测试通过。
 
 ### 验收命令
 
