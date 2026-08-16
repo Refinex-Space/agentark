@@ -24,6 +24,7 @@ import java.util.Set;
 /**
  * 表示协议中立的已认证主体，不拥有 User、Role 或 Membership 生命周期。
  *
+ * @param issuer          已验证凭据的稳定 Issuer，用于防止不同身份源 Subject 碰撞
  * @param subject         身份提供方内稳定且非空的 Subject
  * @param type            主体类型
  * @param authorities     已认证 Token 携带的候选权限声明
@@ -32,6 +33,7 @@ import java.util.Set;
  * @author refinex
  */
 public record AgentArkPrincipal(
+    String issuer,
     String subject,
     PrincipalType type,
     Set<String> authorities,
@@ -42,6 +44,7 @@ public record AgentArkPrincipal(
     /**
      * 校验主体不变量并防御性复制集合。
      *
+     * @param issuer          已验证 Issuer
      * @param subject         Subject
      * @param type            主体类型
      * @param authorities     候选权限声明
@@ -51,6 +54,9 @@ public record AgentArkPrincipal(
      * @throws NullPointerException     当必需参数或 Optional 容器为 {@code null} 时抛出
      */
     public AgentArkPrincipal {
+        if (issuer == null || issuer.isBlank() || issuer.length() > 255) {
+            throw new IllegalArgumentException("issuer must contain 1 to 255 characters");
+        }
         if (subject == null || subject.isBlank() || subject.length() > 255) {
             throw new IllegalArgumentException("subject must contain 1 to 255 characters");
         }

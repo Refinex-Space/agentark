@@ -63,7 +63,7 @@ class StrongIdTest {
    */
   private static Stream<Class<? extends StrongId>> strongIdTypes() {
     Class<?>[] permitted = StrongId.class.getPermittedSubclasses();
-    assertThat(permitted).hasSize(20);
+    assertThat(permitted).hasSize(27);
     return Arrays.stream(permitted).map(type -> type.asSubclass(StrongId.class));
   }
 }

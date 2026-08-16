@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-16
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -73,6 +73,8 @@ referenced_by: AGENTS.md#knowledge-map
 
 - 三个 Schema 使用独立账号、Location 和各自 Schema 内的 `flyway_schema_history`；`create-schemas=false`、`clean-disabled=true`、`validate-migration-naming=true` 是生产强制值。
 - 版本迁移命名为 `V<整数>__<lower_snake_case_description>.sql`。同一 Owner 内版本单调递增且全局唯一；发布后不可改写、重命名或删除。
+- 每个 `CREATE TABLE` 必须使用 MySQL 原生 `COMMENT` 为表和全部字段写入准确中文说明。字段注释必须覆盖业务含义以及实际存在的单位、空值、安全或生成列语义；行首 SQL 注释不能替代数据库元数据注释。
+- 状态、类型、等级和布尔值等可穷举字段必须在字段 `COMMENT` 中列出全部数据库合法值与含义，并与 `CHECK` 约束、Java 枚举和公开契约保持一致。注释不得包含 Secret、Token、Credential、连接串或真实租户数据。
 - Phase 06 的 `V1__phase_06_schema_baseline.sql` 只建立独立历史起点，不创建业务表或额外元数据表。后续业务 DDL 必须由逻辑模型标注的 Owner Phase 增量加入。
 - 兼容迁移使用 Expand → Migrate/Backfill → Contract。MySQL DDL 可能隐式提交，生产回滚默认采用 Forward Fix；需要数据回填时必须拆分、幂等、可观测并设置批量上限。
 - 禁止 Hibernate、MyBatis-Plus、AgentScope Adapter 或应用启动逻辑自动建表。
@@ -82,6 +84,6 @@ referenced_by: AGENTS.md#knowledge-map
 ## 测试与门禁
 
 - 迁移和持久化契约使用 `mysql:8.4.11` Testcontainers；随机凭据只存在于测试进程和临时容器，不写入源码、资源、日志或报告。
-- 每个 Owner 的测试至少证明：V1 空库成功、上一版本基线可升级、固定字符集/排序规则/UTC/严格模式、所属账号可访问自身 Schema 且不能读取另一个 Schema。
+- 每个 Owner 的测试至少证明：V1 空库成功、上一版本基线可升级、固定字符集/排序规则/UTC/严格模式、所属账号可访问自身 Schema 且不能读取另一个 Schema，以及所有业务表和字段的中文 `COMMENT` 已实际写入 `information_schema`。
 - 共享持久化 Contract Test 至少证明：UUIDv7/Instant/JSON 往返、稳定分页排序、乐观锁冲突、Spring 事务回滚和唯一约束异常语义。
-- `tools/harness/knowledge_gate.py` 扫描三个 Owner 的生产源码与 Server 配置，拒绝跨 Schema 引用、限定 Schema SQL、错误 Flyway Location 或带默认值的生产数据库占位符。
+- `tools/harness/knowledge_gate.py` 扫描三个 Owner 的生产源码与 Server 配置，拒绝跨 Schema 引用、限定 Schema SQL、错误 Flyway Location 或带默认值的生产数据库占位符；同时解析全部 Flyway `CREATE TABLE`，拒绝缺失中文表/字段 `COMMENT`、未完整列出 `CHECK ... IN (...)` 合法值或未说明 `BOOLEAN` 的 `0/1` 语义。

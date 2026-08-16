@@ -1,0 +1,247 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/iam-public/v1.json",
+  "title": "AgentArk IAM Public Contracts v1",
+  "$defs": {
+    "UuidV7": {
+      "type": "string",
+      "format": "uuid",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "Status": {
+      "type": "string",
+      "enum": ["ACTIVE", "SUSPENDED", "DISABLED"]
+    },
+    "Organization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "slug", "name", "status", "version", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "slug": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}[a-z0-9]$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "status": { "$ref": "#/$defs/Status" },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Project": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "organizationId", "slug", "name", "status", "version", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "slug": { "type": "string" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "status": { "$ref": "#/$defs/Status" },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Environment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "organizationId", "projectId", "key", "name", "status", "version", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "key": { "type": "string" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "status": { "$ref": "#/$defs/Status" },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Membership": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "organizationId", "projectId", "principalKind", "principalId", "status", "version", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "principalKind": { "type": "string", "enum": ["USER", "SERVICE_ACCOUNT"] },
+        "principalId": { "$ref": "#/$defs/UuidV7" },
+        "status": { "$ref": "#/$defs/Status" },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Role": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "organizationId", "projectId", "key", "name", "builtIn", "permissionKeys", "status", "version", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }] },
+        "key": { "type": "string" },
+        "name": { "type": "string" },
+        "builtIn": { "type": "boolean" },
+        "permissionKeys": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "status": { "$ref": "#/$defs/Status" },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "RoleBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "organizationId", "projectId", "roleId", "principalKind", "principalId", "scopeType", "scopeId", "version", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }] },
+        "roleId": { "$ref": "#/$defs/UuidV7" },
+        "principalKind": { "type": "string", "enum": ["USER", "SERVICE_ACCOUNT"] },
+        "principalId": { "$ref": "#/$defs/UuidV7" },
+        "scopeType": { "type": "string", "enum": ["ORGANIZATION", "PROJECT", "ENVIRONMENT"] },
+        "scopeId": { "$ref": "#/$defs/UuidV7" },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ServiceAccount": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "organizationId", "projectId", "name", "status", "version", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "name": { "type": "string" },
+        "status": { "$ref": "#/$defs/Status" },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Permission": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "key", "description", "riskLevel", "createdAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "key": { "type": "string" },
+        "description": { "type": "string" },
+        "riskLevel": { "type": "string", "enum": ["LOW", "MEDIUM", "HIGH"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "ApiKeyView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "serviceAccountId", "name", "prefix", "scopes", "expiresAt", "revokedAt", "version", "createdAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "serviceAccountId": { "$ref": "#/$defs/UuidV7" },
+        "name": { "type": "string" },
+        "prefix": { "type": "string", "pattern": "^[A-Za-z0-9_-]{12}$" },
+        "scopes": { "type": "array", "uniqueItems": true, "items": { "type": "string" } },
+        "expiresAt": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+        "revokedAt": { "oneOf": [{ "type": "string", "format": "date-time" }, { "type": "null" }] },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CreateOrganizationRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slug", "name"],
+      "properties": {
+        "slug": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}[a-z0-9]$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "CreateProjectRequest": { "$ref": "#/$defs/CreateOrganizationRequest" },
+    "CreateEnvironmentRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 }
+      }
+    },
+    "CreateMembershipRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["principalKind", "principalId"],
+      "properties": {
+        "principalKind": { "type": "string", "enum": ["USER", "SERVICE_ACCOUNT"] },
+        "principalId": { "$ref": "#/$defs/UuidV7" }
+      }
+    },
+    "CreateRoleRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "permissions"],
+      "properties": {
+        "key": { "type": "string" },
+        "name": { "type": "string" },
+        "permissions": { "type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": { "type": "string" } }
+      }
+    },
+    "CreateRoleBindingRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["roleId", "principalKind", "principalId", "scopeType", "scopeId"],
+      "properties": {
+        "roleId": { "$ref": "#/$defs/UuidV7" },
+        "principalKind": { "type": "string", "enum": ["USER", "SERVICE_ACCOUNT"] },
+        "principalId": { "$ref": "#/$defs/UuidV7" },
+        "scopeType": { "type": "string", "enum": ["PROJECT", "ENVIRONMENT"] },
+        "scopeId": { "$ref": "#/$defs/UuidV7" }
+      }
+    },
+    "CreateServiceAccountRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}[a-z0-9]$" }
+      }
+    },
+    "CreateApiKeyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["serviceAccountId", "name", "scopes"],
+      "properties": {
+        "serviceAccountId": { "$ref": "#/$defs/UuidV7" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "scopes": { "type": "array", "minItems": 1, "maxItems": 64, "uniqueItems": true, "items": { "type": "string" } },
+        "expiresAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CreatedApiKeyResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["apiKey", "plaintext"],
+      "properties": {
+        "apiKey": { "$ref": "#/$defs/ApiKeyView" },
+        "plaintext": {
+          "type": "string",
+          "pattern": "^ark_[A-Za-z0-9_-]{12}_[A-Za-z0-9_-]{43}$",
+          "readOnly": true,
+          "description": "仅在创建响应中返回一次的完整 API Key"
+        }
+      }
+    },
+    "RevokeApiKeyRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expectedVersion"],
+      "properties": {
+        "expectedVersion": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

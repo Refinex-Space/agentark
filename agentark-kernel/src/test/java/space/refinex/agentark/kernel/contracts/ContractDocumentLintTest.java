@@ -25,6 +25,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 import org.yaml.snakeyaml.LoaderOptions;
@@ -54,21 +55,55 @@ class ContractDocumentLintTest {
   /** 匹配 YAML 注释中至少一个汉字。 */
   private static final Pattern CHINESE_TEXT = Pattern.compile("\\p{IsHan}");
 
-  /** 验证 OpenAPI 骨架已版本化、尚未虚构端点并统一引用 Problem Detail。 */
+  /** 验证 OpenAPI 已版本化，只有 Public Control 声明 Phase 07 已实现端点。 */
   @Test
-  void openApiSkeletonsAreVersionedEndpointFreeAndUseCommonProblemDetail() throws IOException {
+  void openApiContractsAreVersionedAndOnlyExposeImplementedEndpoints() throws IOException {
     for (String fileName : OPEN_API_DOCUMENTS) {
       Path documentPath = CONTRACTS.resolve("openapi").resolve(fileName);
       Map<String, Object> document = load(documentPath);
 
       assertThat(document.get("openapi")).isEqualTo("3.1.0");
-      assertThat(document.get("paths")).isEqualTo(Map.of());
+      if (fileName.equals("public-control-v1.yaml")) {
+        Set<String> paths =
+            ((Map<?, ?>) document.get("paths"))
+                .keySet().stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
+        assertThat(paths)
+            .containsExactlyInAnyOrderElementsOf(
+                Set.of(
+                    "/api/v1/organizations",
+                    "/api/v1/organizations/{organizationId}/projects",
+                    "/api/v1/projects/{projectId}/environments",
+                    "/api/v1/projects/{projectId}/memberships",
+                    "/api/v1/projects/{projectId}/roles",
+                    "/api/v1/projects/{projectId}/role-bindings",
+                    "/api/v1/projects/{projectId}/service-accounts",
+                    "/api/v1/projects/{projectId}/permissions",
+                    "/api/v1/projects/{projectId}/api-keys",
+                    "/api/v1/projects/{projectId}/api-keys/{apiKeyId}/revoke"));
+      } else {
+        assertThat(document.get("paths")).isEqualTo(Map.of());
+      }
       assertThat(nested(document, "info", "version")).isEqualTo("1.0.0");
       assertThat(nested(document, "components", "schemas", "ProblemDetail", "$ref"))
           .isEqualTo("../schemas/problem-detail/v1.json");
       assertThat(documentPath.getParent().resolve("../schemas/problem-detail/v1.json").normalize())
           .exists();
     }
+  }
+
+  /** 验证 IAM 公共 Schema 已版本化，API Key 安全视图不包含摘要字段。 */
+  @Test
+  void iamPublicSchemaIsVersionedAndDoesNotExposeApiKeyDigest() throws IOException {
+    Path schema = CONTRACTS.resolve("schemas/iam-public/v1.json");
+    String content = Files.readString(schema);
+
+    assertThat(schema).exists();
+    assertThat(content)
+        .contains("https://agentark.refinex.space/contracts/iam-public/v1.json")
+        .contains("\"ApiKeyView\"")
+        .contains("\"readOnly\": true")
+        .doesNotContain("\"writeOnly\": true")
+        .doesNotContain("\"digest\"");
   }
 
   /** 验证 AsyncAPI 骨架已版本化且引用统一的运行时事件 Schema。 */

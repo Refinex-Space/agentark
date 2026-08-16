@@ -113,40 +113,92 @@ public abstract class AbstractMySqlMigrationIT {
     }
 
     /**
-     * 证明当前迁移可从空库执行，且 Phase 06 基线没有提前创建业务表。
+     * 证明当前迁移可从空库执行，且只创建所属阶段声明的业务表。
      *
      * @throws SQLException 查询迁移结果失败时抛出
      */
     @Test
-    void migratesAnEmptySchemaWithoutBusinessTables() throws SQLException {
+    void migratesAnEmptySchemaToExpectedVersion() throws SQLException {
         var result = currentFlyway().migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).hasToString("1");
+        assertThat(result.targetSchemaVersion).hasToString(expectedVersion());
         try (Connection connection = ownerConnection();
             var statement = connection.prepareStatement(
                 "SELECT table_name FROM information_schema.tables "
                     + "WHERE table_schema = ? AND table_name <> 'flyway_schema_history'")) {
             statement.setString(1, schemaName());
             try (ResultSet tables = statement.executeQuery()) {
-                assertThat(tables.next()).isFalse();
+                Set<String> actual = new java.util.HashSet<>();
+                while (tables.next()) {
+                    actual.add(tables.getString(1));
+                }
+                assertThat(actual).containsExactlyInAnyOrderElementsOf(expectedBusinessTables());
             }
         }
     }
 
     /**
-     * 证明先迁移到版本 0 再升级到当前 V1 的 N-1 测试框架可重复执行。
+     * 证明所有业务表和字段的中文注释已实际写入 MySQL 元数据，而不是只存在于 SQL 行注释中。
+     *
+     * @throws SQLException 查询 MySQL 元数据失败时抛出
+     */
+    @Test
+    void persistsChineseCommentsForEveryBusinessTableAndColumn() throws SQLException {
+        var result = currentFlyway().migrate();
+        assertThat(result.success).isTrue();
+
+        Set<String> actualTables = new java.util.HashSet<>();
+        try (Connection connection = ownerConnection();
+            var statement = connection.prepareStatement(
+                "SELECT table_name, table_comment FROM information_schema.tables "
+                    + "WHERE table_schema = ? AND table_name <> 'flyway_schema_history'")) {
+            statement.setString(1, schemaName());
+            try (ResultSet tables = statement.executeQuery()) {
+                while (tables.next()) {
+                    actualTables.add(tables.getString(1));
+                    assertThat(tables.getString(2)).containsPattern("[\\p{IsHan}]");
+                }
+            }
+        }
+        assertThat(actualTables).containsExactlyInAnyOrderElementsOf(expectedBusinessTables());
+
+        try (Connection connection = ownerConnection();
+            var statement = connection.prepareStatement(
+                "SELECT table_name, column_name, column_comment FROM information_schema.columns "
+                    + "WHERE table_schema = ? AND table_name <> 'flyway_schema_history'")) {
+            statement.setString(1, schemaName());
+            try (ResultSet columns = statement.executeQuery()) {
+                while (columns.next()) {
+                    assertThat(columns.getString(3))
+                        .as("字段注释 %s.%s", columns.getString(1), columns.getString(2))
+                        .containsPattern("[\\p{IsHan}]");
+                }
+            }
+        }
+    }
+
+    /**
+     * 证明先迁移到 Owner 声明的上一版本再升级到当前版本可重复执行。
      */
     @Test
     void upgradesFromPreviousVersionToCurrentVersion() {
-        Flyway previous = previousBaselineFlyway();
-        previous.baseline();
-        assertThat(previous.info().current().getVersion()).hasToString("0");
+        Flyway previous = "0".equals(previousVersion())
+            ? previousBaselineFlyway()
+            : flyway(MigrationVersion.fromVersion(previousVersion()));
+        if ("0".equals(previousVersion())) {
+            previous.baseline();
+            assertThat(previous.info().current().getVersion()).hasToString("0");
+        } else {
+            var previousResult = previous.migrate();
+            assertThat(previousResult.success).isTrue();
+            assertThat(previous.info().current().getVersion()).hasToString(previousVersion());
+        }
 
         var result = currentFlyway().migrate();
 
         assertThat(result.success).isTrue();
-        assertThat(result.targetSchemaVersion).hasToString("1");
+        assertThat(result.targetSchemaVersion).hasToString(expectedVersion());
     }
 
     /**
@@ -209,6 +261,33 @@ public abstract class AbstractMySqlMigrationIT {
     protected abstract String migrationLocation();
 
     /**
+     * 返回当前 Owner 应迁移到的最新版本。
+     *
+     * @return 正整数 Flyway 版本
+     */
+    protected String expectedVersion() {
+        return "1";
+    }
+
+    /**
+     * 返回当前 Owner 上一已发布版本。
+     *
+     * @return 小于最新版本的非负 Flyway 版本
+     */
+    protected String previousVersion() {
+        return "0";
+    }
+
+    /**
+     * 返回当前阶段应存在的业务表集合，不包含 Flyway 历史表。
+     *
+     * @return 不可变表名集合
+     */
+    protected Set<String> expectedBusinessTables() {
+        return Set.of();
+    }
+
+    /**
      * 创建迁移到最新版本的 Flyway 实例。
      *
      * @return 只作用于所属 Schema 的 Flyway
@@ -238,6 +317,25 @@ public abstract class AbstractMySqlMigrationIT {
     }
 
     /**
+     * 创建仅用于模拟尚无版本化业务表的零版本基线实例。
+     *
+     * @return 以版本零写入历史表且不创建业务表的 Flyway
+     */
+    private Flyway previousBaselineFlyway() {
+        return Flyway.configure()
+            .dataSource(ownerJdbcUrl(), schemaName(), OWNER_PASSWORD)
+            .locations(migrationLocation())
+            .schemas(schemaName())
+            .defaultSchema(schemaName())
+            .table("flyway_schema_history")
+            .createSchemas(false)
+            .cleanDisabled(true)
+            .baselineVersion(MigrationVersion.fromVersion("0"))
+            .baselineDescription("测试零版本基线")
+            .load();
+    }
+
+    /**
      * 创建允许测试专用 clean 的 Flyway 实例，只能清理所属 Schema。
      *
      * @return 测试清理实例
@@ -251,24 +349,6 @@ public abstract class AbstractMySqlMigrationIT {
             .table("flyway_schema_history")
             .createSchemas(false)
             .cleanDisabled(false)
-            .load();
-    }
-
-    /**
-     * 创建代表 Phase 05 空 Schema 的版本 0 基线实例，供 N-1 升级框架使用。
-     *
-     * @return 只写入测试历史表的版本 0 基线实例
-     */
-    private Flyway previousBaselineFlyway() {
-        return Flyway.configure()
-            .dataSource(ownerJdbcUrl(), schemaName(), OWNER_PASSWORD)
-            .schemas(schemaName())
-            .defaultSchema(schemaName())
-            .table("flyway_schema_history")
-            .createSchemas(false)
-            .cleanDisabled(true)
-            .baselineVersion("0")
-            .baselineDescription("Phase 05 empty schema")
             .load();
     }
 

@@ -32,6 +32,7 @@ import org.springframework.core.env.Environment;
     webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT,
     properties = {
         "spring.profiles.active=test",
+        "agentark.control.iam.enabled=false",
         "spring.autoconfigure.exclude="
             + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
             + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,"

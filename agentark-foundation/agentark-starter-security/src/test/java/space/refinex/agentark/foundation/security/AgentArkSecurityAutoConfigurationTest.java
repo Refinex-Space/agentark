@@ -157,7 +157,13 @@ class AgentArkSecurityAutoConfigurationTest {
    */
   private Jwt jwt(Map<String, Object> claims) {
     Instant now = Instant.now();
+    Map<String, Object> completeClaims = new java.util.HashMap<>(claims);
+    completeClaims.putIfAbsent("iss", "https://issuer.example.test");
     return new Jwt(
-        "test-token", now.minusSeconds(1), now.plusSeconds(60), Map.of("alg", "none"), claims);
+        "test-token",
+        now.minusSeconds(1),
+        now.plusSeconds(60),
+        Map.of("alg", "none"),
+        completeClaims);
   }
 }

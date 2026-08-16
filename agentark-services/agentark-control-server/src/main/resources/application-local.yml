@@ -9,6 +9,46 @@ spring:
 
 # Control 只通过 URL 访问其他平面，不共享 Server 实现。
 agentark:
+  # Foundation Starter 的本地安全覆盖。
+  foundation:
+    # 本地默认不假设存在 OIDC，显式配置后才启用 JWT Decoder。
+    security:
+      # 可通过环境变量连接真实本地 IdP；默认关闭不等于允许匿名访问 IAM API。
+      enabled: ${AGENTARK_LOCAL_SECURITY_ENABLED:false}
+      # 启用本地 JWT 验证时必须提供 HTTPS Issuer。
+      issuer-uri: ${AGENTARK_LOCAL_OIDC_ISSUER_URI:}
+      # 本地 Token 仍必须面向 Control Audience。
+      audiences:
+        # 固定 Control Audience。
+        - agentark-control
+  # Control Plane 本地 IAM 配置。
+  control:
+    # IAM 业务始终启用，API 在无 JWT 时仍拒绝匿名请求。
+    iam:
+      # 本地使用真实 MySQL IAM 表与授权逻辑。
+      enabled: true
+      # 本地授权缓存保持较短陈旧窗口。
+      authorization-cache-ttl: 15s
+      # 受控开发引导默认关闭，且不会创建密码、Token 或 API Key。
+      dev-bootstrap:
+        # 必须显式设置为 true 才创建最小本地租户资源。
+        enabled: ${AGENTARK_IAM_DEV_BOOTSTRAP_ENABLED:false}
+        # 开发主体 Issuer，不代表生产身份提供方。
+        issuer: ${AGENTARK_IAM_DEV_ISSUER:urn:agentark:local-dev}
+        # 开发主体稳定 Subject，不包含认证凭据。
+        subject: ${AGENTARK_IAM_DEV_SUBJECT:local-developer}
+        # 幂等组织 Slug。
+        organization-slug: ${AGENTARK_IAM_DEV_ORGANIZATION_SLUG:local-org}
+        # 本地组织展示名称。
+        organization-name: ${AGENTARK_IAM_DEV_ORGANIZATION_NAME:本地开发组织}
+        # 幂等项目 Slug。
+        project-slug: ${AGENTARK_IAM_DEV_PROJECT_SLUG:local-project}
+        # 本地项目展示名称。
+        project-name: ${AGENTARK_IAM_DEV_PROJECT_NAME:本地开发项目}
+        # 幂等环境 Key。
+        environment-key: ${AGENTARK_IAM_DEV_ENVIRONMENT_KEY:local}
+        # 本地环境展示名称。
+        environment-name: ${AGENTARK_IAM_DEV_ENVIRONMENT_NAME:本地环境}
   # 声明 Control 可见的内部服务端点。
   services:
     # Runtime Plane 基础地址；Compose 使用服务 DNS 覆盖。

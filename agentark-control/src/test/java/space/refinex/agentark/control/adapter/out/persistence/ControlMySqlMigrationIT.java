@@ -16,6 +16,7 @@
 
 package space.refinex.agentark.control.adapter.out.persistence;
 
+import java.util.Set;
 import space.refinex.agentark.foundation.persistence.testing.AbstractMySqlMigrationIT;
 
 /**
@@ -58,5 +59,47 @@ class ControlMySqlMigrationIT extends AbstractMySqlMigrationIT {
     @Override
     protected String migrationLocation() {
         return "classpath:db/migration/control";
+    }
+
+    /**
+     * 声明 Control 当前最新迁移为 Phase 07 的 V2。
+     *
+     * @return Flyway 版本 2
+     */
+    @Override
+    protected String expectedVersion() {
+        return "2";
+    }
+
+    /**
+     * 声明 Phase 06 的 V1 是当前升级测试起点。
+     *
+     * @return Flyway 版本 1
+     */
+    @Override
+    protected String previousVersion() {
+        return "1";
+    }
+
+    /**
+     * 声明 Phase 07 唯一允许创建的 IAM 业务表。
+     *
+     * @return 十二张 IAM 表
+     */
+    @Override
+    protected Set<String> expectedBusinessTables() {
+        return Set.of(
+            "organization",
+            "project",
+            "environment",
+            "user_identity",
+            "service_account",
+            "membership",
+            "permission",
+            "role",
+            "role_permission",
+            "role_binding",
+            "api_key",
+            "api_key_scope");
     }
 }

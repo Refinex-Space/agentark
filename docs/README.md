@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-16
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -20,6 +20,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 04 执行证据 | [Focused Foundation Starters](implementation/phase-04-foundation-starters.md) | 复核六个职责单一 Starter、条件化配置、安全默认和架构规则 |
 | Phase 05 执行证据 | [四服务骨架与本地 Core](implementation/phase-05-service-shells.md) | 复核四个启动单元、健康探针、Compose、Secret 和三 Schema 账号隔离 |
 | Phase 06 执行证据 | [MySQL 持久化基线](implementation/phase-06-persistence-baseline.md) | 复核三套 Flyway、DataSource Owner、MySQL Contract Test 与门禁 |
+| Phase 07 执行证据 | [IAM 与多租户基线](implementation/phase-07-iam-tenancy.md) | 复核身份映射、租户资源树、角色授权、API Key、越权测试与 Public API |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |

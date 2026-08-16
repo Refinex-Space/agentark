@@ -32,7 +32,7 @@
             <artifactId>agentark-starter-observability</artifactId>
         </dependency>
 
-        <!-- 提供 Control Plane 领域边界，当前 Phase 仅为空实现占位。 -->
+        <!-- 提供 Control Plane IAM、租户、授权、API Key 与所属持久化实现。 -->
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>agentark-control</artifactId>

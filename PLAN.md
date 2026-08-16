@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-16
 status: active
 referenced_by: AGENTS.md#knowledge-map
 title: AgentArk Implementation Plan
@@ -441,7 +441,7 @@ flowchart LR
 | 04 | DONE | 2026-08-15 | `docs/implementation/phase-04-foundation-starters.md` | 六个职责单一 Starter、条件化配置、安全默认与架构规则已验收 |
 | 05 | DONE | 2026-08-15 | `docs/implementation/phase-05-service-shells.md` | 四服务空业务骨架、Core/RAG Compose、Secret 与三 Schema 隔离已验收 |
 | 06 | DONE | 2026-08-15 | `docs/implementation/phase-06-persistence-baseline.md` | 三 Schema、Flyway、MyBatis-Plus、Testcontainers 与迁移规范已验收 |
-| 07 | NOT_STARTED | — | `docs/implementation/phase-07-iam-tenancy.md` | |
+| 07 | DONE | 2026-08-16 | `docs/implementation/phase-07-iam-tenancy.md` | IAM、租户隔离、授权、API Key、契约与越权测试已验收 |
 | 08 | NOT_STARTED | — | `docs/implementation/phase-08-asset-catalog.md` | |
 | 09 | NOT_STARTED | — | `docs/implementation/phase-09-knowledge-metadata.md` | |
 | 10 | NOT_STARTED | — | `docs/implementation/phase-10-revision-deployment.md` | |
@@ -1375,24 +1375,24 @@ ApiKey
 
 ### 任务
 
-- [ ] 定义资源层级和强类型 ID；
-- [ ] 实现 Organization/Project/Environment 聚合；
-- [ ] 实现外部 `UserIdentity` 映射；
-- [ ] 实现 Service Account；
-- [ ] 实现 Membership；
-- [ ] 实现内置角色与 Custom Role；
-- [ ] 实现 Permission Registry；
-- [ ] 实现 Scope-aware Role Binding；
-- [ ] 实现 API Key 创建、一次展示、哈希保存、前缀、Scope、到期、吊销；
-- [ ] 实现 Principal → Tenant Context；
-- [ ] 实现 Method/Application Authorization；
-- [ ] 实现租户资源访问检查；
-- [ ] 实现 Control MySQL 表与 Flyway；
-- [ ] 实现 Public API 与 OpenAPI；
-- [ ] 实现缓存失效事件/短 TTL；
-- [ ] 实现审计接口占位的真实 Port，不用空实现吞掉事件；
-- [ ] 提供受控 Dev Bootstrap，但不进入生产 Profile；
-- [ ] 建立跨租户越权测试。
+- [x] 定义资源层级和强类型 ID；
+- [x] 实现 Organization/Project/Environment 聚合；
+- [x] 实现外部 `UserIdentity` 映射；
+- [x] 实现 Service Account；
+- [x] 实现 Membership；
+- [x] 实现内置角色与 Custom Role；
+- [x] 实现 Permission Registry；
+- [x] 实现 Scope-aware Role Binding；
+- [x] 实现 API Key 创建、一次展示、哈希保存、前缀、Scope、到期、吊销；
+- [x] 实现 Principal → Tenant Context；
+- [x] 实现 Method/Application Authorization；
+- [x] 实现租户资源访问检查；
+- [x] 实现 Control MySQL 表与 Flyway；
+- [x] 实现 Public API 与 OpenAPI；
+- [x] 实现缓存失效事件/短 TTL；
+- [x] 实现审计接口占位的真实 Port，不用空实现吞掉事件；
+- [x] 提供受控 Dev Bootstrap，但不进入生产 Profile；
+- [x] 建立跨租户越权测试。
 
 ### API 建议
 
@@ -1418,16 +1418,16 @@ docs/implementation/phase-07-iam-tenancy.md
 
 ### 验收条件
 
-- [ ] 所有资源显式带 Organization/Project；
-- [ ] 客户端 Tenant Header 不能绕过授权；
-- [ ] 无权用户得到稳定 ProblemDetail；
-- [ ] API Key 数据库只有摘要，无明文；
-- [ ] API Key 只在创建时展示；
-- [ ] Dev Bootstrap 在生产 Profile 禁用；
-- [ ] Membership/Role 变化会使缓存失效；
-- [ ] 跨租户 SQL、ID 猜测、列表和直接对象访问测试均失败；
-- [ ] Controller 不直接访问 Mapper；
-- [ ] OpenAPI 与实现一致。
+- [x] 所有资源显式带 Organization/Project；
+- [x] 客户端 Tenant Header 不能绕过授权；
+- [x] 无权用户得到稳定 ProblemDetail；
+- [x] API Key 数据库只有摘要，无明文；
+- [x] API Key 只在创建时展示；
+- [x] Dev Bootstrap 在生产 Profile 禁用；
+- [x] Membership/Role 变化会使缓存失效；
+- [x] 跨租户 SQL、ID 猜测、列表和直接对象访问测试均失败；
+- [x] Controller 不直接访问 Mapper；
+- [x] OpenAPI 与实现一致。
 
 ### 验收命令
 

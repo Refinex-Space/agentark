@@ -65,7 +65,30 @@ public final class AgentArkJwtPrincipalConverter implements Converter<Jwt, Agent
                     Set.copyOf(source.getAudience())))
                 : Optional.empty();
         return new AgentArkPrincipal(
-            source.getSubject(), type, authorities(source), tenantSelection, serviceIdentity);
+            requiredIssuer(source),
+            source.getSubject(),
+            type,
+            authorities(source),
+            tenantSelection,
+            serviceIdentity);
+    }
+
+    /**
+     * 读取已验证 JWT 的 Issuer，并拒绝缺失或过长值，避免跨身份源 Subject 碰撞。
+     *
+     * @param jwt 已验证 JWT
+     * @return 规范 Issuer 字符串
+     * @throws IllegalArgumentException 当 Issuer 缺失、为空或超过持久化上限时抛出
+     */
+    private String requiredIssuer(Jwt jwt) {
+        if (jwt.getIssuer() == null) {
+            throw new IllegalArgumentException("JWT issuer is required");
+        }
+        String issuer = jwt.getIssuer().toString();
+        if (issuer.isBlank() || issuer.length() > 255) {
+            throw new IllegalArgumentException("JWT issuer must contain 1 to 255 characters");
+        }
+        return issuer;
     }
 
     /**

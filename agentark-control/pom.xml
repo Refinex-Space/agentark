@@ -27,10 +27,34 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- 提供 Organization/Project/Environment 与 IAM 强类型 UUIDv7 标识。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-kernel</artifactId>
+        </dependency>
+
+        <!-- 提供 OIDC/JWT 主体、API Key 认证扩展点和 Tenant Selection 契约。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-security</artifactId>
+        </dependency>
+
+        <!-- 提供 RFC 9457、请求上下文、租户上下文和强类型 ID JSON 映射。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-web</artifactId>
+        </dependency>
+
         <!-- 提供 Control 所属 MyBatis-Plus、Flyway、事务与受控类型处理能力。 -->
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>agentark-starter-persistence</artifactId>
+        </dependency>
+
+        <!-- 提供 Control IAM Controller、Servlet 安全过滤链和 Bean Validation 运行时。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
 
         <!-- 提供 Control Server 连接 MySQL 8.4 的运行时 JDBC 驱动。 -->
@@ -44,6 +68,7 @@
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>agentark-starter-persistence</artifactId>
+            <version>${project.version}</version>
             <type>test-jar</type>
             <scope>test</scope>
         </dependency>
@@ -66,6 +91,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 MockMvc 的已认证主体注入和 Security 断言。 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

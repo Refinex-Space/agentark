@@ -375,6 +375,104 @@ def require_schema_ownership(errors: list[str]) -> None:
                 errors.append(f"owner server configuration lacks {token}: {server_config}")
 
 
+def split_sql_definitions(body: str) -> list[str]:
+    """Split CREATE TABLE definitions on top-level commas."""
+    definitions: list[str] = []
+    start = 0
+    depth = 0
+    quoted = False
+    index = 0
+    while index < len(body):
+        character = body[index]
+        if character == "'":
+            if quoted and index + 1 < len(body) and body[index + 1] == "'":
+                index += 2
+                continue
+            quoted = not quoted
+        elif not quoted:
+            if character == "(":
+                depth += 1
+            elif character == ")":
+                depth -= 1
+            elif character == "," and depth == 0:
+                definitions.append(body[start:index].strip())
+                start = index + 1
+        index += 1
+    tail = body[start:].strip()
+    if tail:
+        definitions.append(tail)
+    return definitions
+
+
+def require_flyway_comments(errors: list[str]) -> None:
+    """Require native Chinese comments for every Flyway table and column."""
+    create_table = re.compile(
+        r"\bCREATE\s+TABLE\s+(?:IF\s+NOT\s+EXISTS\s+)?`?([a-z][a-z0-9_]*)`?"
+        r"\s*\((.*?)\)\s*(ENGINE\s*=\s*[^;]+);",
+        re.IGNORECASE | re.DOTALL,
+    )
+    column_start = re.compile(r"^`?([a-z][a-z0-9_]*)`?\s+(.+)$", re.IGNORECASE | re.DOTALL)
+    comment_value = re.compile(r"\bCOMMENT\s+'((?:''|[^'])+)'", re.IGNORECASE | re.DOTALL)
+    enumerable_check = re.compile(
+        r"\bCHECK\s*\(\s*`?([a-z][a-z0-9_]*)`?\s+IN\s*\(([^()]*)\)\s*\)",
+        re.IGNORECASE | re.DOTALL,
+    )
+    non_column_tokens = {"primary", "constraint", "unique", "foreign", "check", "index", "key"}
+
+    for path in ROOT.rglob("V*.sql"):
+        if "target" in path.parts or ".agentark" in path.parts:
+            continue
+        sql = read(path)
+        tables = list(create_table.finditer(sql))
+        declared_table_count = len(re.findall(r"\bCREATE\s+TABLE\b", sql, re.IGNORECASE))
+        if len(tables) != declared_table_count:
+            errors.append(f"cannot parse every Flyway CREATE TABLE for comments: {rel(path)}")
+            continue
+
+        for table in tables:
+            table_name, body, trailer = table.groups()
+            table_comment = re.search(
+                r"\bCOMMENT\s*=\s*'((?:''|[^'])+)'", trailer, re.IGNORECASE | re.DOTALL
+            )
+            if not table_comment or not CHINESE_RE.search(table_comment.group(1)):
+                errors.append(f"Flyway table lacks a Chinese COMMENT: {rel(path)}:{table_name}")
+
+            columns: dict[str, str] = {}
+            comments: dict[str, str] = {}
+            for definition in split_sql_definitions(body):
+                match = column_start.match(definition)
+                if not match or match.group(1).lower() in non_column_tokens:
+                    continue
+                column_name = match.group(1).lower()
+                column_definition = match.group(2)
+                columns[column_name] = column_definition
+                column_comment = comment_value.search(column_definition)
+                if not column_comment or not CHINESE_RE.search(column_comment.group(1)):
+                    errors.append(
+                        f"Flyway column lacks a Chinese COMMENT: {rel(path)}:"
+                        f"{table_name}.{column_name}"
+                    )
+                    continue
+                comments[column_name] = column_comment.group(1)
+                if re.match(r"^BOOLEAN\b", column_definition, re.IGNORECASE):
+                    if "0" not in column_comment.group(1) or "1" not in column_comment.group(1):
+                        errors.append(
+                            f"Flyway BOOLEAN COMMENT must document 0 and 1: {rel(path)}:"
+                            f"{table_name}.{column_name}"
+                        )
+
+            for check in enumerable_check.finditer(body):
+                column_name = check.group(1).lower()
+                values = re.findall(r"'((?:''|[^'])+)'", check.group(2))
+                comment = comments.get(column_name, "")
+                missing = [value for value in values if value not in comment]
+                if column_name not in columns or missing:
+                    errors.append(
+                        f"Flyway enumerable COMMENT is incomplete {missing}: {rel(path)}:"
+                        f"{table_name}.{column_name}"
+                    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--base", help="Git base revision for docs-with-code checks")
@@ -453,6 +551,7 @@ def main() -> int:
     require_maven_foundation(errors)
     require_phase03_boundaries(errors)
     require_schema_ownership(errors)
+    require_flyway_comments(errors)
 
     if errors:
         print(f"knowledge gate failed: {len(errors)} error(s)")

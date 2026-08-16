@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-16
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -9,7 +9,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline；三个服务仍为空业务状态，只有各自的 Migration History，没有业务表或业务 API。Gateway 不连接业务数据库。Redis 与 Object Storage 的业务接线仍由后续 Owner Phase 实现。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2 业务表、OIDC/JWT/API Key 认证与 Public API；Runtime 和 Scheduler 仍只有各自的 Migration History。Gateway 不连接业务数据库。Redis 与 Object Storage 的业务接线仍由后续 Owner Phase 实现。
 
 ## Server 与本地 Profile
 
@@ -91,6 +91,22 @@ Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334`
 | `agentark.foundation.observability.collect-prompt-text` | `false` | 仅显式风险评审后开启 | Prompt 正文默认不采集；Secret 始终脱敏 |
 | `agentark.foundation.observability.collect-tool-arguments` | `false` | 仅显式风险评审后开启 | Tool 参数默认不采集；Secret 始终脱敏 |
 | `agentark.foundation.observability.collect-document-text` | `false` | 仅显式风险评审后开启 | 文档正文默认不采集；Secret 始终脱敏 |
+
+## Control IAM 配置
+
+| 属性/环境变量 | 默认值 | 启用/必填条件 | 安全与所有权说明 |
+|---|---|---|---|
+| `agentark.control.iam.enabled` | `true` | Control 正常运行 | 只允许无数据库的 `test` Profile 显式关闭；关闭后不提供 IAM API |
+| `agentark.control.iam.authorization-cache-ttl` | `15s` | IAM 启用 | 必须为正且不超过一分钟；MySQL 始终是事实源，授权变化提交后主动失效本实例缓存 |
+| `AGENTARK_SECURITY_ENABLED` | `true` | 非 `local` Control | 控制 Foundation OIDC Resource Server；生产不得以关闭认证方式运行 Public API |
+| `AGENTARK_OIDC_ISSUER_URI` | 无 | 生产 Security 启用时必填 | 必须为绝对 HTTPS Issuer，参与 `iss` 与 JWK 校验 |
+| `AGENTARK_LOCAL_SECURITY_ENABLED` | `false` | `local` 可选 | 本地未连接 IdP 时仍不允许匿名访问 IAM API；可使用显式 Dev Bootstrap 创建资源但不提供认证凭据 |
+| `AGENTARK_LOCAL_OIDC_ISSUER_URI` | 无 | 本地 Security 启用时必填 | 只接受 HTTPS Issuer，不提供宽松默认值 |
+| `agentark.control.iam.dev-bootstrap.enabled` / `AGENTARK_IAM_DEV_BOOTSTRAP_ENABLED` | `false` | 仅 `local` Profile | 生产 Profile 即使误设为 `true` 也不装配；不生成口令、Token 或 API Key |
+| `AGENTARK_IAM_DEV_ISSUER`、`AGENTARK_IAM_DEV_SUBJECT` | `urn:agentark:local-dev`、`local-developer` | Dev Bootstrap 启用 | 仅作为本地资源 Owner 身份引用，不是认证凭据 |
+| `AGENTARK_IAM_DEV_ORGANIZATION_SLUG/NAME` | `local-org`、`本地开发组织` | Dev Bootstrap 启用 | 幂等创建本地 Organization |
+| `AGENTARK_IAM_DEV_PROJECT_SLUG/NAME` | `local-project`、`本地开发项目` | Dev Bootstrap 启用 | 幂等创建本地 Project |
+| `AGENTARK_IAM_DEV_ENVIRONMENT_KEY/NAME` | `local`、`本地环境` | Dev Bootstrap 启用 | 幂等创建本地 Environment |
 
 连接、池化、TLS、事务和 Migration 使用 Spring Boot 所属标准属性，例如 `spring.datasource.*`、`spring.flyway.*` 和 `spring.data.redis.*`。Phase 06 已固定 MySQL/Flyway 基线；生产 TLS 信任材料与强制模式仍必须由实际部署环境显式提供，不能依赖本地 Compose 的明文内部网络设置。
 

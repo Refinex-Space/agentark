@@ -14,8 +14,502 @@ info:
     identifier: Apache-2.0
 # 固定所有内联 Schema 使用 JSON Schema Draft 2020-12 方言。
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
-# Phase 03 不提前虚构业务端点，端点由其所有者阶段补充。
-paths: {}
+# Phase 07 只声明已经由 IAM Controller 实现的公开端点。
+paths:
+  # Organization 集合端点。
+  /api/v1/organizations:
+    # 列出当前主体可见组织。
+    get:
+      # 稳定操作标识。
+      operationId: listOrganizations
+      # IAM 功能分组。
+      tags: [IAM]
+      # 成功和稳定错误响应。
+      responses:
+        # 可见组织列表。
+        "200":
+          # 响应说明。
+          description: 当前主体可见的组织
+          # JSON 响应体。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 组织数组结构。
+              schema:
+                # 声明数组。
+                type: array
+                # 数组元素引用组织结构。
+                items:
+                  # 复用组织 Schema。
+                  $ref: "#/components/schemas/Organization"
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建组织和组织所有者绑定。
+    post:
+      # 稳定操作标识。
+      operationId: createOrganization
+      # IAM 功能分组。
+      tags: [IAM]
+      # 创建请求体。
+      requestBody:
+        # 创建请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建组织结构。
+            schema: { $ref: "#/components/schemas/CreateOrganizationRequest" }
+      # 创建结果与稳定错误。
+      responses:
+        # 创建成功。
+        "201":
+          # 响应说明。
+          description: 组织已创建
+          # JSON 响应体。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 组织结构。
+              schema: { $ref: "#/components/schemas/Organization" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 无平台创建权限响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 唯一约束冲突响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Organization 下属 Project 集合端点。
+  /api/v1/organizations/{organizationId}/projects:
+    # 复用组织路径参数。
+    parameters:
+      # 组织 UUIDv7。
+      - { $ref: "#/components/parameters/OrganizationId" }
+    # 列出组织内项目。
+    get:
+      # 稳定操作标识。
+      operationId: listProjects
+      # IAM 功能分组。
+      tags: [IAM]
+      # 查询响应。
+      responses:
+        # 项目数组。
+        "200": { $ref: "#/components/responses/ProjectList" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 组织不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建组织内项目。
+    post:
+      # 稳定操作标识。
+      operationId: createProject
+      # IAM 功能分组。
+      tags: [IAM]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建项目结构。
+            schema: { $ref: "#/components/schemas/CreateProjectRequest" }
+      # 创建响应。
+      responses:
+        # 创建成功。
+        "201":
+          # 响应说明。
+          description: 项目已创建
+          # JSON 响应体。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 项目结构。
+              schema: { $ref: "#/components/schemas/Project" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 唯一约束冲突响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Project 环境集合端点。
+  /api/v1/projects/{projectId}/environments:
+    # 复用项目路径参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 列出项目环境。
+    get:
+      # 稳定操作标识。
+      operationId: listEnvironments
+      # IAM 功能分组。
+      tags: [IAM]
+      # 查询响应。
+      responses:
+        # 环境列表。
+        "200": { $ref: "#/components/responses/EnvironmentList" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建项目环境。
+    post:
+      # 稳定操作标识。
+      operationId: createEnvironment
+      # IAM 功能分组。
+      tags: [IAM]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建环境结构。
+            schema: { $ref: "#/components/schemas/CreateEnvironmentRequest" }
+      # 创建响应。
+      responses:
+        # 创建成功。
+        "201":
+          # 响应说明。
+          description: 环境已创建
+          # JSON 响应体。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 环境结构。
+              schema: { $ref: "#/components/schemas/Environment" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 唯一约束冲突响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Project 成员关系集合端点。
+  /api/v1/projects/{projectId}/memberships:
+    # 复用项目路径参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 列出项目成员。
+    get:
+      # 稳定操作标识。
+      operationId: listMemberships
+      # IAM 功能分组。
+      tags: [IAM]
+      # 查询响应。
+      responses:
+        # 成员关系列表。
+        "200": { $ref: "#/components/responses/MembershipList" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建项目成员关系。
+    post:
+      # 稳定操作标识。
+      operationId: createMembership
+      # IAM 功能分组。
+      tags: [IAM]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建成员关系结构。
+            schema: { $ref: "#/components/schemas/CreateMembershipRequest" }
+      # 创建响应。
+      responses:
+        # 创建成功。
+        "201": { $ref: "#/components/responses/CreatedMembership" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 唯一约束冲突响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Project 角色集合端点。
+  /api/v1/projects/{projectId}/roles:
+    # 复用项目路径参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 列出项目可用角色。
+    get:
+      # 稳定操作标识。
+      operationId: listRoles
+      # IAM 功能分组。
+      tags: [IAM]
+      # 查询响应。
+      responses:
+        # 角色列表。
+        "200": { $ref: "#/components/responses/RoleList" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建项目自定义角色。
+    post:
+      # 稳定操作标识。
+      operationId: createRole
+      # IAM 功能分组。
+      tags: [IAM]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建角色结构。
+            schema: { $ref: "#/components/schemas/CreateRoleRequest" }
+      # 创建响应。
+      responses:
+        # 创建成功。
+        "201": { $ref: "#/components/responses/CreatedRole" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 唯一约束冲突响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Project 角色绑定集合端点。
+  /api/v1/projects/{projectId}/role-bindings:
+    # 复用项目路径参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 列出项目和组织继承绑定。
+    get:
+      # 稳定操作标识。
+      operationId: listRoleBindings
+      # IAM 功能分组。
+      tags: [IAM]
+      # 查询响应。
+      responses:
+        # 角色绑定列表。
+        "200": { $ref: "#/components/responses/RoleBindingList" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建范围感知角色绑定。
+    post:
+      # 稳定操作标识。
+      operationId: createRoleBinding
+      # IAM 功能分组。
+      tags: [IAM]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建绑定结构。
+            schema: { $ref: "#/components/schemas/CreateRoleBindingRequest" }
+      # 创建响应。
+      responses:
+        # 创建成功。
+        "201": { $ref: "#/components/responses/CreatedRoleBinding" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 唯一约束冲突响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Project 服务账号集合端点。
+  /api/v1/projects/{projectId}/service-accounts:
+    # 复用项目路径参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 列出项目服务账号。
+    get:
+      # 稳定操作标识。
+      operationId: listServiceAccounts
+      # IAM 功能分组。
+      tags: [IAM]
+      # 查询响应。
+      responses:
+        # 服务账号列表。
+        "200": { $ref: "#/components/responses/ServiceAccountList" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建项目服务账号。
+    post:
+      # 稳定操作标识。
+      operationId: createServiceAccount
+      # IAM 功能分组。
+      tags: [IAM]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建服务账号结构。
+            schema: { $ref: "#/components/schemas/CreateServiceAccountRequest" }
+      # 创建响应。
+      responses:
+        # 创建成功。
+        "201": { $ref: "#/components/responses/CreatedServiceAccount" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 唯一约束冲突响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Project 权限注册项端点。
+  /api/v1/projects/{projectId}/permissions:
+    # 复用项目路径参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 列出可分配权限注册项。
+    get:
+      # 稳定操作标识。
+      operationId: listPermissions
+      # IAM 功能分组。
+      tags: [IAM]
+      # 查询响应。
+      responses:
+        # 权限列表。
+        "200": { $ref: "#/components/responses/PermissionList" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # Project API Key 集合端点。
+  /api/v1/projects/{projectId}/api-keys:
+    # 复用项目路径参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 列出 API Key 非秘密元数据。
+    get:
+      # 稳定操作标识。
+      operationId: listApiKeys
+      # IAM 功能分组。
+      tags: [IAM]
+      # 查询响应。
+      responses:
+        # API Key 安全视图数组。
+        "200": { $ref: "#/components/responses/ApiKeyList" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建 API Key 并单次展示明文。
+    post:
+      # 稳定操作标识。
+      operationId: createApiKey
+      # IAM 功能分组。
+      tags: [IAM]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建 API Key 结构。
+            schema: { $ref: "#/components/schemas/CreateApiKeyRequest" }
+      # 创建响应。
+      responses:
+        # 创建成功且唯一一次包含明文。
+        "201":
+          # 响应说明。
+          description: API Key 已创建，plaintext 仅在本响应展示
+          # JSON 响应体。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 单次交付结构。
+              schema: { $ref: "#/components/schemas/CreatedApiKeyResponse" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权或 Scope 扩大响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 唯一约束冲突响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 单个 API Key 吊销动作端点。
+  /api/v1/projects/{projectId}/api-keys/{apiKeyId}/revoke:
+    # 复用项目与 API Key 路径参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # 接口密钥 UUIDv7 标识。
+      - $ref: "#/components/parameters/ApiKeyId"
+    # 使用乐观锁吊销 Key。
+    post:
+      # 稳定操作标识。
+      operationId: revokeApiKey
+      # IAM 功能分组。
+      tags: [IAM]
+      # 吊销请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 乐观锁结构。
+            schema: { $ref: "#/components/schemas/RevokeApiKeyRequest" }
+      # 吊销响应。
+      responses:
+        # 吊销成功且无响应体。
+        "204": { description: API Key 已吊销 }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 乐观锁冲突响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
 # 汇总可复用的 Schema 与响应组件。
 components:
   # 注册公共 Schema 引用。
@@ -24,6 +518,118 @@ components:
     ProblemDetail:
       # 引用版本化的公共错误 JSON Schema。
       $ref: ../schemas/problem-detail/v1.json
+    # UUIDv7 文本标识。
+    UuidV7:
+      # 引用 IAM 公共契约中的 UUIDv7 定义。
+      $ref: ../schemas/iam-public/v1.json#/$defs/UuidV7
+    # 组织聚合响应。
+    Organization:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/Organization
+    # 项目聚合响应。
+    Project:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/Project
+    # 环境聚合响应。
+    Environment:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/Environment
+    # 项目成员关系响应。
+    Membership:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/Membership
+    # 角色响应。
+    Role:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/Role
+    # 角色绑定响应。
+    RoleBinding:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/RoleBinding
+    # 服务账号响应。
+    ServiceAccount:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/ServiceAccount
+    # 权限注册项响应。
+    Permission:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/Permission
+    # API Key 非秘密响应。
+    ApiKeyView:
+      # 引用明确排除 digest 和 plaintext 的安全契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/ApiKeyView
+    # 创建组织请求。
+    CreateOrganizationRequest:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/CreateOrganizationRequest
+    # 创建项目请求。
+    CreateProjectRequest:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/CreateProjectRequest
+    # 创建环境请求。
+    CreateEnvironmentRequest:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/CreateEnvironmentRequest
+    # 创建成员关系请求。
+    CreateMembershipRequest:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/CreateMembershipRequest
+    # 创建角色请求。
+    CreateRoleRequest:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/CreateRoleRequest
+    # 创建角色绑定请求。
+    CreateRoleBindingRequest:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/CreateRoleBindingRequest
+    # 创建服务账号请求。
+    CreateServiceAccountRequest:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/CreateServiceAccountRequest
+    # 创建 API Key 请求。
+    CreateApiKeyRequest:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/CreateApiKeyRequest
+    # API Key 单次明文交付响应。
+    CreatedApiKeyResponse:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/CreatedApiKeyResponse
+    # API Key 吊销请求。
+    RevokeApiKeyRequest:
+      # 引用版本化 IAM 公共契约。
+      $ref: ../schemas/iam-public/v1.json#/$defs/RevokeApiKeyRequest
+  # 注册路径参数模板。
+  parameters:
+    # 组织标识路径参数。
+    OrganizationId:
+      # 参数名称。
+      name: organizationId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # 项目标识路径参数。
+    ProjectId:
+      # 参数名称。
+      name: projectId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # API Key 标识路径参数。
+    ApiKeyId:
+      # 参数名称。
+      name: apiKeyId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
   # 注册公共 HTTP 响应模板。
   responses:
     # 定义采用 application/problem+json 的错误响应。
@@ -38,3 +644,147 @@ components:
           schema:
             # 复用版本化的公共错误 JSON Schema。
             $ref: ../schemas/problem-detail/v1.json
+    # 项目列表响应。
+    ProjectList:
+      # 说明该响应返回项目集合。
+      description: 项目列表
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 定义项目数组响应结构。
+          schema: { type: array, items: { $ref: "#/components/schemas/Project" } }
+    # 环境列表响应。
+    EnvironmentList:
+      # 说明该响应返回环境集合。
+      description: 环境列表
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 定义环境数组响应结构。
+          schema: { type: array, items: { $ref: "#/components/schemas/Environment" } }
+    # 成员关系列表响应。
+    MembershipList:
+      # 说明该响应返回成员关系集合。
+      description: 成员关系列表
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 定义成员关系数组响应结构。
+          schema: { type: array, items: { $ref: "#/components/schemas/Membership" } }
+    # 角色列表响应。
+    RoleList:
+      # 说明该响应返回角色集合。
+      description: 角色列表
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 定义角色数组响应结构。
+          schema: { type: array, items: { $ref: "#/components/schemas/Role" } }
+    # 角色绑定列表响应。
+    RoleBindingList:
+      # 说明该响应返回角色绑定集合。
+      description: 角色绑定列表
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 定义角色绑定数组响应结构。
+          schema: { type: array, items: { $ref: "#/components/schemas/RoleBinding" } }
+    # 服务账号列表响应。
+    ServiceAccountList:
+      # 说明该响应返回服务账号集合。
+      description: 服务账号列表
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 定义服务账号数组响应结构。
+          schema: { type: array, items: { $ref: "#/components/schemas/ServiceAccount" } }
+    # 权限注册项列表响应。
+    PermissionList:
+      # 说明该响应返回权限注册项集合。
+      description: 权限注册项列表
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 定义权限数组响应结构。
+          schema: { type: array, items: { $ref: "#/components/schemas/Permission" } }
+    # API Key 安全视图列表响应。
+    ApiKeyList:
+      # 说明该响应只返回非秘密元数据。
+      description: API Key 非秘密元数据列表
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 定义 API Key 安全视图数组。
+          schema: { type: array, items: { $ref: "#/components/schemas/ApiKeyView" } }
+    # 创建成员关系响应。
+    CreatedMembership:
+      # 说明成员关系创建成功。
+      description: 成员关系已创建
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用成员关系响应结构。
+          schema: { $ref: "#/components/schemas/Membership" }
+    # 创建角色响应。
+    CreatedRole:
+      # 说明角色创建成功。
+      description: 角色已创建
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用角色响应结构。
+          schema: { $ref: "#/components/schemas/Role" }
+    # 创建角色绑定响应。
+    CreatedRoleBinding:
+      # 说明角色绑定创建成功。
+      description: 角色绑定已创建
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用角色绑定响应结构。
+          schema: { $ref: "#/components/schemas/RoleBinding" }
+    # 创建服务账号响应。
+    CreatedServiceAccount:
+      # 说明服务账号创建成功。
+      description: 服务账号已创建
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用服务账号响应结构。
+          schema: { $ref: "#/components/schemas/ServiceAccount" }
+  # 注册 IAM 支持的认证方案。
+  securitySchemes:
+    # OIDC/JWT Bearer 认证。
+    BearerAuth:
+      # HTTP 认证类型。
+      type: http
+      # Bearer 方案。
+      scheme: bearer
+      # JWT 载荷格式提示。
+      bearerFormat: JWT
+    # AgentArk API Key Authorization Header 认证。
+    ApiKeyAuth:
+      # Header API Key 类型。
+      type: apiKey
+      # 固定 Authorization Header。
+      in: header
+      # Header 名称。
+      name: Authorization
+# 所有 IAM 路径默认接受已验证 JWT 或摘要 API Key。
+security:
+  # Bearer JWT 认证。
+  - BearerAuth: []
+  # API Key 认证。
+  - ApiKeyAuth: []

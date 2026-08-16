@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-16
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -16,7 +16,7 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 | Phase | 迁移范围 | 边界 |
 |---|---|---|
 | 06 | `V1__phase_06_schema_baseline.sql` | 只建立 Control 独立 Migration History 起点，不创建业务表 |
-| 07 | Organization、Project、Environment、Identity、Membership、Role、Permission、Binding、API Key | IAM 与租户授权事实 |
+| 07 | `V2__phase_07_iam_tenancy.sql`：Organization、Project、Environment、Identity、Membership、Role、Permission、Binding、API Key | IAM 与租户授权事实；十二张业务表 |
 | 08 | Agent、资产稳定身份与不可变版本 | 不包含发布 Revision/Snapshot |
 | 09 | Draft、Validation、Revision、Snapshot、Publish Operation、Control Outbox | 发布事务必须原子提交 |
 | 10 | Deployment 与 Deployment Revision | 固定目标 Revision，不写 Runtime Session |
@@ -39,7 +39,10 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 | `permission` | id, key, description, risk_level | `key` 全局唯一，Registry 管理 |
 | `role_permission` | role_id, permission_id | 组合主键 |
 | `role_binding` | id, organization_id, project_id, role_id, principal, scope_type/id | Scope + principal + role 唯一 |
-| `api_key` | id, organization_id, project_id, prefix, digest, scopes, expires_at, revoked_at | `prefix`、`digest` 唯一；只保存摘要 |
+| `api_key` | id, organization_id, project_id, service_account_id, name, prefix, digest, expires_at, revoked_at, version | `prefix`、`digest` 唯一；复合外键固定项目服务账号；只保存 SHA-256 摘要 |
+| `api_key_scope` | api_key_id, permission_id, created_at | 组合主键；权限外键拒绝未注册 Scope；不使用 JSON 权限数组 |
+
+`user_identity` 是跨租户的外部 Issuer/Subject 身份映射，不直接拥有租户资源；`membership` 和 `role_binding` 才把该身份纳入 Organization/Project Scope。Organization 是租户根，Project 以下的资源、成员、角色绑定、服务账号和 API Key 都显式保存完整 Owner 链。客户端 Tenant Header 不属于授权事实。
 
 ## Agent、发布与部署
 

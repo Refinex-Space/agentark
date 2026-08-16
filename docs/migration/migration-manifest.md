@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-16
 status: active
 referenced_by: docs/README.md#上游迁移审计
 ---
@@ -24,13 +24,13 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 | ID | 候选源路径 | 分类 | 目标模块/Phase | Disposition 与行为门禁 |
 |---|---|---|---|---|
 | SVC-COM-01 | `service-common/web/api/error` | ADAPT | `agentark-kernel` + `agentark-starter-web` / P03–04 | P04 已按 RFC 9457 重写 HTTP 映射并保留稳定错误码；未知异常不回显原消息；覆盖 [ERR-01](behavior-baseline.md#err-01-错误映射) |
-| SVC-COM-02 | `service-common/web/auth` | ADAPT | `agentark-starter-security` + `agentark-control` / P04、P07 | P04 已替换为 HTTPS Issuer/JWK、Audience、服务身份和严格 JWT Principal 转换；User/Role/Membership 生命周期仍归 P07 |
+| SVC-COM-02 | `service-common/web/auth` | ADAPT | `agentark-starter-security` + `agentark-control` / P04、P07 | P04 已替换为 HTTPS Issuer/JWK、Audience、服务身份和严格 JWT Principal 转换；P07 已实现 Issuer/Subject 映射、Membership、Role/Permission/Binding、项目服务账号和摘要 API Key；拒绝共享 Secret 与客户端 Tenant Header 授权 |
 | SVC-COM-03 | `service-common/runtime/config` | ADAPT | `agentark-control`、`agentark-scheduling` / P08、P15 | 按资产 Owner 拆分，不保留共享配置对象 |
 | SVC-COM-04 | `service-common/web/catalog*` | ADAPT | `agentark-control` + Provider / P08、P10、P12 | Spec 语义进入不可变 Snapshot；Codec 留在防腐层 |
 | SVC-COM-05 | `service-common/web/coord` | ADAPT | Redis Starter + `agentark-runtime` + `agentark-scheduling` / P04、P11、P13、P15 | P04 已提供原子 Lease/Fencing/Idempotency/Rate Limit 基础；HITL、Queue、Cron 和持久事实仍按 Owner 留给后续阶段 |
 | SVC-COM-06 | `service-common/web/managed*` | ADAPT | Control/Runtime Contract Adapter / P09–13 | DTO 按契约重建，禁止 shared DTO 包 |
 | SVC-COM-07 | `service-common/web/persistence/jpa` | REJECT | 无 | 不迁入 JPA Entity、Repository、`ddl-auto=update` 或共享表 |
-| SVC-COM-08 | `service-common/web/share` | ADAPT | `agentark-control` / P07–10 | 资源级 ACL，不能只校验 Owner 字符串 |
+| SVC-COM-08 | `service-common/web/share` | ADAPT | `agentark-control` / P07–10 | P07 已以 Organization/Project/Environment Owner 链和 Scope-aware Role Binding 建立资源级授权基线；P08–10 资源继续复用该检查，不能退化为 Owner 字符串 |
 | SVC-COM-09 | `service-common/web/workspace` | ADAPT | Control + Runtime Mount Port / P08、P12 | 分离资产路径和执行挂载 |
 | SVC-COM-10 | 整个 `service-common` | REJECT | 无 | 禁止整体复制和创建 `agentark-common` |
 | SVC-GW-01 | `service-gateway/application.yml` Route 表 | ADAPT | `agentark-gateway-server` / P16 | 保留四平面路由与 Internal 拒绝；覆盖 GW-01/GW-02 |
@@ -58,7 +58,7 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 
 | ID | 候选源路径/资源 | 分类 | 目标模块/Phase | Disposition |
 |---|---|---|---|---|
-| AIO-01 | `internal/product/handlers_auth.go`、`handlers_admin.go` | REFERENCE | `agentark-control` / P07 | 资源/API 语义参考；拒绝 7 天 HS256、自带用户库作为生产认证 |
+| AIO-01 | `internal/product/handlers_auth.go`、`handlers_admin.go` | REFERENCE | `agentark-control` / P07 | P07 已参考身份传递与管理 API 语义重建 OIDC/JWT/API Key IAM；拒绝 7 天 HS256、本地用户名密码库、明文 Seed 用户和共享 Internal Token |
 | AIO-02 | Agent/Workspace/Marketplace/File Handlers | ADAPT | `agentark-control` / P08–10 | 以 AgentArk Draft/Revision/Snapshot 重建 |
 | AIO-03 | Product Session Handlers/Internal resolve | ADAPT | Control Contract + Runtime / P10–13 | 拆 Session 生命周期 Owner，版本化 Internal Contract |
 | AIO-04 | Environment/Vault/Memory Handlers | ADAPT | Control / P08–10 | SecretRef、ACL、审计和不可变挂载 |
@@ -69,7 +69,7 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 | AIO-09 | `internal/store/postgres/migrations` | REFERENCE | MySQL Runtime Schema / P06、P11 | 只参考实体和索引语义，不翻译 PostgreSQL DDL |
 | AIO-10 | CRD/Controller/Helm | DEFER | Deployment / P22 | v1 不把 Kubernetes CRD 作为产品域权威 |
 | AIO-11 | ASDP/SDK/Sidecar Adapter | DEFER | Compatibility / P21 | BYO Agent 契约确定后再评估 |
-| AIO-12 | `seed.go` 明文默认密码日志 | REJECT | 无 | 禁止记录或生成可见默认凭据 |
+| AIO-12 | `seed.go` 明文默认密码日志 | REJECT | 无 | P07 Dev Bootstrap 只在 `local` Profile 且显式开启时创建无凭据资源；禁止记录或生成默认口令、Token、API Key |
 | AIO-13 | Go Aistio 一次性重写 | REJECT | 无 | 必须按 [绞杀计划](aistio-strangler.md) 分 Cohort |
 
 ## 4. AgentScope Framework 依赖矩阵

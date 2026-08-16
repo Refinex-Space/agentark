@@ -44,7 +44,14 @@ public sealed interface StrongId
     SkillVersionId,
     MemoryProfileVersionId,
     WorkspaceProfileVersionId,
-    SandboxProfileVersionId {
+    SandboxProfileVersionId,
+    UserIdentityId,
+    ServiceAccountId,
+    MembershipId,
+    RoleId,
+    PermissionId,
+    RoleBindingId,
+    ApiKeyId {
 
     /**
      * 返回领域标识持有的 UUIDv7 原始值。

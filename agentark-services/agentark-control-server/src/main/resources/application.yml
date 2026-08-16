@@ -1,4 +1,4 @@
-# Control HTTP 服务器配置，当前只公开 Actuator 端点。
+# Control HTTP 服务器配置，公开 Actuator 健康端点与受认证 IAM Public API。
 server:
   # 固定本地 Control 端口，容器部署可通过 SERVER_PORT 覆盖。
   port: 8081
@@ -124,6 +124,16 @@ mybatis-plus:
 agentark:
   # Foundation Starter 配置。
   foundation:
+    # Control 生产 Profile 的 OIDC Resource Server 安全基线。
+    security:
+      # 默认启用 JWT 验证；只有受控诊断环境可以显式关闭。
+      enabled: ${AGENTARK_SECURITY_ENABLED:true}
+      # 生产 Issuer 必须由部署 Secret/Config 注入，不提供本地默认值。
+      issuer-uri: ${AGENTARK_OIDC_ISSUER_URI}
+      # Control 只接受明确面向自身的 JWT Audience。
+      audiences:
+        # 固定 Control Audience，拒绝把其他服务 Token 复用到管理 API。
+        - agentark-control
     # 持久化增强配置。
     persistence:
       # 存在 Control TenantLineHandler 时启用租户 SQL 防御。
@@ -132,3 +142,11 @@ agentark:
       sql-telemetry-enabled: true
       # 超过 500 毫秒输出不含 SQL/参数的慢查询告警。
       slow-query-threshold: 500ms
+  # Control Plane IAM 业务配置。
+  control:
+    # 身份、租户与授权配置。
+    iam:
+      # 正常服务默认启用 IAM；无数据库的 test Profile 显式关闭。
+      enabled: true
+      # 单节点本地缓存最多陈旧十五秒，成员或角色变化在提交后主动失效。
+      authorization-cache-ttl: 15s
