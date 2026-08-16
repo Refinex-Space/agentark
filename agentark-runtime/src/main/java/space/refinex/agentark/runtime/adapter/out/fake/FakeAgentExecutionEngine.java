@@ -94,6 +94,26 @@ public final class FakeAgentExecutionEngine implements AgentExecutionEngine {
     }
 
     /**
+     * 返回预设恢复结果，并证明 Checkpoint 与当前 Run 绑定。
+     *
+     * @param session    固定 Session
+     * @param run        新 Owner 接管的 Run
+     * @param snapshot   固定 Snapshot
+     * @param checkpoint 最新可恢复 Checkpoint
+     * @return 预设或默认成功结果
+     */
+    @Override
+    public synchronized ExecutionResult recover(
+        Session session, Run run, SnapshotDescriptor snapshot, Checkpoint checkpoint) {
+        validate(session, run, snapshot);
+        Objects.requireNonNull(checkpoint, "checkpoint must not be null");
+        if (!checkpoint.runId().equals(run.id()) || !checkpoint.recoverable()) {
+            throw new IllegalArgumentException("checkpoint is not recoverable for the run");
+        }
+        return next();
+    }
+
+    /**
      * 记录取消命令，不产生外部副作用。
      *
      * @param command 取消命令

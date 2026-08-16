@@ -224,7 +224,7 @@ services:
       # 使用固定的 Core 网络名称。
       - agentark-core
 
-  # Control 是 8081 Spring MVC 空业务服务壳。
+  # Control 是 8081 Spring MVC 控制平面服务，当前承载 IAM、资产、Knowledge 与发布能力。
   control:
     # 构建当前 Control Server 本地镜像。
     build:
@@ -254,11 +254,17 @@ services:
       AGENTARK_CONTROL_DB_URL: "jdbc:mysql://mysql:3306/agentark_control?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8&useUnicode=true"
       # Control 使用同名最小权限账号。
       AGENTARK_CONTROL_DB_USERNAME: agentark_control
+      # Local Object Store 使用独立可写命名卷，避免只读根文件系统阻止启动。
+      AGENTARK_LOCAL_OBJECT_ROOT: /var/lib/agentark/control-objects
     # 将 Control 数据库密码只读挂载为 Spring Config Tree 属性。
     secrets:
       # 文件名与 application.yml 的密码占位符一致，值不进入 Compose 环境。
       - source: mysql_control_password
         target: AGENTARK_CONTROL_DB_PASSWORD
+    # Control Local Object Store 只写入独立持久卷。
+    volumes:
+      # 保存 Skill、Document 等本地开发对象，不写容器根文件系统。
+      - control-object-data:/var/lib/agentark/control-objects
     # 等待 MySQL 完成 Schema 与账号初始化后再启动 Control。
     depends_on:
       # 仅依赖 MySQL 健康，不依赖其他业务服务的实现或启动顺序。
@@ -290,7 +296,7 @@ services:
       # 使用固定的 Core 网络名称。
       - agentark-core
 
-  # Runtime 是 8082 WebFlux/Reactor 空业务服务壳。
+  # Runtime 是 8082 WebFlux 托管执行服务，默认关闭真实 Worker 并拒绝匿名业务访问。
   runtime:
     # 构建当前 Runtime Server 本地镜像。
     build:
@@ -318,16 +324,33 @@ services:
       AGENTARK_RUNTIME_DB_URL: "jdbc:mysql://mysql:3306/agentark_runtime?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8&useUnicode=true"
       # Runtime 使用同名最小权限账号。
       AGENTARK_RUNTIME_DB_USERNAME: agentark_runtime
+      # Runtime 使用 Compose Redis DNS，不把 Redis 当作权威状态存储。
+      AGENTARK_REDIS_HOST: redis
+      # Runtime 实例使用稳定且在本 Compose 内唯一的 Owner Key。
+      AGENTARK_RUNTIME_INSTANCE_KEY: runtime-compose-1
+      # Runtime 大 Event/State 载荷写入独立可写命名卷。
+      AGENTARK_RUNTIME_OBJECT_ROOT: /var/lib/agentark/runtime-objects
     # 将 Runtime 数据库密码只读挂载为 Spring Config Tree 属性。
     secrets:
       # 文件名与 application.yml 的密码占位符一致，值不进入 Compose 环境。
       - source: mysql_runtime_password
         target: AGENTARK_RUNTIME_DB_PASSWORD
-    # 等待 MySQL 完成 Schema 与账号初始化后再启动 Runtime。
+      # Redis 密码通过 Config Tree 映射到 Spring 属性，不进入环境明文。
+      - source: redis_password
+        target: AGENTARK_REDIS_PASSWORD
+    # Runtime Local Object Store 只写入独立持久卷。
+    volumes:
+      # 保存大 Event/State Payload，不写容器根文件系统。
+      - runtime-object-data:/var/lib/agentark/runtime-objects
+    # 等待 MySQL 与 Redis 健康后再启动 Runtime。
     depends_on:
       # 仅依赖 MySQL 健康，不依赖 Control 进程或实现。
       mysql:
         # MySQL 健康检查通过后才创建 Runtime 容器。
+        condition: service_healthy
+      # Redis 只负责 Lease 和可丢失通知，但启用的 Starter 启动时必须可连接。
+      redis:
+        # Redis 健康检查通过后才创建 Runtime 容器。
         condition: service_healthy
     # Runtime 宿主端口只绑定回环地址。
     ports:
@@ -455,6 +478,10 @@ volumes:
   redis-data:
   # MinIO 对象数据持久卷。
   minio-data:
+  # Control Local Object Store 持久卷。
+  control-object-data:
+  # Runtime 大 Event/State Payload 持久卷。
+  runtime-object-data:
   # Qdrant 可选向量索引持久卷。
   qdrant-data:
 

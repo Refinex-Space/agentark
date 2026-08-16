@@ -411,7 +411,7 @@ Repository instructions route contributors to the normative source for each deci
 
 ## Development Status
 
-AgentArk currently follows an **architecture-first migration strategy**. Phase 02 provides the fixed upstream evidence baseline and Maven build foundation. Phase 03 provides the framework-free Kernel and language-neutral contract skeletons. Phase 04 provides six focused Foundation Starters. Phase 05 provides four runnable Spring Boot service shells plus local MySQL, Redis, MinIO, and optional Qdrant Compose profiles. Phase 06 provides three isolated DataSource/Flyway histories, MyBatis-Plus persistence rules, real MySQL 8.4 contract tests, and JPA/PostgreSQL migration guidance. Phase 07 provides the first Control business slice: OIDC identity mapping, Organization/Project/Environment tenancy, Membership/Role/Permission/Binding authorization, project Service Accounts, digest-only API Keys, MySQL V2 migration, and Public Control API contracts. Agent assets, AgentScope execution, scheduling behavior, and the Web console are not implemented yet.
+AgentArk currently follows an **architecture-first migration strategy**. Phases 02–06 provide the fixed upstream evidence baseline, Maven build foundation, framework-free Kernel, focused Foundation Starters, four Spring Boot deployment units, isolated MySQL ownership, and reproducible contract gates. Phases 07–10 provide Control IAM, versioned AI assets, Knowledge metadata, immutable Agent revisions/snapshots, and Deployment pointers. Phases 11–13 provide the provider-neutral Runtime domain and MySQL facts, the AgentScope Java 2 anti-corruption adapter, and managed Runtime APIs for Session, Turn, Event/SSE, HITL, cancellation, fencing, and recovery. Scheduling behavior, Gateway routing, the Web console, real RAG ingestion, and production provider/deployment hardening are not implemented yet.
 
 The initial implementation will be derived from the useful service-plane capabilities in AgentScope Java's `agentscope-service`, while deliberately reshaping module boundaries and gradually replacing the Go control plane with Java.
 
@@ -438,7 +438,7 @@ The migration sequence is designed to avoid changing package names, modules, JDK
 |---|---|---|
 | **A — Architecture & Engineering Foundation** | BOM, Kernel, starters, contracts, four service shells, CI, Compose | ✅ Complete — service shells, Core profile, and persistence baseline verified |
 | **B — Control Plane MVP** | IAM, Agent catalog, assets, revisions, snapshots, deployments | ✅ Complete — Control owner, immutable release and deployment contracts verified |
-| **C — Runtime MVP** | Session, Turn, Run, events, SSE, AgentScope compiler, HITL, recovery | 🟡 In progress — neutral domain and durable persistence verified; Provider and API/SSE remain |
+| **C — Runtime MVP** | Session, Turn, Run, events, SSE, AgentScope compiler, HITL, recovery | ✅ Complete — neutral domain, AgentScope adapter, managed API, durable execution, HITL, and recovery verified |
 | **D — Knowledge / RAG** | ingestion, Qdrant, Knowledge Revision, retrieval, citations | ⚪ Planned |
 | **E — Scheduler & Integrations** | cron, webhook, channels, retry/dead-letter | ⚪ Planned |
 | **F — AgentArk Web** | design system, Agent builder, runtime console, governance | ⚪ Planned |
@@ -486,7 +486,7 @@ Install the current reactor into the local Maven repository without running test
 ./mvnw -DskipTests install
 ```
 
-Start the local empty-business service shells and Core infrastructure:
+Start the local Core infrastructure and current service implementations:
 
 ```bash
 ./tools/dev-up.sh
@@ -495,7 +495,7 @@ Start the local empty-business service shells and Core infrastructure:
 ./tools/dev-down.sh
 ```
 
-The four Server JARs expose only sanitized Actuator health and build information. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. There is still no business HTTP API, persistence mapping, AgentScope execution, `agentark-web` build, Helm chart, or runnable product workflow. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
+All four Server JARs expose sanitized Actuator health and build information. Control and Runtime additionally contain the versioned business APIs implemented through Phase 13, but their local security defaults fail closed and the real Runtime Worker remains disabled until production Model/Component/Secret Provider beans are supplied. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. There is still no `agentark-web` build, Helm chart, real RAG ingestion, production identity provider, or end-to-end product workflow. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
 
 ### Engineering Rules
 

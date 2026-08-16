@@ -17,6 +17,7 @@
 package space.refinex.agentark.runtime.adapter.out.persistence;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -166,6 +167,38 @@ public final class RuntimePersistenceRows {
         long fencingToken,
         int attemptCount,
         Instant createdAt) {
+    }
+
+    /**
+     * @param id           Runtime Instance UUID 标识
+     * @param instanceKey  部署范围内稳定实例 Key
+     * @param startedAt    本次进程启动时刻
+     * @param heartbeatAt  最近心跳时刻
+     * @param capabilities 不含秘密的能力 JSON
+     * @param drainStatus  ACTIVE、DRAINING 或 DRAINED
+     * @author refinex
+     */
+    public record RuntimeInstanceRow(
+        UUID id,
+        String instanceKey,
+        Instant startedAt,
+        Instant heartbeatAt,
+        String capabilities,
+        String drainStatus) {
+
+        /**
+         * 校验 Runtime Instance 数据库行包含完整身份、心跳和能力字段。
+         */
+        public RuntimeInstanceRow {
+            Objects.requireNonNull(id, "id must not be null");
+            Objects.requireNonNull(startedAt, "startedAt must not be null");
+            Objects.requireNonNull(heartbeatAt, "heartbeatAt must not be null");
+            if (instanceKey == null || instanceKey.isBlank()
+                || capabilities == null || capabilities.isBlank()
+                || drainStatus == null || drainStatus.isBlank()) {
+                throw new IllegalArgumentException("runtime instance row is invalid");
+            }
+        }
     }
 
     /**

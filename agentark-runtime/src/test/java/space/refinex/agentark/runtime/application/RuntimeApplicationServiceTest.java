@@ -165,7 +165,9 @@ class RuntimeApplicationServiceTest {
             approval.id(), 0, ApprovalStatus.APPROVED, "user:test", NOW)).isEqualTo(1);
 
         ExecutionResult resumed = service.resume(new ResumeCommand(
-            paused.id(), approval.id(), argumentHash, paused.fencingToken()));
+            paused.id(), List.of(new ApprovalDecision(
+                approval.id(), approval.toolName(), argumentHash, true)),
+            paused.fencingToken()));
 
         assertThat(resumed.outcome()).isEqualTo(ExecutionOutcome.SUCCEEDED);
         assertThat(store.findRun(paused.id()).orElseThrow().status()).isEqualTo(RunStatus.SUCCEEDED);

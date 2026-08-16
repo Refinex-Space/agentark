@@ -57,13 +57,15 @@ verify_server() {
     printf '%s\n' "${service_name}: health=UP info=SAFE env=HIDDEN"
 }
 
-# 验证账号可访问自身 Schema、Flyway V1 成功且无业务表，并拒绝两个非归属 Schema。
+# 验证账号可访问自身 Schema、达到所属最新 Flyway/业务表基线，并拒绝两个非归属 Schema。
 verify_mysql_account() {
     account_name=$1
     own_schema=$2
     denied_schema_one=$3
     denied_schema_two=$4
     password_file=$5
+    expected_version=$6
+    expected_table_count=$7
     account_password=$(cat "${password_file}")
     own_result=$(
         MYSQL_PWD="${account_password}" \
@@ -83,8 +85,8 @@ verify_mysql_account() {
             "SELECT CONCAT(version, ':', success) FROM flyway_schema_history ORDER BY installed_rank DESC LIMIT 1" \
             "${own_schema}"
     )
-    if [ "${migration_result}" != "1:1" ]; then
-        printf '%s\n' "${account_name}: expected successful Flyway V1, got ${migration_result:-missing}" >&2
+    if [ "${migration_result}" != "${expected_version}:1" ]; then
+        printf '%s\n' "${account_name}: expected successful Flyway V${expected_version}, got ${migration_result:-missing}" >&2
         exit 1
     fi
     business_table_count=$(
@@ -95,8 +97,8 @@ verify_mysql_account() {
             "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = DATABASE() AND table_name <> 'flyway_schema_history'" \
             "${own_schema}"
     )
-    if [ "${business_table_count}" != "0" ]; then
-        printf '%s\n' "${account_name}: Phase 06 unexpectedly created ${business_table_count} business table(s)" >&2
+    if [ "${business_table_count}" != "${expected_table_count}" ]; then
+        printf '%s\n' "${account_name}: expected ${expected_table_count} business table(s), got ${business_table_count}" >&2
         exit 1
     fi
     for denied_schema in "${denied_schema_one}" "${denied_schema_two}"; do
@@ -108,7 +110,7 @@ verify_mysql_account() {
             exit 1
         fi
     done
-    printf '%s\n' "${account_name}: own=${own_schema} migration=V1 business_tables=0 cross=DENIED"
+    printf '%s\n' "${account_name}: own=${own_schema} migration=V${expected_version} business_tables=${expected_table_count} cross=DENIED"
     unset account_password
 }
 
@@ -136,13 +138,13 @@ verify_server scheduler 8083
 
 verify_mysql_account \
     agentark_control agentark_control agentark_runtime agentark_scheduler \
-    "${secret_dir}/mysql-control-password"
+    "${secret_dir}/mysql-control-password" 5 48
 verify_mysql_account \
     agentark_runtime agentark_runtime agentark_control agentark_scheduler \
-    "${secret_dir}/mysql-runtime-password"
+    "${secret_dir}/mysql-runtime-password" 2 13
 verify_mysql_account \
     agentark_scheduler agentark_scheduler agentark_control agentark_runtime \
-    "${secret_dir}/mysql-scheduler-password"
+    "${secret_dir}/mysql-scheduler-password" 1 0
 
 if [ -n "$(docker compose -f "${compose_file}" --profile core ps --quiet qdrant)" ]; then
     printf '%s\n' "qdrant: unexpectedly enabled in Core profile" >&2

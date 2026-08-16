@@ -275,7 +275,31 @@ public final class RuntimeModels {
         /**
          * 执行观察到取消请求并结束。
          */
-        CANCELLED
+        CANCELLED,
+        /**
+         * 执行超过 Snapshot 固定期限并已停止继续外部调用。
+         */
+        TIMED_OUT
+    }
+
+    /**
+     * 定义 Worker Claim 后应采取的执行方式。
+     *
+     * @author refinex
+     */
+    public enum ExecutionMode {
+        /**
+         * 首次处理已接收的 Turn 输入。
+         */
+        INITIAL,
+        /**
+         * 使用已持久 Checkpoint 恢复中断 Run，不重复追加用户输入。
+         */
+        RECOVER,
+        /**
+         * 使用全部已决 Approval 恢复暂停 Run。
+         */
+        RESUME
     }
 
     /**
@@ -719,6 +743,137 @@ public final class RuntimeModels {
     }
 
     /**
+     * @param deploymentId       Control 中的稳定 Deployment 标识
+     * @param organizationId     Deployment 所属组织
+     * @param projectId          Deployment 所属项目
+     * @param desiredRevisionId  创建新 Session 时应固定的 Revision
+     * @param enabled            是否允许创建新 Session
+     * @param runtimeProvider    Revision 要求的 Runtime Provider
+     * @param schemaVersion      Revision Snapshot Schema 版本
+     * @param requiredCapabilities Runtime 必须满足的能力集合
+     * @author refinex
+     */
+    public record DeploymentDescriptor(
+        DeploymentId deploymentId,
+        OrganizationId organizationId,
+        ProjectId projectId,
+        RevisionId desiredRevisionId,
+        boolean enabled,
+        String runtimeProvider,
+        int schemaVersion,
+        java.util.Set<String> requiredCapabilities) {
+
+        /**
+         * 校验 Deployment 描述只包含可用于 Session Admission 的稳定字段。
+         */
+        public DeploymentDescriptor {
+            Objects.requireNonNull(deploymentId, "deploymentId must not be null");
+            Objects.requireNonNull(organizationId, "organizationId must not be null");
+            Objects.requireNonNull(projectId, "projectId must not be null");
+            Objects.requireNonNull(desiredRevisionId, "desiredRevisionId must not be null");
+            requiredCapabilities = java.util.Set.copyOf(Objects.requireNonNull(
+                requiredCapabilities, "requiredCapabilities must not be null"));
+            if (runtimeProvider == null || runtimeProvider.isBlank() || schemaVersion < 1
+                || requiredCapabilities.stream().anyMatch(String::isBlank)) {
+                throw new IllegalArgumentException("deployment runtime metadata is invalid");
+            }
+        }
+    }
+
+    /**
+     * @param providerId       Runtime Provider 稳定标识
+     * @param compilerVersion  Snapshot Compiler 语义版本
+     * @param supportedSchemas 支持的 Snapshot Schema 版本
+     * @param capabilities     可供发布与接单校验的能力集合
+     * @author refinex
+     */
+    public record RuntimeProviderMetadata(
+        String providerId,
+        String compilerVersion,
+        java.util.Set<Integer> supportedSchemas,
+        java.util.Set<String> capabilities) {
+
+        /**
+         * 校验 Provider 元数据具有稳定版本和非空能力集合。
+         */
+        public RuntimeProviderMetadata {
+            supportedSchemas = java.util.Set.copyOf(Objects.requireNonNull(
+                supportedSchemas, "supportedSchemas must not be null"));
+            capabilities = java.util.Set.copyOf(Objects.requireNonNull(
+                capabilities, "capabilities must not be null"));
+            if (providerId == null || providerId.isBlank()
+                || compilerVersion == null || compilerVersion.isBlank()
+                || supportedSchemas.isEmpty()
+                || capabilities.stream().anyMatch(String::isBlank)) {
+                throw new IllegalArgumentException("runtime provider metadata is invalid");
+            }
+        }
+    }
+
+    /**
+     * @param approvalId  已决 Approval 标识
+     * @param toolCallId  Snapshot 执行中产生的稳定 Tool Call 标识
+     * @param argumentHash 创建审批时固定的 Tool 参数 Hash
+     * @param approved    同意为 true，拒绝、过期或取消为 false
+     * @author refinex
+     */
+    public record ApprovalDecision(
+        ApprovalId approvalId, String toolCallId, Checksum argumentHash, boolean approved) {
+
+        /**
+         * 校验恢复决策始终绑定具体 Approval 和不可替换参数 Hash。
+         */
+        public ApprovalDecision {
+            Objects.requireNonNull(approvalId, "approvalId must not be null");
+            Objects.requireNonNull(argumentHash, "argumentHash must not be null");
+            if (toolCallId == null || toolCallId.isBlank() || toolCallId.length() > 255) {
+                throw new IllegalArgumentException("toolCallId must contain 1 to 255 characters");
+            }
+        }
+    }
+
+    /**
+     * @param session     固定 Snapshot 的 Session
+     * @param turn        当前 Turn
+     * @param run         当前有效 Run Attempt
+     * @param workItem    已由本实例 Claim 的持久 Work Item
+     * @param mode        首次、Checkpoint 恢复或 Approval 恢复模式
+     * @param checkpoint  RECOVER 模式必需的最新可恢复 Checkpoint
+     * @param decisions   RESUME 模式使用的全部审批决策
+     * @author refinex
+     */
+    public record ClaimedExecution(
+        Session session,
+        Turn turn,
+        Run run,
+        RuntimeWorkItem workItem,
+        ExecutionMode mode,
+        Optional<Checkpoint> checkpoint,
+        java.util.List<ApprovalDecision> decisions) {
+
+        /**
+         * 校验 Claim 上下文、Fencing Token 和恢复载荷相互一致。
+         */
+        public ClaimedExecution {
+            Objects.requireNonNull(session, "session must not be null");
+            Objects.requireNonNull(turn, "turn must not be null");
+            Objects.requireNonNull(run, "run must not be null");
+            Objects.requireNonNull(workItem, "workItem must not be null");
+            Objects.requireNonNull(mode, "mode must not be null");
+            checkpoint = Objects.requireNonNull(checkpoint, "checkpoint must not be null");
+            decisions = java.util.List.copyOf(Objects.requireNonNull(
+                decisions, "decisions must not be null"));
+            if (!session.id().equals(run.sessionId()) || !turn.id().equals(run.turnId())
+                || !workItem.runId().equals(run.id())
+                || !workItem.fencingToken().equals(run.fencingToken())
+                || (mode == ExecutionMode.RECOVER) != checkpoint.isPresent()
+                || (mode == ExecutionMode.RESUME) != !decisions.isEmpty()) {
+                throw new IllegalArgumentException("claimed execution context is inconsistent");
+            }
+        }
+    }
+
+    /**
      * @param id           Work Item 标识
      * @param runId        唯一关联 Run
      * @param status       队列状态
@@ -1046,7 +1201,9 @@ public final class RuntimeModels {
             Objects.requireNonNull(outcome, "outcome must not be null");
             errorCode = requireOptionalText(errorCode, "errorCode");
             detail = requireOptionalText(detail, "detail");
-            if ((outcome == ExecutionOutcome.FAILED) != errorCode.isPresent()) {
+            boolean failureOutcome = outcome == ExecutionOutcome.FAILED
+                || outcome == ExecutionOutcome.TIMED_OUT;
+            if (failureOutcome != errorCode.isPresent()) {
                 throw new IllegalArgumentException("execution outcome and error code are inconsistent");
             }
         }

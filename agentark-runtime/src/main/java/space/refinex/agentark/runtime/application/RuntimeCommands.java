@@ -18,10 +18,13 @@ package space.refinex.agentark.runtime.application;
 
 import space.refinex.agentark.kernel.id.*;
 import space.refinex.agentark.kernel.ref.Checksum;
+import space.refinex.agentark.runtime.domain.RuntimeModels.ApprovalDecision;
+import space.refinex.agentark.runtime.domain.RuntimeModels.ApprovalStatus;
 import space.refinex.agentark.runtime.domain.RuntimeModels.FencingToken;
 import space.refinex.agentark.runtime.domain.RuntimeModels.RuntimePayload;
 
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -171,22 +174,59 @@ public final class RuntimeCommands {
 
     /**
      * @param runId        待恢复的 PAUSED Run
-     * @param approvalId   已批准且参数未变化的 Approval
-     * @param argumentHash 原始 Tool 参数 Hash
-     * @param fencingToken 当前 Owner 令牌
+     * @param decisions    同一暂停点全部已决 Approval 及参数 Hash
+     * @param fencingToken 新 Claim 获得的当前 Owner 令牌
      * @author refinex
      */
     public record ResumeCommand(
-        RunId runId, ApprovalId approvalId, Checksum argumentHash, FencingToken fencingToken) {
+        RunId runId, List<ApprovalDecision> decisions, FencingToken fencingToken) {
 
         /**
          * 校验恢复命令绑定 Approval、参数 Hash 和当前 Owner。
          */
         public ResumeCommand {
             Objects.requireNonNull(runId, "runId must not be null");
-            Objects.requireNonNull(approvalId, "approvalId must not be null");
-            Objects.requireNonNull(argumentHash, "argumentHash must not be null");
+            decisions = List.copyOf(Objects.requireNonNull(
+                decisions, "decisions must not be null"));
             Objects.requireNonNull(fencingToken, "fencingToken must not be null");
+            if (decisions.isEmpty()
+                || decisions.stream().map(ApprovalDecision::approvalId).distinct().count()
+                != decisions.size()) {
+                throw new IllegalArgumentException("resume decisions are empty or duplicated");
+            }
+        }
+    }
+
+    /**
+     * @param approvalId      待决策 Approval
+     * @param expectedVersion 调用方读取到的乐观锁版本
+     * @param target          只能为 APPROVED 或 REJECTED
+     * @param decisionBy      已认证审批主体稳定名称
+     * @param idempotencyKey  Approval Scope 内幂等键
+     * @param requestHash     规范决策请求 Hash
+     * @author refinex
+     */
+    public record DecideApprovalCommand(
+        ApprovalId approvalId,
+        long expectedVersion,
+        ApprovalStatus target,
+        String decisionBy,
+        String idempotencyKey,
+        Checksum requestHash) {
+
+        /**
+         * 校验审批决策只表达显式同意或拒绝，并绑定乐观锁与幂等请求。
+         */
+        public DecideApprovalCommand {
+            Objects.requireNonNull(approvalId, "approvalId must not be null");
+            Objects.requireNonNull(target, "target must not be null");
+            Objects.requireNonNull(requestHash, "requestHash must not be null");
+            requireKey(idempotencyKey);
+            if (expectedVersion < 0
+                || (target != ApprovalStatus.APPROVED && target != ApprovalStatus.REJECTED)
+                || decisionBy == null || decisionBy.isBlank()) {
+                throw new IllegalArgumentException("approval decision metadata is invalid");
+            }
         }
     }
 

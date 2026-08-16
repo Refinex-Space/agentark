@@ -63,6 +63,14 @@ public enum ProviderErrorCode {
      */
     EXECUTION_FAILED,
     /**
+     * Provider 调用超过 Snapshot 固定超时。
+     */
+    PROVIDER_TIMEOUT,
+    /**
+     * Provider 明确返回限流，调用方只能按策略创建新 Attempt。
+     */
+    PROVIDER_RATE_LIMITED,
+    /**
      * Turn 输入只有 ObjectRef，但当前未注入载荷解析端口。
      */
     INPUT_PAYLOAD_UNAVAILABLE,

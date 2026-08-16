@@ -205,6 +205,19 @@ Phase 11 新增源码、SQL 与 Runtime Event Schema 均为 AgentArk 独立实�
 
 Phase 12 代码均为 AgentArk 独立防腐实现，只通过 Maven 依赖调用 AgentScope 发布 API；没有迁入上游源码、测试、资源或文件头。Snapshot Profile 内容闭包已补齐，Runtime 无需回读 Control Catalog 即可完成编译。
 
-## 13. 变更协议
+## 13. Phase 13 实际处置
+
+| 来源范围 | 分类 | 实际结果 | 明确延后或拒绝 |
+|---|---|---|---|
+| Dataplane Session/Turn API | `ADAPT` | 建立版本化 WebFlux Public API；Turn 接单事务提交 Run、Work、幂等、Event 与 Outbox 后返回 202 | 不复制 JPA Controller/DTO，不允许 API 直接调用 Mapper 或在接单前编译 Snapshot |
+| `DataSessionService` / Control Resolve Client | `ADAPT` | 通过 Internal API 固定 Deployment/Revision/Snapshot，使用 ETag 缓存与 Provider Capability 协商 | 拒绝 Runtime 读 Control Schema、Catalog、Draft 或可变 Agent 配置 |
+| `SessionEventLog` / SSE | `ADAPT` | 持久 Event 先提交；SSE 使用 Session Sequence、`Last-Event-ID`、Heartbeat、有界背压和 MySQL 轮询追平 | 不使用进程内 Preview 作为事实，不因 SSE 断开取消 Run；Gateway 代理归 P16 |
+| Turn Lease / Work Queue / Runtime Instance | `ADAPT` | Runtime MySQL Claim 递增 Fencing；Redis 快速互斥；续租失败触发 Provider Cancel；Instance 心跳和 Drain 已装配 | 不复制共享 Coordination Repository，不让 Redis 保存权威 Run/Owner 状态 |
+| Tool Confirmation / HITL | `ADAPT` | 参数 Hash Approval、租户授权、乐观锁、幂等决策、到期、取消、Checkpoint 与新 Token Resume 已装配 | 不保存原始 Tool 参数，不暴露 AgentScope `ConfirmResult` 或 Middleware 类型 |
+| Recovery / Usage / Provider Error | `ADAPT` | Checkpoint 孤儿接管、不可恢复新 Attempt、接单后准备失败可查询、原始 Token/Duration Usage 与 429/Timeout 分类 | 价格结算、跨区域容灾、Dead Letter UI 和生产演练延后 P19/P21/P22 |
+
+Phase 13 没有迁入上游实现代码或新增 Provider 私表。Runtime V2、ObjectRef 和 Outbox 继续是权威恢复链；AgentScope 只存在于独立 Provider 模块。
+
+## 14. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

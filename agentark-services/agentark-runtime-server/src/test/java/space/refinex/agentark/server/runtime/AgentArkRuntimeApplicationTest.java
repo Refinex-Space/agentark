@@ -24,7 +24,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
 
 /**
- * 验证 Runtime 空业务应用能以 WebFlux 容器独立启动。
+ * 验证 Runtime WebFlux 进程能在隔离测试 Profile 下独立启动基础容器。
  *
  * @author refinex
  */
@@ -53,10 +53,10 @@ class AgentArkRuntimeApplicationTest {
     private Environment environment;
 
     /**
-     * 证明 Runtime 能在未引入 AgentScope Harness 或 Dataplane 业务时完成启动。
+     * 证明测试 Profile 不连接外部数据库或 Provider 时仍可启动基础 WebFlux 容器。
      */
     @Test
-    void startsWithoutHarnessBusiness() {
+    void startsIsolatedWebFluxContainer() {
         assertThat(environment.getProperty("local.server.port", Integer.class)).isPositive();
         assertThat(environment.getProperty("spring.application.name"))
             .isEqualTo("agentark-runtime-server");

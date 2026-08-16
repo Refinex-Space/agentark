@@ -33,9 +33,12 @@ import io.agentscope.core.ReActAgent;
 import io.agentscope.core.event.AgentEvent;
 import io.agentscope.core.event.AgentResultEvent;
 import io.agentscope.core.event.ConfirmResult;
+import io.agentscope.core.message.AssistantMessage;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.core.message.UserMessage;
+import io.agentscope.core.model.transport.HttpTransportException;
+import io.agentscope.core.state.AgentState;
 import io.agentscope.harness.agent.HarnessAgent;
 import java.time.Duration;
 import java.util.List;
@@ -43,6 +46,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -53,6 +57,7 @@ import space.refinex.agentark.runtime.application.RuntimeCommands.ResumeCommand;
 import space.refinex.agentark.runtime.application.RuntimeCommands.CancellationCommand;
 import space.refinex.agentark.runtime.domain.RuntimeModels.ExecutionOutcome;
 import space.refinex.agentark.runtime.domain.RuntimeModels.FencingToken;
+import space.refinex.agentark.runtime.domain.RuntimeModels.ApprovalDecision;
 import space.refinex.agentark.runtime.provider.agentscope.compiler.AgentScopeCompilationPlan;
 import space.refinex.agentark.runtime.provider.agentscope.compiler.AgentScopeRuntimeMaterializer;
 import space.refinex.agentark.runtime.provider.agentscope.error.AgentScopeProviderException;
@@ -66,6 +71,64 @@ import space.refinex.agentark.runtime.provider.agentscope.model.RuntimeInputMapp
  * @author refinex
  */
 class AgentScopeExecutionControlTest {
+
+    /** 验证 AgentScope Core HTTP 429 被转换为稳定限流错误且不回显响应正文。 */
+    @Test
+    void classifiesProviderRateLimitWithoutLeakingResponseBody() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        var snapshot = ProviderTestFixtures.snapshot(objectMapper);
+        var session = ProviderTestFixtures.session(snapshot);
+        var run = ProviderTestFixtures.run(session);
+        AgentScopeRuntimeMaterializer materializer = mock(AgentScopeRuntimeMaterializer.class);
+        RuntimeHandle handle = executableHandle(session, run);
+        when(materializer.materialize(session, run, snapshot)).thenReturn(handle);
+        when(handle.agent().streamEvents(anyList(), any(RuntimeContext.class)))
+            .thenReturn(Flux.error(new RuntimeException(new HttpTransportException(
+                "provider rejected request", 429, "sensitive provider response"))));
+        AgentScopeExecutionEngine engine = new AgentScopeExecutionEngine(
+            materializer,
+            new AgentScopeEventMapper(objectMapper),
+            new RuntimeInputMapper(objectMapper),
+            (currentSession, currentRun, signal) -> { });
+
+        var result = engine.execute(
+            session, run, snapshot,
+            space.refinex.agentark.runtime.domain.RuntimeModels.RuntimePayload.inline(
+                "{\"message\":\"rate limit\"}"));
+
+        assertThat(result.outcome()).isEqualTo(ExecutionOutcome.FAILED);
+        assertThat(result.errorCode()).contains("PROVIDER_RATE_LIMITED");
+        assertThat(result.detail()).hasValueSatisfying(detail ->
+            assertThat(detail).doesNotContain("sensitive provider response"));
+    }
+
+    /** 验证异常链中的 Reactor/Provider Timeout 被转换为明确超时终态。 */
+    @Test
+    void classifiesProviderTimeoutAndInterruptsDelegate() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        var snapshot = ProviderTestFixtures.snapshot(objectMapper);
+        var session = ProviderTestFixtures.session(snapshot);
+        var run = ProviderTestFixtures.run(session);
+        AgentScopeRuntimeMaterializer materializer = mock(AgentScopeRuntimeMaterializer.class);
+        RuntimeHandle handle = executableHandle(session, run);
+        when(materializer.materialize(session, run, snapshot)).thenReturn(handle);
+        when(handle.agent().streamEvents(anyList(), any(RuntimeContext.class)))
+            .thenReturn(Flux.error(new RuntimeException(new TimeoutException("provider timeout"))));
+        AgentScopeExecutionEngine engine = new AgentScopeExecutionEngine(
+            materializer,
+            new AgentScopeEventMapper(objectMapper),
+            new RuntimeInputMapper(objectMapper),
+            (currentSession, currentRun, signal) -> { });
+
+        var result = engine.execute(
+            session, run, snapshot,
+            space.refinex.agentark.runtime.domain.RuntimeModels.RuntimePayload.inline(
+                "{\"message\":\"timeout\"}"));
+
+        assertThat(result.outcome()).isEqualTo(ExecutionOutcome.TIMED_OUT);
+        assertThat(result.errorCode()).contains("PROVIDER_TIMEOUT");
+        verify(handle.agent().getDelegate()).interrupt(handle.context());
+    }
 
     /** 验证输入映射在 Event Stream 前失败时会移除并关闭已注册 Handle。 */
     @Test
@@ -164,7 +227,8 @@ class AgentScopeExecutionControlTest {
             new RuntimeInputMapper(objectMapper),
             (currentSession, currentRun, signal) -> { });
         ResumeCommand command = new ResumeCommand(
-            run.id(), ApprovalId.generate(), snapshot.contentHash(),
+            run.id(), List.of(new ApprovalDecision(
+                ApprovalId.generate(), "tool-1", snapshot.contentHash(), true)),
             new FencingToken(run.fencingToken().value() + 1));
 
         assertThatThrownBy(() -> engine.resume(session, run, snapshot, command))
@@ -185,16 +249,24 @@ class AgentScopeExecutionControlTest {
         AgentScopeRuntimeMaterializer materializer = mock(AgentScopeRuntimeMaterializer.class);
         RuntimeHandle handle = mock(RuntimeHandle.class);
         HarnessAgent agent = mock(HarnessAgent.class);
+        ReActAgent delegate = mock(ReActAgent.class);
         RuntimeContext context = RuntimeContext.builder()
             .userId(session.projectId().asString())
             .sessionId(session.id().asString())
+            .build();
+        AgentState state = AgentState.builder()
+            .userId(context.getUserId())
+            .sessionId(context.getSessionId())
+            .context(List.of(new AssistantMessage(tool)))
             .build();
         AgentScopeCompilationPlan plan = mock(AgentScopeCompilationPlan.class);
         when(plan.turnTimeout()).thenReturn(Duration.ofSeconds(5));
         when(handle.agent()).thenReturn(agent);
         when(handle.context()).thenReturn(context);
         when(handle.plan()).thenReturn(plan);
-        when(handle.pendingToolCalls()).thenReturn(List.of(tool));
+        when(agent.getDelegate()).thenReturn(delegate);
+        when(delegate.getAgentState(context.getUserId(), context.getSessionId()))
+            .thenReturn(state);
         when(materializer.materialize(session, run, snapshot)).thenReturn(handle);
         when(agent.streamEvents(anyList(), any(RuntimeContext.class)))
             .thenReturn(Flux.just(new AgentResultEvent(new UserMessage("done"))));
@@ -203,7 +275,9 @@ class AgentScopeExecutionControlTest {
             materializer, eventMapper, new RuntimeInputMapper(objectMapper),
             (currentSession, currentRun, signal) -> { });
         ResumeCommand command = new ResumeCommand(
-            run.id(), ApprovalId.generate(), eventMapper.argumentHash(tool), run.fencingToken());
+            run.id(), List.of(new ApprovalDecision(
+                ApprovalId.generate(), tool.getId(), eventMapper.argumentHash(tool), true)),
+            run.fencingToken());
 
         var result = engine.resume(session, run, snapshot, command);
 
@@ -217,5 +291,33 @@ class AgentScopeExecutionControlTest {
         ConfirmResult confirmation = (ConfirmResult) ((List<?>) metadata).getFirst();
         assertThat(confirmation.isConfirmed()).isTrue();
         assertThat(confirmation.getToolCall().getId()).isEqualTo("tool-1");
+    }
+
+    /**
+     * 构造可进入 AgentScope Event Stream 的隔离 RuntimeHandle。
+     *
+     * @param session Runtime Session
+     * @param run     Runtime Run
+     * @return 已设置 Agent、Context、Plan、输入和 Fencing Token 的 Handle
+     */
+    private RuntimeHandle executableHandle(
+        space.refinex.agentark.runtime.domain.RuntimeModels.Session session,
+        space.refinex.agentark.runtime.domain.RuntimeModels.Run run) {
+        RuntimeHandle handle = mock(RuntimeHandle.class);
+        HarnessAgent agent = mock(HarnessAgent.class);
+        ReActAgent delegate = mock(ReActAgent.class);
+        RuntimeContext context = RuntimeContext.builder()
+            .userId(session.projectId().asString())
+            .sessionId(session.id().asString())
+            .build();
+        AgentScopeCompilationPlan plan = mock(AgentScopeCompilationPlan.class);
+        when(plan.turnTimeout()).thenReturn(Duration.ofSeconds(5));
+        when(handle.agent()).thenReturn(agent);
+        when(agent.getDelegate()).thenReturn(delegate);
+        when(handle.context()).thenReturn(context);
+        when(handle.plan()).thenReturn(plan);
+        when(handle.fencingToken()).thenReturn(run.fencingToken());
+        when(handle.seedMessages()).thenReturn(List.of());
+        return handle;
     }
 }

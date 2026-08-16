@@ -17,10 +17,12 @@
 package space.refinex.agentark.runtime.port;
 
 import space.refinex.agentark.kernel.id.ApprovalId;
+import space.refinex.agentark.kernel.id.RunId;
 import space.refinex.agentark.runtime.domain.RuntimeModels.Approval;
 import space.refinex.agentark.runtime.domain.RuntimeModels.ApprovalStatus;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -61,4 +63,37 @@ public interface ApprovalRepository {
         ApprovalStatus target,
         String decisionBy,
         Instant decisionAt);
+
+    /**
+     * 读取同一 Run 的全部审批，并按创建顺序稳定排列。
+     *
+     * @param runId Run 标识
+     * @return Approval 列表
+     */
+    List<Approval> listForRun(RunId runId);
+
+    /**
+     * 增量读取项目内审批列表；游标使用 UUIDv7 标识而不是租户 Header。
+     *
+     * @param projectId   项目标识
+     * @param status      可选状态过滤
+     * @param afterId     可选上一页末 Approval
+     * @param limit       单页最大数量
+     * @return 稳定排序后的 Approval
+     */
+    List<Approval> list(
+        space.refinex.agentark.kernel.id.ProjectId projectId,
+        Optional<ApprovalStatus> status,
+        Optional<ApprovalId> afterId,
+        int limit);
+
+    /**
+     * 将指定 Run 仍待决的 Approval 统一取消，用于 Run 取消和不可恢复终止。
+     *
+     * @param runId       Run 标识
+     * @param decisionBy  系统或调用主体稳定名称
+     * @param decisionAt  取消时刻
+     * @return 实际取消数量
+     */
+    int cancelPending(RunId runId, String decisionBy, Instant decisionAt);
 }

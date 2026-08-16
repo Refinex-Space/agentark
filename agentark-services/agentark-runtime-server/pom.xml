@@ -38,6 +38,36 @@
             <artifactId>agentark-runtime</artifactId>
         </dependency>
 
+        <!-- 装配 AgentScope Java 2 Snapshot Compiler 与执行引擎，Provider 类型不得进入公共 API。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-runtime-provider-agentscope</artifactId>
+        </dependency>
+
+        <!-- 提供 Runtime API 的 JWT Principal、租户选择与方法安全基础。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-security</artifactId>
+        </dependency>
+
+        <!-- 提供 Redis Lease、Fencing Counter 和跨实例事件通知连接能力。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-redis</artifactId>
+        </dependency>
+
+        <!-- 将大型 Runtime Event 载荷写入受控 ObjectRef，并为本地 Profile 提供 Local Object Store。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-storage</artifactId>
+        </dependency>
+
+        <!-- 为 WebFlux Runtime API 提供 Bearer JWT Resource Server 过滤链。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
         <!-- 在部署单元显式装配 Runtime 所属 MyBatis-Plus、Flyway、事务与数据源能力。 -->
         <dependency>
             <groupId>${project.groupId}</groupId>

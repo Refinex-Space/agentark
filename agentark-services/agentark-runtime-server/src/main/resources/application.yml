@@ -1,4 +1,4 @@
-# Runtime HTTP 服务器配置，当前只公开 Actuator 端点。
+# Runtime HTTP 服务器配置，公开受保护的 Runtime API 与脱敏 Actuator 端点。
 server:
   # 固定本地 Runtime 端口，容器部署可通过 SERVER_PORT 覆盖。
   port: 8082
@@ -28,7 +28,7 @@ management:
     web:
       # 显式限制可访问端点，禁止环境与 Bean 信息泄露。
       exposure:
-        # Phase 05 仅允许健康与构建信息。
+        # 管理平面仅允许健康与构建信息，Runtime 业务 API 不经 Actuator 暴露。
         include: health,info
   # 单个管理端点的安全行为。
   endpoint:
@@ -110,6 +110,18 @@ spring:
     locations: classpath:db/migration/runtime
     # 在 agentark_runtime 内使用标准且独立的历史表名。
     table: flyway_schema_history
+  # Spring Data Redis 连接只读取本服务运行环境，Redis 不是 Runtime 权威存储。
+  data:
+    # Redis 8.10.x 连接配置。
+    redis:
+      # Redis 主机名；Compose 使用服务 DNS 覆盖。
+      host: ${AGENTARK_REDIS_HOST:localhost}
+      # Redis 标准端口。
+      port: ${AGENTARK_REDIS_PORT:6379}
+      # Redis 密码无默认值，本地无密码时保持空。
+      password: ${AGENTARK_REDIS_PASSWORD:}
+      # 连接与命令超时上限。
+      timeout: 3s
 
 # MyBatis-Plus 生产日志不得输出 SQL 正文或绑定参数。
 mybatis-plus:
@@ -122,8 +134,42 @@ mybatis-plus:
 
 # Runtime 持久化纵深防御和慢查询基线。
 agentark:
+  # Runtime API、Worker、Control Client 与 Instance 配置。
+  runtime:
+    # Control Internal API 地址；非测试 Profile 必须可解析。
+    control-base-url: ${AGENTARK_CONTROL_BASE_URL:http://localhost:8081}
+    # 服务身份 Token 无默认值，只能由 Secret 注入并进入 Authorization Header。
+    internal-service-token: ${AGENTARK_RUNTIME_INTERNAL_TOKEN:}
+    # 单实例稳定 Key；多实例部署必须由 Pod 名或实例 ID 覆盖。
+    instance-key: ${AGENTARK_RUNTIME_INSTANCE_KEY:runtime-local-1}
+    # MySQL 与 Redis 双层 Lease 的有效期。
+    lease-ttl: ${AGENTARK_RUNTIME_LEASE_TTL:30s}
+    # 默认不启动真实 Worker，生产 SPI 齐备后必须显式开启。
+    worker-enabled: ${AGENTARK_RUNTIME_WORKER_ENABLED:false}
+    # 持久 Work Queue 无任务时的轮询间隔。
+    worker-poll-delay: ${AGENTARK_RUNTIME_WORKER_POLL_DELAY:250ms}
+    # Runtime Instance 心跳间隔。
+    instance-heartbeat-delay: ${AGENTARK_RUNTIME_HEARTBEAT_DELAY:10s}
   # Foundation Starter 配置。
   foundation:
+    # JWT 安全失败默认：关闭时 Runtime API 全部拒绝，只开放健康端点。
+    security:
+      # 生产必须显式开启并提供 Issuer/JWK 与 Audience。
+      enabled: ${AGENTARK_RUNTIME_SECURITY_ENABLED:false}
+    # Redis 只承载 Lease、通知和可丢失加速状态。
+    redis:
+      # Runtime 非测试 Profile 启用 Redis 原子协调能力。
+      enabled: true
+      # 固定 Runtime Redis Key 应用命名空间，避免与其他平面冲突。
+      application-name: runtime
+    # Local Object Store 仅作为本地基础实现，生产可用 S3-compatible Bean 替换。
+    storage:
+      # 启用受控 ObjectRef 写入能力。
+      enabled: true
+      # Local ObjectRef 的稳定 Authority。
+      authority: ${AGENTARK_RUNTIME_OBJECT_AUTHORITY:runtime-local}
+      # 本地对象专用目录，已由 `.gitignore` 排除 `.agentark/`。
+      root: ${AGENTARK_RUNTIME_OBJECT_ROOT:.agentark/data/runtime-objects}
     # 持久化增强配置。
     persistence:
       # 存在 Runtime TenantLineHandler 时启用租户 SQL 防御。

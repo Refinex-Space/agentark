@@ -308,3 +308,15 @@ DSH_SNAPSHOT=replay pnpm run test:web:built
 | RT-09 | Durable Work Item 支持 Claim、Complete、Release、Attempt、Visibility Timeout 与过期回收 | Self-hosted Worker Controller、Heartbeat、Stop、权限和 Dead Letter 运维归 P13/P21 |
 
 Phase 11 没有迁入上游源码、JPA Entity、Go Store、AgentScope Event 或 Provider 自动建表。Fake Adapter 只证明中立状态机，不能替代 Phase 12 的真实 Provider Compatibility Test 或 Phase 13 的服务 E2E。
+
+## 9. Phase 13 Runtime 服务行为落地
+
+| 基线 | Phase 13 实际覆盖 | 剩余边界 |
+|---|---|---|
+| RT-01 / RT-06 | Public API 校验租户和权限；Turn 事务提交后返回 202，Snapshot 加载/编译位于 Worker；Session API 不提供 Snapshot Override | Gateway 路由、外部限流和产品 UI 归 P16–18 |
+| RT-02 / RT-03 | Event 先持久化再通知；SSE `id`/`Last-Event-ID` 固定 Session Sequence，支持回放、Heartbeat、有界缓冲和持久轮询追平 | Redis Pub/Sub 与跨区域延迟优化只能替换提示层，不能替换 Event Store |
+| RT-07 | Approval Requested 转换为参数 Hash 事实；精确租户授权、乐观锁、幂等 Decision、Expire/Cancel 与新 Token Resume 已覆盖 | 真实浏览器 HITL 交互归 P18，外部审批 Channel 归 P15 |
+| RT-08 | Redis 快速 Lease + MySQL Fencing；续租、Owner/Token Release、陈旧写拒绝、丢失 Cancel、Instance 心跳和 Drain 已装配 | Kubernetes GC Pause、网络分区和跨主机压力演练归 P22 |
+| RT-09 | 常驻 Worker Claim 持久 Work Queue；Checkpoint 孤儿恢复、不可恢复新 Attempt、取消/超时终态和接单后准备失败可查询已覆盖 | Self-hosted Hands Worker 与 Dead Letter 运维归 P21 |
+
+Phase 13 保持 Control、Runtime 和 Provider 边界：Control 只经 Internal Contract 提供不可变 Snapshot；Runtime MySQL/Object Storage 保存权威事实；Provider 只编译和执行，不创建表或泄漏 AgentScope Event。

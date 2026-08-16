@@ -57,4 +57,13 @@ public interface RuntimeWorkQueue {
      * @param terminal     COMPLETED、FAILED 或 CANCELLED
      */
     void complete(RunId runId, FencingToken fencingToken, WorkItemStatus terminal);
+
+    /**
+     * 在同一暂停点全部 Approval 已决后，将已完成 Work Item 重新置为 READY。
+     *
+     * @param runId        PAUSED Run 标识
+     * @param fencingToken 暂停时有效的旧令牌
+     * @param availableAt  最早可重新 Claim 的时刻
+     */
+    void requeueForResume(RunId runId, FencingToken fencingToken, Instant availableAt);
 }

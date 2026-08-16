@@ -162,4 +162,29 @@ public interface RuntimeRepository {
      */
     Optional<IdempotencyRecord> findIdempotency(
         String scopeType, String scopeId, String idempotencyKey);
+
+    /**
+     * 插入独立命令的持久幂等结果；必须与所属状态变化处于同一事务。
+     *
+     * @param idempotency 幂等记录
+     */
+    void insertIdempotency(IdempotencyRecord idempotency);
+
+    /**
+     * 将失联且不可恢复的旧 Run 标记为 ABANDONED，并原子追加新 Run Attempt 与 Work Item。
+     *
+     * @param turn        当前 Turn
+     * @param abandoned   已使用新 Fencing Token 接管的旧 Run
+     * @param retry       新 Run Attempt
+     * @param workItem    新 Run 对应 Work Item
+     * @param outboxEvent 恢复诊断 Outbox
+     * @param occurredAt  状态转换时刻
+     */
+    void replaceOrphanRun(
+        Turn turn,
+        Run abandoned,
+        Run retry,
+        RuntimeWorkItem workItem,
+        RuntimeOutboxEvent outboxEvent,
+        Instant occurredAt);
 }

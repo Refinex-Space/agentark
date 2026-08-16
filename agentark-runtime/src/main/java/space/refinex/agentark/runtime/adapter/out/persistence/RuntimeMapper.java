@@ -173,6 +173,31 @@ public interface RuntimeMapper {
         @Param("updatedAt") Instant updatedAt);
 
     /**
+     * 将失联 Run 的 Turn 指针切到新 Attempt，并从执行态重新进入 QUEUED。
+     *
+     * @param turnId    Turn UUID
+     * @param oldRunId  已被新 Token 接管并放弃的旧 Run UUID
+     * @param newRunId  新 Run Attempt UUID
+     * @param oldToken  旧 Run 被接管后的当前 Fencing Token
+     * @param updatedAt 更新时间
+     * @return 更新行数
+     */
+    @Update("""
+        UPDATE turn SET current_run_id = #{newRunId,jdbcType=BINARY}, status = 'QUEUED',
+            fencing_token = 0, version = version + 1, updated_at = #{updatedAt}
+        WHERE id = #{turnId,jdbcType=BINARY}
+          AND current_run_id = #{oldRunId,jdbcType=BINARY}
+          AND fencing_token = #{oldToken}
+          AND status IN ('QUEUED', 'RUNNING', 'WAITING_APPROVAL')
+        """)
+    int attachRecoveryRun(
+        @Param("turnId") UUID turnId,
+        @Param("oldRunId") UUID oldRunId,
+        @Param("newRunId") UUID newRunId,
+        @Param("oldToken") long oldToken,
+        @Param("updatedAt") Instant updatedAt);
+
+    /**
      * 插入 Run Attempt。
      *
      * @param row Run 数据库行
@@ -400,6 +425,26 @@ public interface RuntimeMapper {
         @Param("now") Instant now);
 
     /**
+     * 将 PAUSED Run 已完成的 Work Item 重新置为 READY，等待新 Lease/Fencing Resume。
+     *
+     * @param runId       Run UUID
+     * @param token       暂停时 Fencing Token
+     * @param availableAt 最早 Claim 时刻
+     * @return 更新行数
+     */
+    @Update("""
+        UPDATE runtime_work_item
+        SET status = 'READY', available_at = #{availableAt}, claimed_by = NULL,
+            claim_until = NULL, updated_at = #{availableAt}
+        WHERE run_id = #{runId,jdbcType=BINARY} AND status = 'COMPLETED'
+          AND fencing_token = #{token}
+        """)
+    int requeueWorkItem(
+        @Param("runId") UUID runId,
+        @Param("token") long token,
+        @Param("availableAt") Instant availableAt);
+
+    /**
      * 插入 Runtime Event。
      *
      * @param row Event 数据库行
@@ -455,6 +500,31 @@ public interface RuntimeMapper {
         """)
     List<EventRow> listEventsAfter(
         @Param("sessionId") UUID sessionId,
+        @Param("afterSequence") long afterSequence,
+        @Param("limit") int limit);
+
+    /**
+     * 按 Session Sequence 增量读取单个 Run 的 Event。
+     *
+     * @param runId         Run UUID
+     * @param afterSequence 已消费 Session Sequence
+     * @param limit         最大数量
+     * @return Event 行
+     */
+    @Select("""
+        SELECT e.id, e.organization_id, e.project_id, e.session_id, e.turn_id, e.run_id,
+               e.session_sequence, e.run_sequence, e.type, e.schema_version, e.trace_id,
+               e.payload_storage, e.payload_json, e.occurred_at, e.fencing_token,
+               r.object_uri, r.content_hash AS object_hash, r.object_size, r.media_type
+        FROM runtime_event e
+        LEFT JOIN runtime_event_payload_ref r ON r.event_id = e.id
+        WHERE e.run_id = #{runId,jdbcType=BINARY}
+          AND e.session_sequence > #{afterSequence}
+        ORDER BY e.session_sequence
+        LIMIT #{limit}
+        """)
+    List<EventRow> listRunEventsAfter(
+        @Param("runId") UUID runId,
         @Param("afterSequence") long afterSequence,
         @Param("limit") int limit);
 
@@ -623,6 +693,115 @@ public interface RuntimeMapper {
         @Param("target") String target,
         @Param("decisionBy") String decisionBy,
         @Param("decisionAt") Instant decisionAt);
+
+    /**
+     * 读取同一 Run 的全部 Approval。
+     *
+     * @param runId Run UUID
+     * @return Approval 行
+     */
+    @Select("""
+        SELECT id, organization_id, project_id, run_id, tool_name, action_code,
+               argument_hash, policy_version, status, version, expires_at,
+               decision_by, decision_at, created_at
+        FROM approval WHERE run_id = #{runId,jdbcType=BINARY}
+        ORDER BY created_at, id
+        """)
+    List<ApprovalRow> listApprovalsForRun(@Param("runId") UUID runId);
+
+    /**
+     * 增量读取项目内 Approval。
+     *
+     * @param projectId 项目 UUID
+     * @param status    可选状态
+     * @param afterId   可选 UUIDv7 游标
+     * @param limit     最大数量
+     * @return Approval 行
+     */
+    @Select("""
+        <script>
+        SELECT id, organization_id, project_id, run_id, tool_name, action_code,
+               argument_hash, policy_version, status, version, expires_at,
+               decision_by, decision_at, created_at
+        FROM approval
+        WHERE project_id = #{projectId,jdbcType=BINARY}
+        <if test="status != null">AND status = #{status}</if>
+        <if test="afterId != null">AND id &gt; #{afterId,jdbcType=BINARY}</if>
+        ORDER BY id LIMIT #{limit}
+        </script>
+        """)
+    List<ApprovalRow> listApprovals(
+        @Param("projectId") UUID projectId,
+        @Param("status") String status,
+        @Param("afterId") UUID afterId,
+        @Param("limit") int limit);
+
+    /**
+     * 取消 Run 下全部待决 Approval。
+     *
+     * @param runId      Run UUID
+     * @param decisionBy 系统或调用主体
+     * @param decisionAt 取消时刻
+     * @return 更新数量
+     */
+    @Update("""
+        UPDATE approval SET status = 'CANCELLED', version = version + 1,
+            decision_by = #{decisionBy}, decision_at = #{decisionAt}
+        WHERE run_id = #{runId,jdbcType=BINARY} AND status = 'PENDING'
+        """)
+    int cancelPendingApprovals(
+        @Param("runId") UUID runId,
+        @Param("decisionBy") String decisionBy,
+        @Param("decisionAt") Instant decisionAt);
+
+    /**
+     * 注册 Runtime Instance；同 Key 重启时替换实例 UUID 和能力并恢复 ACTIVE。
+     *
+     * @param row Runtime Instance 行
+     */
+    @Insert("""
+        INSERT INTO runtime_instance
+            (id, instance_key, started_at, heartbeat_at, capabilities, drain_status)
+        VALUES
+            (#{row.id,jdbcType=BINARY}, #{row.instanceKey}, #{row.startedAt},
+             #{row.heartbeatAt}, #{row.capabilities}, #{row.drainStatus})
+        ON DUPLICATE KEY UPDATE id = VALUES(id), started_at = VALUES(started_at),
+            heartbeat_at = VALUES(heartbeat_at), capabilities = VALUES(capabilities),
+            drain_status = VALUES(drain_status)
+        """)
+    void upsertRuntimeInstance(@Param("row") RuntimeInstanceRow row);
+
+    /**
+     * 刷新 Runtime Instance 心跳。
+     *
+     * @param instanceKey 实例 Key
+     * @param heartbeatAt 当前时刻
+     * @return 更新行数
+     */
+    @Update("""
+        UPDATE runtime_instance SET heartbeat_at = #{heartbeatAt}
+        WHERE instance_key = #{instanceKey}
+        """)
+    int heartbeatRuntimeInstance(
+        @Param("instanceKey") String instanceKey,
+        @Param("heartbeatAt") Instant heartbeatAt);
+
+    /**
+     * 更新 Runtime Instance 排空状态。
+     *
+     * @param instanceKey 实例 Key
+     * @param status      排空状态
+     * @param occurredAt  更新时间
+     * @return 更新行数
+     */
+    @Update("""
+        UPDATE runtime_instance SET drain_status = #{status}, heartbeat_at = #{occurredAt}
+        WHERE instance_key = #{instanceKey}
+        """)
+    int updateRuntimeInstanceDrain(
+        @Param("instanceKey") String instanceKey,
+        @Param("status") String status,
+        @Param("occurredAt") Instant occurredAt);
 
     /**
      * 插入 Agent State Version。

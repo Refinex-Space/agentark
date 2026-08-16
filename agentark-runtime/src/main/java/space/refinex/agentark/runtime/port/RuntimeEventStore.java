@@ -65,10 +65,20 @@ public interface RuntimeEventStore {
     /**
      * 按 Session 序号增量读取事实，供恢复和 SSE 消费。
      *
-     * @param sessionId    Session 标识
+     * @param sessionId     Session 标识
      * @param afterSequence 排除的最后已消费序号
-     * @param limit        最大返回数量
+     * @param limit         最大返回数量
      * @return 按 sessionSequence 升序排列的 Event
      */
     List<RuntimeEvent> listAfter(SessionId sessionId, long afterSequence, int limit);
+
+    /**
+     * 按 Session Sequence 增量读取指定 Run 的已提交事件，供列表和 SSE 重连使用。
+     *
+     * @param runId         Run 标识
+     * @param afterSequence 已消费的 Session Sequence，零表示从头读取
+     * @param limit         单页最大数量
+     * @return 按 Session Sequence 升序排列的 Event
+     */
+    List<RuntimeEvent> listRunAfter(RunId runId, long afterSequence, int limit);
 }

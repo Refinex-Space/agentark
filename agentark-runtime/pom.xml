@@ -33,6 +33,41 @@
             <artifactId>agentark-kernel</artifactId>
         </dependency>
 
+        <!-- 提供 Phase 13 WebFlux Controller、SSE 与响应式流入口；保持可选以免 Provider 传递引入 Web 层。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 提供 Runtime API 请求的 Jakarta Bean Validation 约束与 WebFlux 校验集成。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 复用 AgentArk Principal 与租户选择语义；保持可选以维持 Runtime 中立依赖边界。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-security</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 复用带 Owner/Fencing 校验的 Redis Lease 原子语义；Redis 仍不保存权威运行状态。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-redis</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- 将超过内联阈值的 Runtime Event 载荷写入受控 ObjectRef；保持可选以保护 Provider 边界。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-storage</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- 提供 Runtime 所属 MyBatis-Plus、Flyway、事务与受控类型处理能力。 -->
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -74,6 +109,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 SSE 背压、重连与 Worker 响应式行为的 StepVerifier 测试能力。 -->
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

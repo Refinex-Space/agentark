@@ -4,8 +4,10 @@ openapi: 3.1.0
 info:
   # 标识面向外部调用方的 Runtime API。
   title: AgentArk Public Runtime API
-  # 声明该契约骨架的语义版本。
+  # 声明 Runtime 公共契约的语义版本。
   version: 1.0.0
+  # 说明本契约覆盖 Phase 13 已实现能力。
+  description: 固定 Snapshot 的 Session、Turn、Run、Event、SSE 与 HITL Approval API。
   # 声明契约文档采用的开源许可证。
   license:
     # 提供便于阅读的 SPDX 许可证名称。
@@ -14,27 +16,629 @@ info:
     identifier: Apache-2.0
 # 固定所有内联 Schema 使用 JSON Schema Draft 2020-12 方言。
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
-# Phase 03 不提前虚构业务端点，端点由其所有者阶段补充。
-paths: {}
-# 汇总可复用的 Schema 与响应组件。
+# 所有 Runtime 业务端点默认要求 Bearer JWT。
+security:
+  # 使用统一 Bearer JWT 安全方案。
+  - BearerAuth: []
+# 声明已实现的 Runtime Public API。
+paths:
+  # 创建固定 Deployment、Revision 与 Snapshot 的 Session。
+  /api/v1/runtime/sessions:
+    # 创建 Runtime Session。
+    post:
+      # 固定生成客户端使用的操作标识。
+      operationId: createRuntimeSession
+      # 归入 Runtime Session 分组。
+      tags: [RuntimeSession]
+      # Session 创建要求幂等键。
+      parameters:
+        # 复用幂等请求头定义。
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      # 声明 Session 创建请求。
+      requestBody:
+        # 创建请求不可省略。
+        required: true
+        # 声明请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 复用 Session 请求结构。
+            schema: { $ref: "#/components/schemas/CreateSessionRequest" }
+      # 声明创建结果与稳定错误。
+      responses:
+        # 成功创建或幂等复用 Session。
+        "201":
+          # 说明响应固定 Snapshot。
+          description: 已创建固定 Snapshot 的 Runtime Session
+          # 声明响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 复用 Session 视图。
+              schema: { $ref: "#/components/schemas/Session" }
+        # 请求或幂等键无效。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 调用方无执行权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Deployment 不可用。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # Provider、状态或幂等 Hash 冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 读取固定 Snapshot 的 Session。
+  /api/v1/runtime/sessions/{sessionId}:
+    # 注册 Session 路径参数。
+    parameters:
+      # 复用 Session 标识参数。
+      - { $ref: "#/components/parameters/SessionId" }
+    # 获取 Session。
+    get:
+      # 固定读取操作标识。
+      operationId: getRuntimeSession
+      # 归入 Runtime Session 分组。
+      tags: [RuntimeSession]
+      # 声明查询响应。
+      responses:
+        # 返回 Session 视图。
+        "200":
+          # 说明响应成功。
+          description: Runtime Session
+          # 声明响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 复用 Session 视图。
+              schema: { $ref: "#/components/schemas/Session" }
+        # 调用方无读取权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Session 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # 原子接收 Turn 并返回稳定 Run 标识。
+  /api/v1/runtime/sessions/{sessionId}/turns:
+    # 注册 Session 路径参数。
+    parameters:
+      # 复用 Session 标识参数。
+      - { $ref: "#/components/parameters/SessionId" }
+    # 接收新 Turn。
+    post:
+      # 固定接单操作标识。
+      operationId: createRuntimeTurn
+      # 归入 Runtime Turn 分组。
+      tags: [RuntimeTurn]
+      # Turn 接单要求幂等键。
+      parameters:
+        # 复用幂等请求头定义。
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      # 声明 Turn 输入请求。
+      requestBody:
+        # Turn 请求不可省略。
+        required: true
+        # 声明请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 复用 Turn 请求结构。
+            schema: { $ref: "#/components/schemas/CreateTurnRequest" }
+      # 声明接单结果。
+      responses:
+        # 只有 Turn、Run、WorkItem、幂等、Event 与 Outbox 事务提交后才返回。
+        "202":
+          # 说明任务已经权威接收。
+          description: Turn 已接收并持久入队
+          # 声明响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 复用 Turn 接单视图。
+              schema: { $ref: "#/components/schemas/Turn" }
+        # 请求字段或内联大小无效。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 调用方无执行权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Session 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 状态或幂等 Hash 冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 读取单个 Run Attempt。
+  /api/v1/runtime/runs/{runId}:
+    # 注册 Run 路径参数。
+    parameters:
+      # 复用 Run 标识参数。
+      - { $ref: "#/components/parameters/RunId" }
+    # 获取 Run 状态。
+    get:
+      # 固定查询操作标识。
+      operationId: getRuntimeRun
+      # 归入 Runtime Run 分组。
+      tags: [RuntimeRun]
+      # 声明查询响应。
+      responses:
+        # 返回当前 Run 投影。
+        "200":
+          # 说明响应成功。
+          description: Runtime Run Attempt
+          # 声明响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 复用 Run 视图。
+              schema: { $ref: "#/components/schemas/Run" }
+        # 调用方无读取权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Run 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # 幂等取消 Run。
+  /api/v1/runtime/runs/{runId}:cancel:
+    # 注册 Run 路径参数。
+    parameters:
+      # 复用 Run 标识参数。
+      - { $ref: "#/components/parameters/RunId" }
+    # 发起取消命令。
+    post:
+      # 固定取消操作标识。
+      operationId: cancelRuntimeRun
+      # 归入 Runtime Run 分组。
+      tags: [RuntimeRun]
+      # 声明取消响应。
+      responses:
+        # 取消事实已持久化或 Run 已处于终态。
+        "202":
+          # 说明取消命令已接受。
+          description: Run 取消命令已接受
+        # 调用方无取消权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Run 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 当前 Run 指针或状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 按 Session Sequence 增量读取 Run Event。
+  /api/v1/runtime/runs/{runId}/events:
+    # 注册 Run 路径参数。
+    parameters:
+      # 复用 Run 标识参数。
+      - { $ref: "#/components/parameters/RunId" }
+    # 查询已持久 Event。
+    get:
+      # 固定 Event 列表操作标识。
+      operationId: listRuntimeRunEvents
+      # 归入 Runtime Event 分组。
+      tags: [RuntimeEvent]
+      # 注册游标和分页参数。
+      parameters:
+        # 复用 Session Sequence 游标。
+        - { $ref: "#/components/parameters/AfterSequence" }
+        # 复用 Event 页大小。
+        - { $ref: "#/components/parameters/EventLimit" }
+      # 声明 Event 列表响应。
+      responses:
+        # 返回有序 Event 数组。
+        "200":
+          # 说明响应只包含已提交事实。
+          description: 已持久 Runtime Event 列表
+          # 声明响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 定义 Event 数组。
+              schema: { type: array, items: { $ref: "#/components/schemas/RuntimeEvent" } }
+        # 游标或页大小无效。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 调用方无读取权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Run 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # 回放后切实时的 SSE Event Stream。
+  /api/v1/runtime/runs/{runId}/events:stream:
+    # 注册 Run 路径参数。
+    parameters:
+      # 复用 Run 标识参数。
+      - { $ref: "#/components/parameters/RunId" }
+    # 建立 SSE 订阅。
+    get:
+      # 固定 SSE 操作标识。
+      operationId: streamRuntimeRunEvents
+      # 归入 Runtime Event 分组。
+      tags: [RuntimeEvent]
+      # 注册可选断点续传游标。
+      parameters:
+        # 复用 Last-Event-ID 请求头。
+        - { $ref: "#/components/parameters/LastEventId" }
+      # 声明 SSE 响应。
+      responses:
+        # 返回 Event Stream 和十五秒 Heartbeat 注释。
+        "200":
+          # 说明断开 SSE 不取消 Run。
+          description: 可重连 Runtime SSE Event Stream
+          # 声明流式媒体类型。
+          content:
+            # 固定 SSE 媒体类型。
+            text/event-stream:
+              # SSE 每项 data 使用 Runtime Event JSON。
+              schema: { $ref: "#/components/schemas/RuntimeEvent" }
+        # Last-Event-ID 无效。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 调用方无读取权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Run 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # 按已认证项目范围列出 HITL Approval。
+  /api/v1/runtime/approvals:
+    # 查询 Approval 游标页。
+    get:
+      # 固定 Approval 列表操作标识。
+      operationId: listRuntimeApprovals
+      # 归入 Runtime Approval 分组。
+      tags: [RuntimeApproval]
+      # 注册状态、游标和页大小参数。
+      parameters:
+        # 可选 Approval 状态。
+        - { name: status, in: query, required: false, schema: { $ref: "#/components/schemas/ApprovalStatus" } }
+        # 可选 UUIDv7 游标。
+        - { name: after, in: query, required: false, schema: { $ref: "#/components/schemas/UuidV7" } }
+        # 可选页大小。
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      # 声明 Approval 列表响应。
+      responses:
+        # 返回当前项目 Approval 游标页。
+        "200":
+          # 说明响应成功。
+          description: Runtime Approval 游标页
+          # 声明响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 复用 Approval Page。
+              schema: { $ref: "#/components/schemas/ApprovalPage" }
+        # 参数无效。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 调用方无审批权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # 对参数 Hash 固定的 Approval 做一次性决策。
+  /api/v1/runtime/approvals/{approvalId}:decide:
+    # 注册 Approval 路径参数。
+    parameters:
+      # 复用 Approval 标识参数。
+      - { $ref: "#/components/parameters/ApprovalId" }
+    # 提交审批决策。
+    post:
+      # 固定审批操作标识。
+      operationId: decideRuntimeApproval
+      # 归入 Runtime Approval 分组。
+      tags: [RuntimeApproval]
+      # Approval 决策要求幂等键。
+      parameters:
+        # 复用幂等请求头定义。
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      # 声明审批请求。
+      requestBody:
+        # 审批请求不可省略。
+        required: true
+        # 声明请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 复用审批决策结构。
+            schema: { $ref: "#/components/schemas/DecideApprovalRequest" }
+      # 声明审批响应。
+      responses:
+        # 返回已决 Approval。
+        "200":
+          # 说明决策已持久化。
+          description: 已决 Runtime Approval
+          # 声明响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 复用 Approval 视图。
+              schema: { $ref: "#/components/schemas/Approval" }
+        # 决策值或版本无效。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 调用方无审批权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Approval 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 乐观锁、到期或幂等 Hash 冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+# 汇总可复用 Schema、参数、响应与认证组件。
 components:
-  # 注册公共 Schema 引用。
+  # 注册公共 Schema。
   schemas:
     # 暴露 AgentArk 公共 Problem Detail 错误结构。
     ProblemDetail:
       # 引用版本化的公共错误 JSON Schema。
       $ref: ../schemas/problem-detail/v1.json
-  # 注册公共 HTTP 响应模板。
+    # UUIDv7 文本标识。
+    UuidV7:
+      # 使用带版本与 Variant 的 UUIDv7 正则。
+      type: string
+      # 固定 UUIDv7 小写文本格式。
+      pattern: "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    # SHA-256 十六进制摘要。
+    Sha256:
+      # 固定摘要文本类型。
+      type: string
+      # 固定带算法前缀的小写六十四位十六进制。
+      pattern: "^sha256:[0-9a-f]{64}$"
+    # Session 创建请求。
+    CreateSessionRequest:
+      # 固定对象结构。
+      type: object
+      # 三个租户与发布身份字段不可省略。
+      required: [organizationId, projectId, deploymentId]
+      # 定义 Session 创建字段。
+      properties:
+        # 已授权组织标识。
+        organizationId: { $ref: "#/components/schemas/UuidV7" }
+        # 已授权项目标识。
+        projectId: { $ref: "#/components/schemas/UuidV7" }
+        # 启用的 Deployment 标识。
+        deploymentId: { $ref: "#/components/schemas/UuidV7" }
+        # 非敏感参与者元数据。
+        participantMetadata: { type: object, maxProperties: 64, propertyNames: { type: string, minLength: 1, maxLength: 128 }, additionalProperties: { type: string, minLength: 1, maxLength: 1024 } }
+        # 非敏感渠道元数据。
+        channelMetadata: { type: object, maxProperties: 64, propertyNames: { type: string, minLength: 1, maxLength: 128 }, additionalProperties: { type: string, minLength: 1, maxLength: 1024 } }
+      # 禁止传入未声明字段。
+      additionalProperties: false
+    # Turn 接单请求。
+    CreateTurnRequest:
+      # 固定对象结构。
+      type: object
+      # 租户、输入和优先级不可省略。
+      required: [organizationId, projectId, input, priority]
+      # 定义 Turn 接单字段。
+      properties:
+        # 已授权组织标识。
+        organizationId: { $ref: "#/components/schemas/UuidV7" }
+        # 已授权项目标识。
+        projectId: { $ref: "#/components/schemas/UuidV7" }
+        # 不含 Secret 和隐藏推理过程的 JSON 输入。
+        input: {}
+        # 有界队列优先级。
+        priority: { type: integer, minimum: -100, maximum: 100 }
+      # 禁止传入未声明字段。
+      additionalProperties: false
+    # Approval 决策请求。
+    DecideApprovalRequest:
+      # 固定对象结构。
+      type: object
+      # 乐观锁版本与显式决策不可省略。
+      required: [expectedVersion, decision]
+      # 定义 Approval 决策字段。
+      properties:
+        # 调用方读取到的版本。
+        expectedVersion: { type: integer, minimum: 0 }
+        # 只允许批准或拒绝。
+        decision: { type: string, enum: [APPROVED, REJECTED] }
+      # 禁止传入未声明字段。
+      additionalProperties: false
+    # Session 公开视图。
+    Session:
+      # 固定对象结构。
+      type: object
+      # Session 响应字段全部不可省略。
+      required: [sessionId, organizationId, projectId, deploymentId, revisionId, snapshotId, snapshotHash, status, createdAt]
+      # 定义 Session 响应字段。
+      properties:
+        # Session 标识。
+        sessionId: { $ref: "#/components/schemas/UuidV7" }
+        # 组织标识。
+        organizationId: { $ref: "#/components/schemas/UuidV7" }
+        # 项目标识。
+        projectId: { $ref: "#/components/schemas/UuidV7" }
+        # 固定 Deployment 标识。
+        deploymentId: { $ref: "#/components/schemas/UuidV7" }
+        # 固定 Revision 标识。
+        revisionId: { $ref: "#/components/schemas/UuidV7" }
+        # 固定 Snapshot 标识。
+        snapshotId: { $ref: "#/components/schemas/UuidV7" }
+        # 固定 Snapshot Hash。
+        snapshotHash: { $ref: "#/components/schemas/Sha256" }
+        # Session 状态完整集合。
+        status: { type: string, enum: [ACTIVE, CLOSED, FAILED] }
+        # Session 创建时刻。
+        createdAt: { type: string, format: date-time }
+      # 禁止返回未声明字段。
+      additionalProperties: false
+    # Turn 接单视图。
+    Turn:
+      # 固定对象结构。
+      type: object
+      # Turn 接单字段全部不可省略。
+      required: [turnId, runId, sequence, status, createdAt]
+      # 定义 Turn 字段。
+      properties:
+        # Turn 标识。
+        turnId: { $ref: "#/components/schemas/UuidV7" }
+        # 当前 Run 标识。
+        runId: { $ref: "#/components/schemas/UuidV7" }
+        # Session 内 Turn 序号。
+        sequence: { type: integer, minimum: 1 }
+        # Turn 状态完整集合。
+        status: { type: string, enum: [ACCEPTED, QUEUED, RUNNING, WAITING_APPROVAL, COMPLETED, FAILED, CANCELLED, TIMED_OUT] }
+        # Turn 接单时刻。
+        createdAt: { type: string, format: date-time }
+      # 禁止返回未声明字段。
+      additionalProperties: false
+    # Run Attempt 公开视图。
+    Run:
+      # 固定对象结构。
+      type: object
+      # 稳定 Run 字段不可省略，可空终态字段除外。
+      required: [runId, sessionId, turnId, attemptNumber, status, runtimeProvider, compilerVersion, fencingToken]
+      # 定义 Run 字段。
+      properties:
+        # Run 标识。
+        runId: { $ref: "#/components/schemas/UuidV7" }
+        # Session 标识。
+        sessionId: { $ref: "#/components/schemas/UuidV7" }
+        # Turn 标识。
+        turnId: { $ref: "#/components/schemas/UuidV7" }
+        # Turn 内 Attempt 序号。
+        attemptNumber: { type: integer, minimum: 1 }
+        # Run 状态完整集合。
+        status: { type: string, enum: [CREATED, CLAIMED, RUNNING, PAUSED, SUCCEEDED, FAILED, CANCELLED, ABANDONED] }
+        # Runtime Provider 标识。
+        runtimeProvider: { type: string, minLength: 1 }
+        # Snapshot Compiler 版本。
+        compilerVersion: { type: string, minLength: 1 }
+        # 当前 MySQL 权威 Fencing Token。
+        fencingToken: { type: integer, minimum: 0 }
+        # 首次开始时刻。
+        startedAt: { type: [string, "null"], format: date-time }
+        # 终态结束时刻。
+        endedAt: { type: [string, "null"], format: date-time }
+        # 稳定错误码。
+        errorCode: { type: [string, "null"], maxLength: 128 }
+      # 禁止返回未声明字段。
+      additionalProperties: false
+    # Runtime Event 公开视图。
+    RuntimeEvent:
+      # 复用语言中立 Runtime Event v1 JSON Schema。
+      $ref: ../schemas/runtime-event/v1.json
+    # Approval 状态完整集合。
+    ApprovalStatus:
+      # 固定状态字符串。
+      type: string
+      # 明确全部 Approval 状态。
+      enum: [PENDING, APPROVED, REJECTED, EXPIRED, CANCELLED]
+    # Approval 公开视图。
+    Approval:
+      # 固定对象结构。
+      type: object
+      # Approval 响应字段全部不可省略。
+      required: [approvalId, runId, organizationId, projectId, toolName, action, argumentHash, policyVersion, status, version, expiresAt, createdAt]
+      # 定义 Approval 字段。
+      properties:
+        # Approval 标识。
+        approvalId: { $ref: "#/components/schemas/UuidV7" }
+        # 所属 Run 标识。
+        runId: { $ref: "#/components/schemas/UuidV7" }
+        # 所属组织标识。
+        organizationId: { $ref: "#/components/schemas/UuidV7" }
+        # 所属项目标识。
+        projectId: { $ref: "#/components/schemas/UuidV7" }
+        # Tool 稳定名称。
+        toolName: { type: string, minLength: 1, maxLength: 255 }
+        # 含 Tool Call 标识的动作摘要。
+        action: { type: string, minLength: 1, maxLength: 128 }
+        # 原始参数 Hash，不返回参数原文。
+        argumentHash: { $ref: "#/components/schemas/Sha256" }
+        # 固定策略版本。
+        policyVersion: { type: string, minLength: 1, maxLength: 255 }
+        # 当前 Approval 状态。
+        status: { $ref: "#/components/schemas/ApprovalStatus" }
+        # 决策乐观锁版本。
+        version: { type: integer, minimum: 0 }
+        # Approval 到期时刻。
+        expiresAt: { type: string, format: date-time }
+        # Approval 创建时刻。
+        createdAt: { type: string, format: date-time }
+      # 禁止返回原始参数和决策内部字段。
+      additionalProperties: false
+    # Approval 游标页。
+    ApprovalPage:
+      # 固定对象结构。
+      type: object
+      # 列表与游标字段不可省略。
+      required: [items, nextCursor]
+      # 定义游标页字段。
+      properties:
+        # 当前页 Approval。
+        items: { type: array, items: { $ref: "#/components/schemas/Approval" } }
+        # 下一页 UUIDv7 游标。
+        nextCursor: { anyOf: [{ $ref: "#/components/schemas/UuidV7" }, { type: "null" }] }
+      # 禁止返回未声明字段。
+      additionalProperties: false
+  # 注册公共参数模板。
+  parameters:
+    # Session 路径参数。
+    SessionId:
+      # 固定参数名称。
+      name: sessionId
+      # 参数位于 URL Path。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # 使用 UUIDv7 结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # Run 路径参数。
+    RunId:
+      # 固定参数名称。
+      name: runId
+      # 参数位于 URL Path。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # 使用 UUIDv7 结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # Approval 路径参数。
+    ApprovalId:
+      # 固定参数名称。
+      name: approvalId
+      # 参数位于 URL Path。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # 使用 UUIDv7 结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # 命令幂等请求头。
+    IdempotencyKey:
+      # 固定请求头名称。
+      name: Idempotency-Key
+      # 参数位于 HTTP Header。
+      in: header
+      # 命令请求不可省略幂等键。
+      required: true
+      # 限制键长度。
+      schema: { type: string, minLength: 1, maxLength: 128 }
+    # Event 列表游标。
+    AfterSequence:
+      # 固定参数名称。
+      name: after
+      # 参数位于 Query。
+      in: query
+      # 省略时从首个 Event 开始。
+      required: false
+      # 使用非负序号。
+      schema: { type: integer, minimum: 0, default: 0 }
+    # Event 列表页大小。
+    EventLimit:
+      # 固定参数名称。
+      name: limit
+      # 参数位于 Query。
+      in: query
+      # 省略时返回一百项。
+      required: false
+      # 限制 Event 页大小。
+      schema: { type: integer, minimum: 1, maximum: 1000, default: 100 }
+    # SSE 断点续传请求头。
+    LastEventId:
+      # 固定 SSE 请求头名称。
+      name: Last-Event-ID
+      # 参数位于 HTTP Header。
+      in: header
+      # 首次连接可以省略。
+      required: false
+      # 使用非负 Session Sequence 文本。
+      schema: { type: string, pattern: "^[0-9]+$", default: "0" }
+  # 注册公共错误响应模板。
   responses:
     # 定义采用 application/problem+json 的错误响应。
     ProblemResponse:
-      # 说明该响应承载 AgentArk Problem Detail。
-      description: AgentArk problem detail
-      # 列出该错误响应支持的媒体类型。
+      # 说明响应承载 AgentArk Problem Detail。
+      description: AgentArk Problem Detail
+      # 列出错误响应媒体类型。
       content:
-        # 固定 RFC 9457 风格错误的媒体类型。
+        # 固定 RFC 9457 媒体类型。
         application/problem+json:
-          # 描述该媒体类型的响应体 Schema。
-          schema:
-            # 复用版本化的公共错误 JSON Schema。
-            $ref: ../schemas/problem-detail/v1.json
+          # 复用公共 Problem Detail Schema。
+          schema: { $ref: "#/components/schemas/ProblemDetail" }
+  # 注册认证方案。
+  securitySchemes:
+    # 运行时公共接口使用 Bearer JWT。
+    BearerAuth:
+      # 使用 HTTP Authorization 方案。
+      type: http
+      # 固定 Bearer Scheme。
+      scheme: bearer
+      # Token 使用 JWT 格式。
+      bearerFormat: JWT

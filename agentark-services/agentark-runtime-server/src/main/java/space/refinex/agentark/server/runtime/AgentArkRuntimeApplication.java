@@ -20,7 +20,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 
 /**
- * AgentArk Runtime Plane 启动入口，当前只装配 WebFlux、Reactor 与管理端点。
+ * AgentArk Runtime Plane 启动入口，装配 WebFlux Runtime API、托管 Worker 与管理端点。
  *
  * @author refinex
  */
@@ -28,7 +28,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 public class AgentArkRuntimeApplication {
 
     /**
-     * 启动 Runtime Spring Boot 应用；Phase 05 不引入 Dataplane 业务或 AgentScope Harness。
+     * 启动 Runtime Spring Boot 应用；AgentScope 类型只允许由独立 Provider 防腐层接入。
      *
      * @param args 传递给 Spring Boot 的命令行参数
      */

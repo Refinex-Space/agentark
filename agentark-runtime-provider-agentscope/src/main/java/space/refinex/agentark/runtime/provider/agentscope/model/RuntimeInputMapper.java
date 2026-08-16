@@ -23,6 +23,7 @@ import io.agentscope.core.event.ConfirmResult;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.ToolUseBlock;
 import io.agentscope.core.message.UserMessage;
+import space.refinex.agentark.runtime.domain.RuntimeModels.ApprovalDecision;
 import space.refinex.agentark.runtime.domain.RuntimeModels.RuntimePayload;
 import space.refinex.agentark.runtime.provider.agentscope.error.AgentScopeProviderException;
 import space.refinex.agentark.runtime.provider.agentscope.error.ProviderErrorCode;
@@ -71,12 +72,22 @@ public final class RuntimeInputMapper {
      * @param toolCall 参数 Hash 与 Approval 匹配的 Tool Call
      * @return AgentScope HITL 恢复消息
      */
-    public Msg approval(ToolUseBlock toolCall) {
-        Objects.requireNonNull(toolCall, "toolCall must not be null");
+    public Msg approval(List<ToolUseBlock> toolCalls, List<ApprovalDecision> decisions) {
+        toolCalls = List.copyOf(Objects.requireNonNull(toolCalls, "toolCalls must not be null"));
+        decisions = List.copyOf(Objects.requireNonNull(decisions, "decisions must not be null"));
+        if (toolCalls.isEmpty() || toolCalls.size() != decisions.size()) {
+            throw new IllegalArgumentException("tool calls and approval decisions must align");
+        }
+        java.util.Map<String, ToolUseBlock> callsById = new java.util.HashMap<>();
+        toolCalls.forEach(toolCall -> callsById.put(toolCall.getId(), toolCall));
+        List<ConfirmResult> results = decisions.stream().map(decision -> {
+            ToolUseBlock toolCall = Objects.requireNonNull(
+                callsById.get(decision.toolCallId()), "approved tool call is missing");
+            return new ConfirmResult(decision.approved(), toolCall);
+        }).toList();
         return UserMessage.builder()
-            .textContent("Approved tool execution.")
-            .metadata(Map.of(
-                Msg.METADATA_CONFIRM_RESULTS, List.of(new ConfirmResult(true, toolCall))))
+            .textContent("Tool execution decisions supplied.")
+            .metadata(Map.of(Msg.METADATA_CONFIRM_RESULTS, results))
             .build();
     }
 

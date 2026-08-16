@@ -19,6 +19,9 @@ package space.refinex.agentark.runtime.provider.agentscope;
 import io.agentscope.core.event.*;
 import io.agentscope.core.message.Msg;
 import io.agentscope.core.message.ToolUseBlock;
+import io.agentscope.core.model.ModelHttpException;
+import io.agentscope.core.model.transport.HttpTransportException;
+import io.agentscope.core.state.AgentState;
 import space.refinex.agentark.kernel.id.RunId;
 import space.refinex.agentark.runtime.application.RuntimeCommands.CancellationCommand;
 import space.refinex.agentark.runtime.application.RuntimeCommands.ResumeCommand;
@@ -143,39 +146,72 @@ public final class AgentScopeExecutionEngine implements AgentExecutionEngine {
     public ExecutionResult resume(
         Session session, Run run, SnapshotDescriptor snapshot, ResumeCommand command) {
         RuntimeHandle handle = null;
-        boolean recoveredHere = false;
         try {
             requireResumeOwnership(run, command);
-            handle = activeHandles.get(run.id());
-            if (handle == null) {
-                RuntimeHandle recovered = materializer.materialize(session, run, snapshot);
-                RuntimeHandle existing = activeHandles.putIfAbsent(run.id(), recovered);
-                handle = existing == null ? recovered : existing;
-                recoveredHere = existing == null;
-                if (existing != null) {
-                    recovered.close();
-                }
+            RuntimeHandle stale = activeHandles.remove(run.id());
+            if (stale != null) {
+                stale.close();
             }
-            ToolUseBlock approved = handle.pendingToolCalls().stream()
-                .filter(tool -> eventMapper.argumentHash(tool).equals(command.argumentHash()))
-                .findFirst()
-                .orElseThrow(() -> new AgentScopeProviderException(
+            handle = materializer.materialize(session, run, snapshot);
+            RuntimeHandle existing = activeHandles.putIfAbsent(run.id(), handle);
+            if (existing != null) {
+                handle.close();
+                throw new AgentScopeProviderException(
                     ProviderErrorCode.RESUME_STATE_UNAVAILABLE,
-                    "approved tool call is not present in recoverable AgentScope state"));
-            return executeStream(session, run, handle, List.of(inputMapper.approval(approved)));
-        } catch (AgentScopeProviderException exception) {
-            if (recoveredHere) {
-                closeFailedStart(run.id(), handle, exception);
+                    "run is already active in this instance");
             }
+            List<ToolUseBlock> toolCalls = recoverToolCalls(handle, command);
+            return executeStream(
+                session, run, handle, List.of(inputMapper.approval(toolCalls, command.decisions())));
+        } catch (AgentScopeProviderException exception) {
+            closeFailedStart(run.id(), handle, exception);
             throw exception;
         } catch (RuntimeException exception) {
             AgentScopeProviderException wrapped = new AgentScopeProviderException(
                 ProviderErrorCode.RESUME_STATE_UNAVAILABLE,
                 "AgentScope paused state cannot be recovered", exception);
-            if (recoveredHere) {
-                closeFailedStart(run.id(), handle, wrapped);
-            }
+            closeFailedStart(run.id(), handle, wrapped);
             throw wrapped;
+        }
+    }
+
+    /**
+     * 重新物化固定 Snapshot，并以空输入从持久 AgentState/Checkpoint 继续中断 Run。
+     *
+     * @param session    固定 Session
+     * @param run        新 Fencing Token 接管的 Run
+     * @param snapshot   固定 Snapshot
+     * @param checkpoint 最新可恢复 Checkpoint
+     * @return 供应商中立结果
+     */
+    @Override
+    public ExecutionResult recover(
+        Session session, Run run, SnapshotDescriptor snapshot, Checkpoint checkpoint) {
+        Objects.requireNonNull(checkpoint, "checkpoint must not be null");
+        RuntimeHandle handle = null;
+        try {
+            RuntimeHandle stale = activeHandles.remove(run.id());
+            if (stale != null) {
+                stale.close();
+            }
+            handle = materializer.materialize(session, run, snapshot);
+            RuntimeHandle existing = activeHandles.putIfAbsent(run.id(), handle);
+            if (existing != null) {
+                handle.close();
+                throw new AgentScopeProviderException(
+                    ProviderErrorCode.RESUME_STATE_UNAVAILABLE,
+                    "run is already active in this instance");
+            }
+            return executeStream(session, run, handle, List.of());
+        } catch (AgentScopeProviderException exception) {
+            closeFailedStart(run.id(), handle, exception);
+            return failed(exception);
+        } catch (RuntimeException exception) {
+            AgentScopeProviderException wrapped = new AgentScopeProviderException(
+                ProviderErrorCode.RESUME_STATE_UNAVAILABLE,
+                "AgentScope checkpoint recovery could not start", exception);
+            closeFailedStart(run.id(), handle, wrapped);
+            return failed(wrapped);
         }
     }
 
@@ -273,6 +309,16 @@ public final class AgentScopeExecutionEngine implements AgentExecutionEngine {
             }
             if (containsTimeout(exception)) {
                 handle.agent().getDelegate().interrupt(handle.context());
+                return finish(run.id(), handle, new ExecutionResult(
+                    ExecutionOutcome.TIMED_OUT,
+                    Optional.of(ProviderErrorCode.PROVIDER_TIMEOUT.name()),
+                    Optional.of("AgentScope execution exceeded the snapshot timeout")));
+            }
+            if (containsHttpStatus(exception, 429)) {
+                return finish(run.id(), handle, new ExecutionResult(
+                    ExecutionOutcome.FAILED,
+                    Optional.of(ProviderErrorCode.PROVIDER_RATE_LIMITED.name()),
+                    Optional.of("AgentScope provider rate limit was reached")));
             }
             AgentScopeProviderException providerException = exception instanceof AgentScopeProviderException value
                 ? value : new AgentScopeProviderException(
@@ -328,6 +374,53 @@ public final class AgentScopeExecutionEngine implements AgentExecutionEngine {
             current = current.getCause();
         }
         return false;
+    }
+
+    /**
+     * 按 AgentScope 稳定异常接口和 Core Transport 异常检查 HTTP 状态，不解析异常消息或响应正文。
+     *
+     * @param throwable  异常链
+     * @param statusCode 目标 HTTP 状态
+     * @return 异常链中存在目标状态时为 true
+     */
+    private boolean containsHttpStatus(Throwable throwable, int statusCode) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof ModelHttpException modelException
+                && Objects.equals(modelException.getStatusCode(), statusCode)) {
+                return true;
+            }
+            if (current instanceof HttpTransportException transportException
+                && Objects.equals(transportException.getStatusCode(), statusCode)) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
+    }
+
+    /**
+     * 从已持久 AgentState 的消息上下文恢复待决 Tool，并再次校验 Tool Call ID 与参数 Hash。
+     *
+     * @param handle  新 Fencing Token 对应的 RuntimeHandle
+     * @param command 已持久审批决策
+     * @return 与决策顺序一致的 Tool Call
+     */
+    private List<ToolUseBlock> recoverToolCalls(RuntimeHandle handle, ResumeCommand command) {
+        AgentState state = handle.agent().getDelegate().getAgentState(
+            handle.context().getUserId(), handle.context().getSessionId());
+        java.util.Map<String, ToolUseBlock> candidates = new java.util.HashMap<>();
+        state.getContext().forEach(message -> message.getContentBlocks(ToolUseBlock.class)
+            .forEach(toolCall -> candidates.put(toolCall.getId(), toolCall)));
+        return command.decisions().stream().map(decision -> {
+            ToolUseBlock toolCall = candidates.get(decision.toolCallId());
+            if (toolCall == null || !eventMapper.argumentHash(toolCall).equals(decision.argumentHash())) {
+                throw new AgentScopeProviderException(
+                    ProviderErrorCode.RESUME_STATE_UNAVAILABLE,
+                    "approval does not match recoverable AgentScope tool state");
+            }
+            return toolCall;
+        }).toList();
     }
 
     /**

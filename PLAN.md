@@ -447,7 +447,7 @@ flowchart LR
 | 10 | DONE | 2026-08-16 | `docs/implementation/phase-10-revision-deployment.md` | Draft、不可变 Revision/Snapshot、Deployment、Internal Contract 与真实 MySQL E2E 已验收 |
 | 11 | DONE | 2026-08-16 | `docs/implementation/phase-11-runtime-domain.md` | 中立领域、状态机、MySQL V2、双 Sequence Event、Fencing、恢复与 Fake Engine 已验收 |
 | 12 | DONE | 2026-08-16 | `docs/implementation/phase-12-agentscope-adapter.md` | AgentScope 防腐层、Snapshot Compiler、Event/State 映射、执行引擎与兼容门禁已验收 |
-| 13 | NOT_STARTED | — | `docs/implementation/phase-13-runtime-api.md` | |
+| 13 | DONE | 2026-08-16 | `docs/implementation/phase-13-runtime-api.md` | Runtime API、持久 Worker、SSE、HITL、Lease/Fencing、取消与恢复已验收 |
 | 14 | NOT_STARTED | — | `docs/implementation/phase-14-knowledge-rag.md` | |
 | 15 | NOT_STARTED | — | `docs/implementation/phase-15-scheduler.md` | |
 | 16 | NOT_STARTED | — | `docs/implementation/phase-16-gateway.md` | |
@@ -2269,59 +2269,59 @@ POST /api/v1/runtime/approvals/{approvalId}:decide
 
 #### Session/Turn
 
-- [ ] 从 Deployment 解析并固定 Revision/Snapshot；
-- [ ] Snapshot Cache + ETag；
-- [ ] 创建 Session 幂等；
-- [ ] 创建 Turn 幂等；
-- [ ] 单一 Runtime MySQL 事务提交 Turn、Run、WorkItem、幂等结果、`run.accepted` Event 和 Outbox；
-- [ ] 仅在上述事务提交后返回 `202 Accepted`，Snapshot 加载/编译不得位于接单事务之前；
-- [ ] 持久 Work Queue，状态与 Claim 索引匹配 `docs/database/runtime-schema.md`；
-- [ ] Runtime Worker Claim。
+- [x] 从 Deployment 解析并固定 Revision/Snapshot；
+- [x] Snapshot Cache + ETag；
+- [x] 创建 Session 幂等；
+- [x] 创建 Turn 幂等；
+- [x] 单一 Runtime MySQL 事务提交 Turn、Run、WorkItem、幂等结果、`run.accepted` Event 和 Outbox；
+- [x] 仅在上述事务提交后返回 `202 Accepted`，Snapshot 加载/编译不得位于接单事务之前；
+- [x] 持久 Work Queue，状态与 Claim 索引匹配 `docs/database/runtime-schema.md`；
+- [x] Runtime Worker Claim。
 
 #### Lease/Fencing
 
-- [ ] Redis Lease；
-- [ ] 单调 Fencing Token；
-- [ ] DB 当前 Token；
-- [ ] 续租；
-- [ ] 过期 Owner 写拒绝；
-- [ ] Release 校验 Owner/Token；
-- [ ] Lease 丢失停止新外部调用；
-- [ ] Reconciliation。
+- [x] Redis Lease；
+- [x] 单调 Fencing Token；
+- [x] DB 当前 Token；
+- [x] 续租；
+- [x] 过期 Owner 写拒绝；
+- [x] Release 校验 Owner/Token；
+- [x] Lease 丢失停止新外部调用；
+- [x] Reconciliation。
 
 #### SSE
 
-- [ ] 先持久化再通知；
-- [ ] `Last-Event-ID`；
-- [ ] 回放后切实时；
-- [ ] Heartbeat；
-- [ ] 有界缓冲；
-- [ ] Slow Consumer；
-- [ ] Gateway 断线后可恢复；
-- [ ] SSE 关闭不取消 Run。
+- [x] 先持久化再通知；
+- [x] `Last-Event-ID`；
+- [x] 回放后切实时；
+- [x] Heartbeat；
+- [x] 有界缓冲；
+- [x] Slow Consumer；
+- [x] Gateway 断线后可恢复；
+- [x] SSE 关闭不取消 Run。
 
 #### HITL
 
-- [ ] Approval Requested；
-- [ ] 参数摘要和 Hash；
-- [ ] 授权；
-- [ ] 幂等 Decision；
-- [ ] Approve/Reject/Expire/Cancel；
-- [ ] Checkpoint；
-- [ ] 新 Lease/Fencing Resume；
-- [ ] 审计。
+- [x] Approval Requested；
+- [x] 参数摘要和 Hash；
+- [x] 授权；
+- [x] 幂等 Decision；
+- [x] Approve/Reject/Expire/Cancel；
+- [x] Checkpoint；
+- [x] 新 Lease/Fencing Resume；
+- [x] 审计。
 
 #### 运行控制
 
-- [ ] Cancel；
-- [ ] Timeout；
-- [ ] Pod Drain；
-- [ ] Orphan Run Reconciliation；
-- [ ] Recoverable/Non-recoverable Attempt；
-- [ ] Runtime Instance Heartbeat；
-- [ ] Usage/Cost 原始记录；
-- [ ] Provider 429/Timeout 分类；
-- [ ] Control 短暂不可用时 Snapshot Cache 策略。
+- [x] Cancel；
+- [x] Timeout；
+- [x] Pod Drain；
+- [x] Orphan Run Reconciliation；
+- [x] Recoverable/Non-recoverable Attempt；
+- [x] Runtime Instance Heartbeat；
+- [x] Usage/Cost 原始记录；
+- [x] Provider 429/Timeout 分类；
+- [x] Control 短暂不可用时 Snapshot Cache 策略。
 
 ### 产物
 
@@ -2338,19 +2338,19 @@ docs/implementation/phase-13-runtime-api.md
 
 ### 验收条件
 
-- [ ] Session 固定 Snapshot；
-- [ ] 重复 Turn 请求不重复执行；
-- [ ] 两个 Runtime 实例竞争只有一个有效 Owner；
-- [ ] 陈旧 Worker 无法写 Event/终态；
-- [ ] SSE 断开重连不丢持久事件；
-- [ ] 慢客户端不拖垮执行；
-- [ ] Approval 重复决策幂等；
-- [ ] 无权审批被拒绝；
-- [ ] Pod 中断后 Run 可恢复或形成新 Attempt；
-- [ ] Cancel/Timeout 形成明确终态；
-- [ ] Control 中断不影响已缓存 Snapshot 的运行；
-- [ ] Runtime OpenAPI/Event Contract/E2E 通过。
-- [ ] 接单后 Worker 在 Snapshot 加载/编译失败时仍产生可查询的失败或重试状态，`runId` 不丢失。
+- [x] Session 固定 Snapshot；
+- [x] 重复 Turn 请求不重复执行；
+- [x] 两个 Runtime 实例竞争只有一个有效 Owner；
+- [x] 陈旧 Worker 无法写 Event/终态；
+- [x] SSE 断开重连不丢持久事件；
+- [x] 慢客户端不拖垮执行；
+- [x] Approval 重复决策幂等；
+- [x] 无权审批被拒绝；
+- [x] Pod 中断后 Run 可恢复或形成新 Attempt；
+- [x] Cancel/Timeout 形成明确终态；
+- [x] Control 中断不影响已缓存 Snapshot 的运行；
+- [x] Runtime OpenAPI/Event Contract/E2E 通过。
+- [x] 接单后 Worker 在 Snapshot 加载/编译失败时仍产生可查询的失败或重试状态，`runId` 不丢失。
 
 ### 验收命令
 

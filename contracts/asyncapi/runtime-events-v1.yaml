@@ -4,10 +4,10 @@ asyncapi: 3.0.0
 info:
   # 标识 AgentArk 语言中立的 Runtime 事件族。
   title: AgentArk Runtime Events
-  # 声明该事件契约骨架的语义版本。
+  # 声明事件契约的语义版本。
   version: 1.0.0
-  # 说明 Phase 11 已固定双重序号、Fencing 与 ObjectRef 载荷边界。
-  description: 供应商中立的 Runtime Event v1；MySQL Event Log 是权威事实来源。
+  # 说明 SSE 只是持久 Event Log 的消费方式。
+  description: Runtime Event v1 通过 SSE 回放和追平，MySQL Event Log 是唯一权威事实来源。
   # 声明契约文档采用的开源许可证。
   license:
     # 提供便于阅读的 SPDX 许可证名称。
@@ -16,10 +16,38 @@ info:
     url: https://www.apache.org/licenses/LICENSE-2.0
 # 固定未单独声明时使用的消息内容类型。
 defaultContentType: application/json
-# Phase 11 不虚构消息 Broker；Phase 13 的 SSE 只消费 Event Store，届时再声明真实通道。
-channels: {}
-# 当前没有真实 Broker 发布或订阅操作。
-operations: {}
+# 声明 Runtime Run SSE 通道。
+channels:
+  # 单个 Run 的可重连 Event Stream。
+  runtimeRunEvents:
+    # 与 Public Runtime OpenAPI 保持完全一致的地址。
+    address: /api/v1/runtime/runs/{runId}/events:stream
+    # 声明通道参数。
+    parameters:
+      # Run UUIDv7 路径参数。
+      runId:
+        # 说明参数选择单个 Run Attempt。
+        description: Runtime Run UUIDv7 标识
+    # 声明通道传递的消息。
+    messages:
+      # Runtime Event Envelope 消息。
+      runtimeEvent:
+        # 复用版本化消息组件。
+        $ref: "#/components/messages/RuntimeEvent"
+# 声明客户端从 Runtime 接收 Event 的操作。
+operations:
+  # 客户端订阅 Runtime Run Event。
+  receiveRuntimeRunEvents:
+    # 从服务接收消息。
+    action: receive
+    # 绑定 Runtime Run SSE 通道。
+    channel:
+      # 引用通道组件。
+      $ref: "#/channels/runtimeRunEvents"
+    # 声明该操作接收的消息集合。
+    messages:
+      # 接收 Runtime Event Envelope。
+      - $ref: "#/channels/runtimeRunEvents/messages/runtimeEvent"
 # 汇总可复用的消息组件。
 components:
   # 注册 Runtime 事件消息类型。
@@ -30,7 +58,9 @@ components:
       name: RuntimeEvent
       # 提供带版本的可读消息标题。
       title: AgentArk Runtime Event Envelope v1
+      # 说明 Event 先持久化再通过 SSE 通知。
+      description: 已提交、可按 Session Sequence 重放且不包含隐藏推理链的 Runtime Event。
       # 定义消息负载 Schema。
       payload:
-        # 引用版本化的 Runtime Event JSON Schema。
+        # 引用版本化 Runtime Event JSON Schema。
         $ref: ../schemas/runtime-event/v1.json

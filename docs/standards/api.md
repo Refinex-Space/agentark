@@ -79,4 +79,15 @@ Phase 12 增加以下 Snapshot 编译契约约束：
 - AgentScope Typed Event 必须映射到 `runtime-event/v1.json` 语义。未知 Event 只保留安全类型标识，Tool 参数、Approval 参数和隐藏推理内容不得进入 Event、日志或缓存；
 - 编译缓存键固定为 Provider、Snapshot Schema、Snapshot Hash 与 Compiler Version，且只缓存不含 Secret 和 Session 可变状态的不可变编译计划；缓存丢失必须能够由 Snapshot 重建。
 
+Phase 13 增加以下托管 Runtime 契约约束：
+
+- `public-runtime-v1.yaml` 只声明已经实现的 Session 创建/查询、Turn 接单、Run 查询/取消、Event 列表/SSE、Approval 列表/决策九条路径；`runtime-events-v1.yaml` 只声明已提交 Runtime Event 的消费通道；
+- Session 创建必须在校验 Deployment、Revision、Snapshot、Provider、Schema 和 Capability 后固定不可漂移的执行身份，返回 `201 Created`；重复的 Session 幂等请求只返回首次资源，同键异参返回稳定冲突；
+- Turn 接单必须在单一 Runtime MySQL 事务提交 Turn、首个 Run、Work Item、幂等结果、`run.accepted` Event 和 Outbox 后返回 `202 Accepted` 与稳定 `runId`。Snapshot 加载、编译、Lease 和外部调用只能由提交后的 Worker 执行，准备失败不得使 `runId` 消失；
+- Session、Turn 和 Approval 决策使用 `Idempotency-Key`。重复同键同 Request Hash 返回首次结果；同键不同 Hash 返回 `409`，不得重复执行 Tool、Model 或审批副作用；
+- Runtime Public API 只接受 Bearer JWT，并按 `runtime:execute`、`runtime:read`、`runtime:cancel`、`runtime:approve` 分权。Organization/Project 必须同时匹配已认证 Principal 和资源归属；跨租户直接对象访问按不可枚举资源返回 `404`；
+- Event 列表的 `after` 和 SSE 的 `Last-Event-ID` 均表示已提交 `sessionSequence`。SSE 必须先回放再切实时追平，Heartbeat 不持久化、不推进游标；慢消费者只能关闭自身订阅，SSE 断开不得取消 Run；
+- Approval Public DTO 只暴露 Tool 名、Tool Call ID、参数摘要 Hash、策略引用、状态与版本，不暴露原始 Tool 参数。决策必须校验当前版本、权限和幂等结果，并在新 Lease/Fencing Token 下恢复执行；
+- Runtime 错误统一使用 Problem Detail 和稳定 `ARK-RUNTIME-*` 代码。401/403 不回显 Token、内部异常或租户细节；Provider 429、超时和不可恢复错误必须先转换为 AgentArk 分类后再进入 API/Event。
+
 Golden File、明文 Secret 负例和文档结构 Lint 由 `agentark-kernel` 测试执行，必需文件与 Kernel/Server 边界由知识门禁检查。首次发布后的修改必须增加 Breaking Change 检测；在不存在已发布前一版本的 Phase 03 不伪造兼容比较结果。

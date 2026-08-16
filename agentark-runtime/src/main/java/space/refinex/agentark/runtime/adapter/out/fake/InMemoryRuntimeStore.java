@@ -263,6 +263,62 @@ public final class InMemoryRuntimeStore implements
     }
 
     /**
+     * 插入独立命令幂等记录。
+     *
+     * @param idempotency 幂等记录
+     */
+    @Override
+    public synchronized void insertIdempotency(IdempotencyRecord idempotency) {
+        if (idempotencyRecords.putIfAbsent(idempotencyKey(idempotency), idempotency) != null) {
+            throw new RuntimeConflictException("idempotency record already exists");
+        }
+    }
+
+    /**
+     * 原子放弃不可恢复的旧 Run，并追加新的恢复 Attempt。
+     *
+     * @param turn        当前 Turn
+     * @param abandoned   旧 Run
+     * @param retry       新 Run Attempt
+     * @param workItem    新 Work Item
+     * @param outboxEvent 恢复诊断 Outbox
+     * @param occurredAt  状态转换时刻
+     */
+    @Override
+    public synchronized void replaceOrphanRun(
+        Turn turn,
+        Run abandoned,
+        Run retry,
+        RuntimeWorkItem workItem,
+        RuntimeOutboxEvent outboxEvent,
+        Instant occurredAt) {
+        Run stored = requireRun(abandoned.id());
+        Turn storedTurn = requireTurn(turn.id());
+        RuntimeStateMachine.requireRunTransition(stored.status(), RunStatus.ABANDONED);
+        if (!stored.fencingToken().equals(abandoned.fencingToken())
+            || !storedTurn.currentRunId().equals(Optional.of(stored.id()))
+            || runs.containsKey(retry.id()) || workItems.containsKey(retry.id())) {
+            throw new RuntimeConflictException("orphan recovery state conflicts");
+        }
+        runs.put(stored.id(), new Run(
+            stored.id(), stored.organizationId(), stored.projectId(), stored.sessionId(),
+            stored.turnId(), stored.attemptNumber(), stored.runtimeProvider(),
+            stored.compilerVersion(), RunStatus.ABANDONED, stored.eventSequence(),
+            stored.fencingToken(), stored.startedAt(), Optional.of(occurredAt),
+            Optional.of("RUNTIME_OWNER_LOST"), stored.createdAt()));
+        complete(stored.id(), stored.fencingToken(), WorkItemStatus.FAILED);
+        runs.put(retry.id(), retry);
+        workItems.put(retry.id(), workItem);
+        turns.put(storedTurn.id(), new Turn(
+            storedTurn.id(), storedTurn.organizationId(), storedTurn.projectId(),
+            storedTurn.sessionId(), storedTurn.sequence(), storedTurn.input(),
+            storedTurn.inputHash(), TurnStatus.QUEUED, Optional.of(retry.id()),
+            FencingToken.unclaimed(), storedTurn.version() + 1,
+            storedTurn.createdAt(), occurredAt));
+        outboxEvents.put(outboxEvent.id(), outboxEvent);
+    }
+
+    /**
      * 使用当前令牌转换 Run 状态。
      *
      * @param runId        Run 标识
@@ -455,6 +511,28 @@ public final class InMemoryRuntimeStore implements
     }
 
     /**
+     * 按 Session Sequence 增量读取单个 Run 的 Event。
+     *
+     * @param runId         Run 标识
+     * @param afterSequence 已消费 Session Sequence
+     * @param limit         最大数量
+     * @return 有序 Event
+     */
+    @Override
+    public synchronized List<RuntimeEvent> listRunAfter(
+        RunId runId, long afterSequence, int limit) {
+        if (afterSequence < 0 || limit < 1 || limit > 1000) {
+            throw new IllegalArgumentException("event cursor or limit is invalid");
+        }
+        return events.values().stream()
+            .filter(event -> event.runId().equals(runId)
+                && event.sessionSequence() > afterSequence)
+            .sorted(Comparator.comparingLong(RuntimeEvent::sessionSequence))
+            .limit(limit)
+            .toList();
+    }
+
+    /**
      * 追加引用已提交 State 的 Checkpoint。
      *
      * @param checkpoint Checkpoint
@@ -493,16 +571,16 @@ public final class InMemoryRuntimeStore implements
     public synchronized void append(AgentStateVersion stateVersion) {
         Run run = requireRun(stateVersion.runId());
         if (!run.fencingToken().equals(stateVersion.fencingToken())
-            || stateVersions.putIfAbsent(stateVersion.id(), stateVersion) != null
+            || stateVersions.containsKey(stateVersion.id())
             || stateVersions.values().stream().anyMatch(existing ->
             existing.sessionId().equals(stateVersion.sessionId())
                 && existing.agentKey().equals(stateVersion.agentKey())
                 && existing.stateKey().equals(stateVersion.stateKey())
                 && existing.itemIndex() == stateVersion.itemIndex()
                 && existing.stateVersion() == stateVersion.stateVersion())) {
-            stateVersions.remove(stateVersion.id());
             throw new RuntimeConflictException("state version or fencing token conflicts");
         }
+        stateVersions.put(stateVersion.id(), stateVersion);
     }
 
     /**
@@ -597,6 +675,71 @@ public final class InMemoryRuntimeStore implements
             target, expectedVersion + 1, approval.expiresAt(), Optional.of(decisionBy),
             Optional.of(decisionAt), approval.createdAt()));
         return 1;
+    }
+
+    /**
+     * 读取同一 Run 的全部 Approval。
+     *
+     * @param runId Run 标识
+     * @return 创建时间有序的 Approval
+     */
+    @Override
+    public synchronized List<Approval> listForRun(RunId runId) {
+        return approvals.values().stream()
+            .filter(approval -> approval.runId().equals(runId))
+            .sorted(Comparator.comparing(Approval::createdAt)
+                .thenComparing(approval -> approval.id().asString()))
+            .toList();
+    }
+
+    /**
+     * 按项目、状态和 UUIDv7 游标读取 Approval。
+     *
+     * @param projectId 项目标识
+     * @param status    可选状态
+     * @param afterId   可选游标
+     * @param limit     最大数量
+     * @return Approval 列表
+     */
+    @Override
+    public synchronized List<Approval> list(
+        ProjectId projectId,
+        Optional<ApprovalStatus> status,
+        Optional<ApprovalId> afterId,
+        int limit) {
+        if (limit < 1 || limit > 100) {
+            throw new IllegalArgumentException("approval page limit must be between 1 and 100");
+        }
+        return approvals.values().stream()
+            .filter(approval -> approval.projectId().equals(projectId))
+            .filter(approval -> status.map(value -> approval.status() == value).orElse(true))
+            .filter(approval -> afterId
+                .map(value -> approval.id().asString().compareTo(value.asString()) > 0)
+                .orElse(true))
+            .sorted(Comparator.comparing(approval -> approval.id().asString()))
+            .limit(limit)
+            .toList();
+    }
+
+    /**
+     * 取消 Run 下仍待决的 Approval。
+     *
+     * @param runId      Run 标识
+     * @param decisionBy 决策主体
+     * @param decisionAt 决策时刻
+     * @return 更新数量
+     */
+    @Override
+    public synchronized int cancelPending(
+        RunId runId, String decisionBy, Instant decisionAt) {
+        List<Approval> pending = approvals.values().stream()
+            .filter(approval -> approval.runId().equals(runId)
+                && approval.status() == ApprovalStatus.PENDING)
+            .toList();
+        pending.forEach(approval -> decide(
+            approval.id(), approval.expectedVersion(), ApprovalStatus.CANCELLED,
+            decisionBy, decisionAt));
+        return pending.size();
     }
 
     /**
@@ -716,6 +859,27 @@ public final class InMemoryRuntimeStore implements
             item.id(), item.runId(), terminal, item.priority(), item.availableAt(),
             Optional.empty(), Optional.empty(), item.fencingToken(),
             item.attemptCount(), item.createdAt()));
+    }
+
+    /**
+     * 将暂停 Run 的已完成 Work Item 重新置为 READY。
+     *
+     * @param runId        Run 标识
+     * @param fencingToken 暂停时令牌
+     * @param availableAt  最早 Claim 时刻
+     */
+    @Override
+    public synchronized void requeueForResume(
+        RunId runId, FencingToken fencingToken, Instant availableAt) {
+        RuntimeWorkItem item = workItems.get(runId);
+        if (item == null || item.status() != WorkItemStatus.COMPLETED
+            || !item.fencingToken().equals(fencingToken)) {
+            throw new RuntimeConflictException("approval resume work item conflicts");
+        }
+        workItems.put(runId, new RuntimeWorkItem(
+            item.id(), item.runId(), WorkItemStatus.READY, item.priority(), availableAt,
+            Optional.empty(), Optional.empty(), item.fencingToken(), item.attemptCount(),
+            item.createdAt()));
     }
 
     /**

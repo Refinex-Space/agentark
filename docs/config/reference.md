@@ -9,7 +9,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2；Phase 08 已接入资产目录 V3、Skill Object Store 和开发 Local Secret Provider；Phase 09 已接入 Knowledge 元数据 V4、原文件 Object Store、不可变 Revision 与摄取意图描述；Phase 10 已接入 Draft、不可变 Snapshot、Deployment 和 Control Outbox V5。Runtime 和 Scheduler 仍只有各自的 Migration History，Gateway 不连接业务数据库。生产 Object Store 和云 Secret Provider 仍必须由部署方提供受支持 Adapter。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2；Phase 08 已接入资产目录 V3、Skill Object Store 和开发 Local Secret Provider；Phase 09 已接入 Knowledge 元数据 V4、原文件 Object Store、不可变 Revision 与摄取意图描述；Phase 10 已接入 Draft、不可变 Snapshot、Deployment 和 Control Outbox V5；Phase 11 已接入 Runtime V2 权威表；Phase 13 已装配 Runtime API、持久 Worker、Redis/MySQL 双层 Lease、SSE 与 HITL。Scheduler 仍只有 Migration History，Gateway 尚无业务路由。生产 Object Store、云 Secret Provider 和真实 AgentScope Model/Component Provider 仍必须由部署方提供受支持 Adapter。
 
 ## Server 与本地 Profile
 
@@ -140,6 +140,24 @@ Knowledge 摄取 Endpoint 返回 `202` 只表示幂等请求已经记录且 Revi
 | `agentark.control.release.enabled` | `true` | Control 正常运行且存在 `KnowledgeSnapshotLookup` | 装配 Agent Draft、Publisher、Deployment、V5 Repository 与 Public/Internal API；关闭后不提供 Release API，不能作为绕过 V5 校验或权限的生产降级方式 |
 
 Runtime 调用 Snapshot Internal API 时必须携带受信 Service Identity，以及 `X-AgentArk-Runtime-Provider`、`X-AgentArk-Snapshot-Schema-Versions` 和可选 `X-AgentArk-Runtime-Capabilities`。这些 Header 是单次能力协商，不是环境 Secret 或租户选择。Internal Service JWT 的 Issuer、JWK 和 Audience 继续使用 Security Starter 配置，禁止配置共享静态 Token。
+
+## Runtime 托管执行配置
+
+| 属性/环境变量 | 默认值 | 启用/必填条件 | 安全与所有权说明 |
+|---|---|---|---|
+| `agentark.runtime.control-base-url` / `AGENTARK_CONTROL_BASE_URL` | `http://localhost:8081` | Runtime 非测试环境 | 只访问 Control Internal API；生产应使用受控网络和 TLS，不得连接 Control DB |
+| `agentark.runtime.internal-service-token` / `AGENTARK_RUNTIME_INTERNAL_TOKEN` | 无 | Control Internal API 要求服务认证时必填 | 只进入 Authorization Header，不得写入 Snapshot、Redis、Event、日志或本地默认配置 |
+| `agentark.runtime.instance-key` / `AGENTARK_RUNTIME_INSTANCE_KEY` | `runtime-local-1` | Runtime 实例启动 | 多副本必须使用唯一稳定的 Pod/实例标识，参与 Work Claim、心跳和 Lease Owner 校验 |
+| `agentark.runtime.lease-ttl` / `AGENTARK_RUNTIME_LEASE_TTL` | `30s` | Worker 启用 | Redis/MySQL 双层 Lease TTL；续租失败触发 Provider Cancel，MySQL Fencing 仍是权威写边界 |
+| `agentark.runtime.worker-enabled` / `AGENTARK_RUNTIME_WORKER_ENABLED` | `false` | 真实 Model/Component/Secret Provider 均已装配 | 默认安全关闭；缺少生产 SPI 时显式启用会启动失败，不回退 Fake Engine |
+| `agentark.runtime.worker-poll-delay` / `AGENTARK_RUNTIME_WORKER_POLL_DELAY` | `250ms` | Worker 启用 | 每次最多领取一个持久 Work Item，排空后停止轮询 |
+| `agentark.runtime.instance-heartbeat-delay` / `AGENTARK_RUNTIME_HEARTBEAT_DELAY` | `10s` | Runtime 实例启动 | 只更新 Runtime MySQL Instance 心跳，不把 Redis 当作实例事实源 |
+| `spring.data.redis.host` / `AGENTARK_REDIS_HOST` | `localhost` | 非测试 Runtime | Redis 只承载 Lease 与可丢失加速状态；全量丢失后从 MySQL/Object Storage 恢复 |
+| `spring.data.redis.port` / `AGENTARK_REDIS_PORT` | `6379` | 非测试 Runtime | 固定 Redis TCP 端口；生产网络与 TLS 由部署环境显式配置 |
+| `spring.data.redis.password` / `AGENTARK_REDIS_PASSWORD` | 空 | Redis 启用且服务要求认证 | 敏感值只由 Secret 注入，禁止写入版本库或日志 |
+| `agentark.foundation.storage.root` / `AGENTARK_RUNTIME_OBJECT_ROOT` | `.agentark/data/runtime-objects` | Local Object Store | 只保存大 Event/State Payload；生产应替换为受支持 Object Store Adapter |
+
+Runtime API 权限固定为 `runtime:execute`、`runtime:read`、`runtime:cancel` 和 `runtime:approve`，并要求 JWT 中精确选择资源所属 Organization/Project。安全未启用时只开放脱敏 Actuator，所有 Runtime API 拒绝；生产不能把关闭认证作为可用降级方案。
 
 连接、池化、TLS、事务和 Migration 使用 Spring Boot 所属标准属性，例如 `spring.datasource.*`、`spring.flyway.*` 和 `spring.data.redis.*`。Phase 06 已固定 MySQL/Flyway 基线；生产 TLS 信任材料与强制模式仍必须由实际部署环境显式提供，不能依赖本地 Compose 的明文内部网络设置。
 

@@ -15,7 +15,7 @@
     "code": {
       "description": "遵循 ARK-服务-资源-五位数字协议的稳定领域错误码。",
       "type": "string",
-      "pattern": "^ARK-[A-Z][A-Z0-9]*-[A-Z][A-Z0-9]*-[0-9]{5}$"
+      "pattern": "^ARK-[A-Z][A-Z0-9_]*-[A-Z][A-Z0-9_]*-[0-9]{5}$"
     },
     "requestId": { "description": "边缘层分配的请求关联标识。", "type": "string", "minLength": 1, "maxLength": 128 },
     "traceId": { "description": "用于跨服务追踪的 16 字节小写十六进制标识。", "type": "string", "pattern": "^[0-9a-f]{32}$" },

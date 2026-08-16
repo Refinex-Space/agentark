@@ -116,6 +116,21 @@ class ContractDocumentLintTest {
             .containsExactlyInAnyOrder(
                 "/internal/v1/agent-revisions/{revisionId}/snapshot",
                 "/internal/v1/deployments/{deploymentId}");
+      } else if (fileName.equals("public-runtime-v1.yaml")) {
+        Set<String> paths =
+            ((Map<?, ?>) document.get("paths"))
+                .keySet().stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
+        assertThat(paths)
+            .containsExactlyInAnyOrder(
+                "/api/v1/runtime/sessions",
+                "/api/v1/runtime/sessions/{sessionId}",
+                "/api/v1/runtime/sessions/{sessionId}/turns",
+                "/api/v1/runtime/runs/{runId}",
+                "/api/v1/runtime/runs/{runId}:cancel",
+                "/api/v1/runtime/runs/{runId}/events",
+                "/api/v1/runtime/runs/{runId}/events:stream",
+                "/api/v1/runtime/approvals",
+                "/api/v1/runtime/approvals/{approvalId}:decide");
       } else {
         assertThat(document.get("paths")).isEqualTo(Map.of());
       }
@@ -194,15 +209,23 @@ class ContractDocumentLintTest {
         .doesNotContain("credentialValue");
   }
 
-  /** 验证 AsyncAPI 骨架已版本化且引用统一的运行时事件 Schema。 */
+  /** 验证 AsyncAPI SSE 通道已版本化且引用统一的运行时事件 Schema。 */
   @Test
   void asyncApiSkeletonIsVersionedAndReferencesRuntimeEventSchema() throws IOException {
     Path documentPath = CONTRACTS.resolve("asyncapi/runtime-events-v1.yaml");
     Map<String, Object> document = load(documentPath);
 
     assertThat(document.get("asyncapi")).isEqualTo("3.0.0");
-    assertThat(document.get("channels")).isEqualTo(Map.of());
-    assertThat(document.get("operations")).isEqualTo(Map.of());
+    Set<String> channels =
+        ((Map<?, ?>) document.get("channels"))
+            .keySet().stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
+    Set<String> operations =
+        ((Map<?, ?>) document.get("operations"))
+            .keySet().stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
+    assertThat(channels)
+        .containsExactly("runtimeRunEvents");
+    assertThat(operations)
+        .containsExactly("receiveRuntimeRunEvents");
     assertThat(nested(document, "components", "messages", "RuntimeEvent", "payload", "$ref"))
         .isEqualTo("../schemas/runtime-event/v1.json");
     assertThat(documentPath.getParent().resolve("../schemas/runtime-event/v1.json").normalize())

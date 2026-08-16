@@ -52,6 +52,18 @@ public interface AgentExecutionEngine {
         Session session, Run run, SnapshotDescriptor snapshot, ResumeCommand command);
 
     /**
+     * 从已提交 Checkpoint 恢复中断 Run；不得重新追加原始用户输入。
+     *
+     * @param session    固定 Revision/Snapshot 的 Session
+     * @param run        已由新 Fencing Token 接管的 Run
+     * @param snapshot   已校验且允许缓存降级的 Snapshot
+     * @param checkpoint 最新可恢复 Checkpoint
+     * @return 供应商中立执行结果
+     */
+    ExecutionResult recover(
+        Session session, Run run, SnapshotDescriptor snapshot, Checkpoint checkpoint);
+
+    /**
      * 通知 Provider 取消外部执行；权威取消事实必须已由 Runtime 持久化。
      *
      * @param command 绑定当前 Run 与 Fencing Token 的取消命令

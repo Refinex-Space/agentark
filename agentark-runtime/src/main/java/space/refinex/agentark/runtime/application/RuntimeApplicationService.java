@@ -29,6 +29,7 @@ import space.refinex.agentark.runtime.port.*;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -127,16 +128,29 @@ public class RuntimeApplicationService {
      * @return 新建或幂等复用的 Session
      * @throws RuntimeConflictException 同 Key 不同请求 Hash 时抛出
      */
-    @Transactional
     public Session createSession(CreateSessionCommand command) {
         Objects.requireNonNull(command, "command must not be null");
+        return createSession(command, snapshotLoader.load(command.revisionId()));
+    }
+
+    /**
+     * 使用事务外已解析并校验的 Snapshot 原子创建 Session；幂等重放返回原 Session。
+     *
+     * @param command  创建命令
+     * @param snapshot 已解析固定 Snapshot
+     * @return 新建或幂等复用的 Session
+     */
+    @Transactional
+    public Session createSession(
+        CreateSessionCommand command, SnapshotDescriptor snapshot) {
+        Objects.requireNonNull(command, "command must not be null");
+        Objects.requireNonNull(snapshot, "snapshot must not be null");
         String scopeId = command.projectId().asString();
         Optional<IdempotencyRecord> existing = repository.findIdempotency(
             SESSION_SCOPE, scopeId, command.idempotencyKey());
         if (existing.isPresent()) {
             return replaySession(existing.orElseThrow(), command.requestHash());
         }
-        SnapshotDescriptor snapshot = snapshotLoader.load(command.revisionId());
         if (!snapshot.snapshotId().equals(command.snapshotId())
             || !snapshot.contentHash().equals(command.snapshotHash())) {
             throw new RuntimeConflictException("session snapshot identity or hash changed");
@@ -349,11 +363,14 @@ public class RuntimeApplicationService {
         Objects.requireNonNull(command, "command must not be null");
         Run run = requireRun(command.runId());
         Turn turn = requireTurn(run.turnId());
-        Approval approval = approvalRepository.find(command.approvalId())
-            .filter(item -> item.runId().equals(run.id()))
-            .orElseThrow(() -> new RuntimeNotFoundException("approval is not available"));
-        if (approval.status() != ApprovalStatus.APPROVED
-            || !approval.argumentHash().equals(command.argumentHash())
+        List<Approval> approvals = approvalRepository.listForRun(run.id());
+        boolean decisionsMatch = !command.decisions().isEmpty()
+            && command.decisions().stream().allMatch(decision -> approvals.stream()
+            .anyMatch(approval -> approval.id().equals(decision.approvalId())
+                && approval.argumentHash().equals(decision.argumentHash())
+                && approval.status() == (decision.approved()
+                ? ApprovalStatus.APPROVED : ApprovalStatus.REJECTED)));
+        if (!decisionsMatch
             || run.status() != RunStatus.PAUSED
             || turn.status() != TurnStatus.WAITING_APPROVAL
             || !run.fencingToken().equals(command.fencingToken())) {
@@ -415,6 +432,12 @@ public class RuntimeApplicationService {
                 turnTarget = TurnStatus.CANCELLED;
                 workTarget = WorkItemStatus.CANCELLED;
                 eventType = "run.cancelled";
+            }
+            case TIMED_OUT -> {
+                runTarget = RunStatus.FAILED;
+                turnTarget = TurnStatus.TIMED_OUT;
+                workTarget = WorkItemStatus.FAILED;
+                eventType = "run.timed_out";
             }
             default -> throw new IllegalStateException("unsupported execution outcome");
         }

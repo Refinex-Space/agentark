@@ -46,7 +46,8 @@ public class MybatisRuntimeStore implements
     ApprovalRepository,
     LeaseManager,
     RuntimeWorkQueue,
-    UsageRecorder {
+    UsageRecorder,
+    RuntimeInstanceRepository {
 
     /**
      * 运行时所属 MyBatis 数据库映射器。
@@ -291,6 +292,52 @@ public class MybatisRuntimeStore implements
     }
 
     /**
+     * 插入独立命令幂等记录，并由外层应用事务与状态变化共同提交。
+     *
+     * @param idempotency 幂等记录
+     */
+    @Override
+    public void insertIdempotency(IdempotencyRecord idempotency) {
+        mapper.insertIdempotency(idempotencyRow(idempotency));
+    }
+
+    /**
+     * 原子放弃失联旧 Run，创建新 Attempt、Work Item 并移动 Turn 指针。
+     *
+     * @param turn        当前 Turn
+     * @param abandoned   已使用新 Fencing Token 接管的旧 Run
+     * @param retry       新 Run Attempt
+     * @param workItem    新 Work Item
+     * @param outboxEvent 恢复诊断 Outbox
+     * @param occurredAt  状态转换时刻
+     */
+    @Override
+    @Transactional
+    public void replaceOrphanRun(
+        Turn turn,
+        Run abandoned,
+        Run retry,
+        RuntimeWorkItem workItem,
+        RuntimeOutboxEvent outboxEvent,
+        Instant occurredAt) {
+        requireOne(mapper.transitionRun(
+                abandoned.id().value(), abandoned.status().name(), RunStatus.ABANDONED.name(),
+                abandoned.fencingToken().value(), occurredAt, "RUNTIME_OWNER_LOST"),
+            "orphan run transition conflicted");
+        requireOne(mapper.completeWorkItem(
+                abandoned.id().value(), abandoned.fencingToken().value(),
+                WorkItemStatus.FAILED.name(), occurredAt),
+            "orphan work item completion conflicted");
+        mapper.insertRun(runRow(retry));
+        mapper.insertWorkItem(workItemRow(workItem));
+        requireOne(mapper.attachRecoveryRun(
+                turn.id().value(), abandoned.id().value(), retry.id().value(),
+                abandoned.fencingToken().value(), occurredAt),
+            "orphan turn recovery pointer conflicted");
+        insertOutbox(outboxEvent);
+    }
+
+    /**
      * 锁定 Session/Run 计数器、分别递增一次并追加 Event 与可选 ObjectRef。
      *
      * @param eventId        Event 标识
@@ -358,6 +405,25 @@ public class MybatisRuntimeStore implements
             throw new IllegalArgumentException("event cursor or limit is invalid");
         }
         return mapper.listEventsAfter(sessionId.value(), afterSequence, limit).stream()
+            .map(this::event)
+            .toList();
+    }
+
+    /**
+     * 按 Session Sequence 增量读取单个 Run 的已提交 Event。
+     *
+     * @param runId         Run 标识
+     * @param afterSequence 已消费 Session Sequence
+     * @param limit         最大数量
+     * @return 有序 Event
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<RuntimeEvent> listRunAfter(RunId runId, long afterSequence, int limit) {
+        if (afterSequence < 0 || limit < 1 || limit > 1000) {
+            throw new IllegalArgumentException("event cursor or limit is invalid");
+        }
+        return mapper.listRunEventsAfter(runId.value(), afterSequence, limit).stream()
             .map(this::event)
             .toList();
     }
@@ -468,6 +534,57 @@ public class MybatisRuntimeStore implements
     }
 
     /**
+     * 读取同一 Run 的全部 Approval。
+     *
+     * @param runId Run 标识
+     * @return 创建顺序稳定的 Approval
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<Approval> listForRun(RunId runId) {
+        return mapper.listApprovalsForRun(runId.value()).stream().map(this::approval).toList();
+    }
+
+    /**
+     * 增量读取项目内 Approval。
+     *
+     * @param projectId 项目标识
+     * @param status    可选状态
+     * @param afterId   可选 UUIDv7 游标
+     * @param limit     最大数量
+     * @return Approval 列表
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<Approval> list(
+        ProjectId projectId,
+        Optional<ApprovalStatus> status,
+        Optional<ApprovalId> afterId,
+        int limit) {
+        if (limit < 1 || limit > 100) {
+            throw new IllegalArgumentException("approval page limit must be between 1 and 100");
+        }
+        return mapper.listApprovals(
+                projectId.value(), status.map(Enum::name).orElse(null),
+                afterId.map(ApprovalId::value).orElse(null), limit).stream()
+            .map(this::approval)
+            .toList();
+    }
+
+    /**
+     * 取消 Run 下仍待决的 Approval。
+     *
+     * @param runId      Run 标识
+     * @param decisionBy 系统或调用主体
+     * @param decisionAt 取消时刻
+     * @return 更新数量
+     */
+    @Override
+    public int cancelPending(RunId runId, String decisionBy, Instant decisionAt) {
+        return mapper.cancelPendingApprovals(runId.value(), decisionBy, decisionAt);
+    }
+
+    /**
      * 续约当前 Owner Lease。
      *
      * @param runId        Run 标识
@@ -554,6 +671,61 @@ public class MybatisRuntimeStore implements
         requireOne(mapper.completeWorkItem(
                 runId.value(), fencingToken.value(), terminal.name(), Instant.now()),
             "work item owner is stale");
+    }
+
+    /**
+     * 将已暂停 Run 的 Work Item 重新置为 READY，下一次 Claim 将产生新 Token。
+     *
+     * @param runId        Run 标识
+     * @param fencingToken 暂停时令牌
+     * @param availableAt  最早 Claim 时刻
+     */
+    @Override
+    public void requeueForResume(
+        RunId runId, FencingToken fencingToken, Instant availableAt) {
+        requireOne(mapper.requeueWorkItem(
+                runId.value(), fencingToken.value(), availableAt),
+            "approval resume work item conflicted");
+    }
+
+    /**
+     * 注册或刷新 Runtime Instance。
+     *
+     * @param instance Runtime Instance
+     */
+    @Override
+    public void register(RuntimeInstance instance) {
+        mapper.upsertRuntimeInstance(new RuntimeInstanceRow(
+            instance.id().value(), instance.instanceKey(), instance.startedAt(),
+            instance.heartbeatAt(), write(instance.capabilities()),
+            instance.drainStatus().name()));
+    }
+
+    /**
+     * 刷新 Runtime Instance 心跳。
+     *
+     * @param instanceKey 实例 Key
+     * @param heartbeatAt 当前时刻
+     * @return 实例存在时为 true
+     */
+    @Override
+    public boolean heartbeat(String instanceKey, Instant heartbeatAt) {
+        return mapper.heartbeatRuntimeInstance(instanceKey, heartbeatAt) == 1;
+    }
+
+    /**
+     * 更新 Runtime Instance 排空状态。
+     *
+     * @param instanceKey 实例 Key
+     * @param status      排空状态
+     * @param occurredAt  更新时间
+     * @return 实例存在时为 true
+     */
+    @Override
+    public boolean updateDrainStatus(
+        String instanceKey, DrainStatus status, Instant occurredAt) {
+        return mapper.updateRuntimeInstanceDrain(
+            instanceKey, status.name(), occurredAt) == 1;
     }
 
     /**

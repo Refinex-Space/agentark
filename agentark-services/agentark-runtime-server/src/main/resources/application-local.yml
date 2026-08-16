@@ -7,9 +7,9 @@ spring:
       # 仅当 `local` 被激活时加载。
       on-profile: local
 
-# Runtime 只通过 URL 访问 Control，不读取 Control Schema 或 Server 实现。
+# Runtime 只通过 Internal URL 访问 Control，不读取 Control Schema 或 Server 实现。
 agentark:
-  # 声明 Runtime 可见的内部服务端点。
-  services:
+  # Runtime 本地接线覆盖。
+  runtime:
     # Control Plane 基础地址；Compose 使用服务 DNS 覆盖。
     control-base-url: ${AGENTARK_CONTROL_BASE_URL:http://localhost:8081}

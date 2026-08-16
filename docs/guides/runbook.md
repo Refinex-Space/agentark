@@ -40,7 +40,7 @@ Phase 05 已建立四个可执行 Spring Boot JAR。根 Reactor 仍可全量验�
 
 `verify` 执行 Enforcer、Java License Header、Surefire/Failsafe、JaCoCo Report、第三方许可汇总和 CycloneDX Aggregate SBOM。仓库不在 Maven 生命周期执行自动 Java 格式化；格式变更由评审者依据相邻源码风格检查。
 
-仓库仍无 `agentark-web/package.json` 或 Helm，因此前端和 Kubernetes 不可运行。四个 Server 仍是空业务应用壳；Control/Runtime/Scheduler 只新增所属 DataSource 和 Flyway V1 History，健康与 Migration 成功不等于业务能力已实现。
+仓库仍无 `agentark-web/package.json` 或 Helm，因此前端和 Kubernetes 不可运行。Control 已实现 IAM、资产、Knowledge 和发布能力；Runtime 已实现中立领域、AgentScope 防腐层与 Phase 13 API/Worker 装配，但真实 Worker 默认关闭且仓库未提供生产 Model/MCP/Sandbox Bean；Scheduler 与 Gateway 仍是后续阶段边界。健康与 Migration 成功不等于真实模型、跨服务认证或产品工作流已验收。
 
 ## 本地 Core/RAG
 
@@ -58,13 +58,13 @@ Phase 05 已建立四个可执行 Spring Boot JAR。根 Reactor 仍可全量验�
 ./tools/dev-up.sh --prepare-only
 ```
 
-Phase 06 起，Control、Runtime、Scheduler 启动时会分别执行所属 `V1__phase_06_schema_baseline.sql`。若任一 Flyway 校验失败，服务必须保持失败状态；禁止通过关闭 Flyway、修改历史表或启用 `clean` 绕过。确认本地三套独立历史可用：
+三个 Owner 均从 `V1__phase_06_schema_baseline.sql` 起独立迁移；当前 Control 到 V5、Runtime 到 V2、Scheduler 保持 V1。若任一 Flyway 校验失败，服务必须保持失败状态；禁止通过关闭 Flyway、修改历史表或启用 `clean` 绕过。确认本地三套独立历史可用：
 
 ```bash
 ./tools/verify-core.sh
 ```
 
-该脚本验证三个账号只能使用自身 Schema、最新 Migration 为成功 V1 且业务表数为 0；Migration Checksum 和 N-1 升级由对应 Owner 的 Testcontainers 测试与 Flyway 启动校验共同负责。
+该脚本验证三个账号只能使用自身 Schema，并分别达到 Control V5/48 表、Runtime V2/13 表、Scheduler V1/0 表；Migration Checksum 和 N-1 升级由对应 Owner 的 Testcontainers 测试与 Flyway 启动校验共同负责。
 
 显式启动包含 Qdrant 1.18.3 的 RAG Profile：
 
