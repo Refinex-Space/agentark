@@ -14,7 +14,7 @@ info:
     identifier: Apache-2.0
 # 固定所有内联 Schema 使用 JSON Schema Draft 2020-12 方言。
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
-# Phase 08 声明已经由 IAM、Catalog 与 Secret Controller 实现的公开端点。
+# Phase 09 声明已经由 IAM、Catalog、Secret 与 Knowledge Controller 实现的公开端点。
 paths:
   # Organization 集合端点。
   /api/v1/organizations:
@@ -927,6 +927,467 @@ paths:
         # 冲突。
         "409": { $ref: "#/components/responses/ProblemResponse" }
 
+  # Project 下的 Knowledge Base 集合端点。
+  /api/v1/projects/{projectId}/knowledge-bases:
+    # 复用项目路径参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 游标列出 Knowledge Base。
+    get:
+      # 稳定操作标识。
+      operationId: listKnowledgeBases
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 分页查询参数。
+      parameters:
+        # 不透明游标。
+        - { $ref: "#/components/parameters/Cursor" }
+        # 页大小。
+        - { $ref: "#/components/parameters/Limit" }
+      # 查询结果。
+      responses:
+        # Knowledge Base 游标页。
+        "200":
+          # 成功说明。
+          description: Knowledge Base 游标页
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Knowledge Base 页契约。
+              schema: { $ref: "#/components/schemas/CursorPageKnowledgeBase" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建 Knowledge Base 稳定身份。
+    post:
+      # 稳定操作标识。
+      operationId: createKnowledgeBase
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建请求契约。
+            schema: { $ref: "#/components/schemas/CreateKnowledgeBaseRequest" }
+      # 创建结果。
+      responses:
+        # 创建成功。
+        "201":
+          # 成功说明。
+          description: Knowledge Base 已创建
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Knowledge Base 契约。
+              schema: { $ref: "#/components/schemas/KnowledgeBase" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 唯一键冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Knowledge Base 下的数据源集合端点。
+  /api/v1/projects/{projectId}/knowledge-bases/{knowledgeBaseId}/data-sources:
+    # 复用项目和 Knowledge Base 参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Knowledge Base 标识。
+      - { $ref: "#/components/parameters/KnowledgeBaseId" }
+    # 游标列出不含凭据的数据源元数据。
+    get:
+      # 稳定操作标识。
+      operationId: listKnowledgeDataSources
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 分页查询参数。
+      parameters:
+        # 不透明游标。
+        - { $ref: "#/components/parameters/Cursor" }
+        # 页大小。
+        - { $ref: "#/components/parameters/Limit" }
+      # 查询结果。
+      responses:
+        # 数据源游标页。
+        "200":
+          # 成功说明。
+          description: Knowledge 数据源游标页
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 数据源页契约。
+              schema: { $ref: "#/components/schemas/CursorPageDataSource" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Knowledge Base 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建数据源描述。
+    post:
+      # 稳定操作标识。
+      operationId: createKnowledgeDataSource
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建请求契约。
+            schema: { $ref: "#/components/schemas/CreateDataSourceRequest" }
+      # 创建结果。
+      responses:
+        # 创建成功。
+        "201":
+          # 成功说明。
+          description: Knowledge 数据源已创建
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 数据源契约。
+              schema: { $ref: "#/components/schemas/DataSource" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Knowledge Base 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Knowledge Base 下的文档集合端点。
+  /api/v1/projects/{projectId}/knowledge-bases/{knowledgeBaseId}/documents:
+    # 复用项目和 Knowledge Base 参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Knowledge Base 标识。
+      - { $ref: "#/components/parameters/KnowledgeBaseId" }
+    # 游标列出文档稳定身份与 ACL。
+    get:
+      # 稳定操作标识。
+      operationId: listKnowledgeDocuments
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 分页查询参数。
+      parameters:
+        # 不透明游标。
+        - { $ref: "#/components/parameters/Cursor" }
+        # 页大小。
+        - { $ref: "#/components/parameters/Limit" }
+      # 查询结果。
+      responses:
+        # 文档游标页。
+        "200":
+          # 成功说明。
+          description: Knowledge 文档游标页
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 文档页契约。
+              schema: { $ref: "#/components/schemas/CursorPageDocument" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Knowledge Base 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 上传原文件并创建首个不可变文档修订。
+    post:
+      # 稳定操作标识。
+      operationId: uploadKnowledgeDocument
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # Multipart 上传请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 Multipart 媒体类型。
+          multipart/form-data:
+            # 上传字段结构。
+            schema:
+              # 声明对象。
+              type: object
+              # 必需上传字段。
+              required: [dataSourceId, title, file]
+              # 上传字段定义。
+              properties:
+                # UPLOAD 数据源标识。
+                dataSourceId: { $ref: "#/components/schemas/UuidV7" }
+                # 文档标题。
+                title: { type: string, minLength: 1, maxLength: 255 }
+                # 可选字符串值元数据 JSON。
+                metadataJson: { type: string, default: "{}", maxLength: 8192 }
+                # 可选客户端 SHA-256。
+                checksum: { $ref: "#/components/schemas/Checksum" }
+                # 原始文件二进制内容。
+                file: { type: string, format: binary }
+      # 上传结果。
+      responses:
+        # 上传并提交成功。
+        "201":
+          # 成功说明。
+          description: 文档首个不可变修订已创建
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 文档修订契约。
+              schema: { $ref: "#/components/schemas/DocumentRevision" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # Hash、Object Store 或状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Project 下的四类不可变 Knowledge Profile 创建端点。
+  /api/v1/projects/{projectId}/knowledge-profiles/{profileKind}:
+    # 复用项目和 Profile 类型参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Profile 类型。
+      - { $ref: "#/components/parameters/KnowledgeProfileKind" }
+    # 创建新的不可变 Profile 版本。
+    post:
+      # 稳定操作标识。
+      operationId: createKnowledgeProfile
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # Profile 创建契约。
+            schema: { $ref: "#/components/schemas/CreateKnowledgeProfileRequest" }
+      # 创建结果。
+      responses:
+        # 创建成功。
+        "201":
+          # 成功说明。
+          description: 不可变 Knowledge Profile 已创建
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Profile 契约。
+              schema: { $ref: "#/components/schemas/KnowledgeProfile" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 版本唯一约束冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Knowledge Base 下的不可变 Revision 集合端点。
+  /api/v1/projects/{projectId}/knowledge-bases/{knowledgeBaseId}/revisions:
+    # 复用项目和 Knowledge Base 参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Knowledge Base 标识。
+      - { $ref: "#/components/parameters/KnowledgeBaseId" }
+    # 游标列出 Knowledge Revision。
+    get:
+      # 稳定操作标识。
+      operationId: listKnowledgeRevisions
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 分页查询参数。
+      parameters:
+        # 不透明游标。
+        - { $ref: "#/components/parameters/Cursor" }
+        # 页大小。
+        - { $ref: "#/components/parameters/Limit" }
+      # 查询结果。
+      responses:
+        # Revision 游标页。
+        "200":
+          # 成功说明。
+          description: Knowledge Revision 游标页
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Revision 页契约。
+              schema: { $ref: "#/components/schemas/CursorPageKnowledgeRevision" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Knowledge Base 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建绑定文档修订和已发布 Profile 的新 Revision。
+    post:
+      # 稳定操作标识。
+      operationId: createKnowledgeRevision
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # Revision 创建契约。
+            schema: { $ref: "#/components/schemas/CreateKnowledgeRevisionRequest" }
+      # 创建结果。
+      responses:
+        # 创建成功。
+        "201":
+          # 成功说明。
+          description: CREATED Knowledge Revision 已创建
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Revision 契约。
+              schema: { $ref: "#/components/schemas/KnowledgeRevision" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 引用资源不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # Profile 未发布或版本冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Knowledge Revision 摄取意图端点。
+  /api/v1/projects/{projectId}/knowledge-revisions/{revisionId}/ingestion-requests:
+    # 复用项目和 Revision 参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Knowledge Revision 标识。
+      - { $ref: "#/components/parameters/KnowledgeRevisionId" }
+    # 幂等描述异步摄取意图，不冒充 Scheduler Job。
+    post:
+      # 稳定操作标识。
+      operationId: requestKnowledgeIngestion
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 幂等请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 摄取请求契约。
+            schema: { $ref: "#/components/schemas/CreateKnowledgeIngestionRequest" }
+      # 接受结果。
+      responses:
+        # 描述已持久化。
+        "202":
+          # 成功说明。
+          description: 摄取意图已幂等持久化，尚未执行向量摄取
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 摄取描述契约。
+              schema: { $ref: "#/components/schemas/KnowledgeIngestionRequest" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Revision 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 幂等键或状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Knowledge Revision 停止新增引用端点。
+  /api/v1/projects/{projectId}/knowledge-revisions/{revisionId}/deprecate:
+    # 复用项目和 Revision 参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Knowledge Revision 标识。
+      - { $ref: "#/components/parameters/KnowledgeRevisionId" }
+    # 将 READY Revision 转为 DEPRECATED。
+    post:
+      # 稳定操作标识。
+      operationId: deprecateKnowledgeRevision
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 转换结果。
+      responses:
+        # 转换成功。
+        "200":
+          # 成功说明。
+          description: Knowledge Revision 已停止新增引用
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Revision 契约。
+              schema: { $ref: "#/components/schemas/KnowledgeRevision" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Revision 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 状态转换冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Knowledge Revision 派生数据清理请求端点。
+  /api/v1/projects/{projectId}/knowledge-revisions/{revisionId}/deletion:
+    # 复用项目和 Revision 参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Knowledge Revision 标识。
+      - { $ref: "#/components/parameters/KnowledgeRevisionId" }
+    # 将允许删除的 Revision 转为 DELETING。
+    post:
+      # 稳定操作标识。
+      operationId: requestKnowledgeRevisionDeletion
+      # Knowledge 功能分组。
+      tags: [Knowledge]
+      # 转换结果。
+      responses:
+        # 转换成功。
+        "200":
+          # 成功说明。
+          description: Knowledge Revision 已进入派生数据清理状态
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Revision 契约。
+              schema: { $ref: "#/components/schemas/KnowledgeRevision" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Revision 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 状态转换冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+
 # 汇总可复用的 Schema 与响应组件。
 components:
   # 注册公共 Schema 引用。
@@ -1075,6 +1536,74 @@ components:
     CursorPageSecretBinding:
       # 引用版本化资产公共契约。
       $ref: ../schemas/catalog-public/v1.json#/$defs/CursorPageSecretBinding
+    # Knowledge Base 公共视图。
+    KnowledgeBase:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/KnowledgeBase
+    # Knowledge 数据源公共视图。
+    DataSource:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/DataSource
+    # 文档稳定身份与 ACL 公共视图。
+    Document:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/Document
+    # 不可变文档修订公共视图。
+    DocumentRevision:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/DocumentRevision
+    # 不可变 Knowledge Profile 公共视图。
+    KnowledgeProfile:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/KnowledgeProfile
+    # 不可变 Knowledge Revision 公共视图。
+    KnowledgeRevision:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/KnowledgeRevision
+    # 摄取请求描述公共视图。
+    KnowledgeIngestionRequest:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/IngestionRequest
+    # 创建 Knowledge Base 请求。
+    CreateKnowledgeBaseRequest:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/CreateKnowledgeBaseRequest
+    # 创建 Knowledge 数据源请求。
+    CreateDataSourceRequest:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/CreateDataSourceRequest
+    # 创建不可变 Knowledge Profile 请求。
+    CreateKnowledgeProfileRequest:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/CreateProfileRequest
+    # 创建 Knowledge Revision 请求。
+    CreateKnowledgeRevisionRequest:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/CreateKnowledgeRevisionRequest
+    # 创建摄取意图请求。
+    CreateKnowledgeIngestionRequest:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/CreateIngestionRequest
+    # Knowledge Base 游标页。
+    CursorPageKnowledgeBase:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/CursorPageKnowledgeBase
+    # Knowledge 数据源游标页。
+    CursorPageDataSource:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/CursorPageDataSource
+    # Knowledge 文档游标页。
+    CursorPageDocument:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/CursorPageDocument
+    # Knowledge Revision 游标页。
+    CursorPageKnowledgeRevision:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/CursorPageKnowledgeRevision
+    # 规范 SHA-256 字符串。
+    Checksum:
+      # 引用版本化 Knowledge 公共契约。
+      $ref: ../schemas/knowledge-public/v1.json#/$defs/Checksum
   # 注册路径参数模板。
   parameters:
     # 组织标识路径参数。
@@ -1157,6 +1686,36 @@ components:
       required: true
       # UUIDv7 参数结构。
       schema: { $ref: "#/components/schemas/UuidV7" }
+    # Knowledge Base 标识路径参数。
+    KnowledgeBaseId:
+      # 参数名称。
+      name: knowledgeBaseId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # Knowledge Revision 标识路径参数。
+    KnowledgeRevisionId:
+      # 参数名称。
+      name: revisionId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # Knowledge Profile 类型路径参数。
+    KnowledgeProfileKind:
+      # 参数名称。
+      name: profileKind
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # 只允许四类中立 Profile。
+      schema: { type: string, enum: [parser, chunk, embedding, retrieval] }
   # 注册公共 HTTP 响应模板。
   responses:
     # 定义采用 application/problem+json 的错误响应。

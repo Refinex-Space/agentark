@@ -86,6 +86,15 @@ public final class AgentArkJacksonModule extends SimpleModule {
         addId(PermissionPolicyVersionId.class, PermissionPolicyVersionId::parse);
         addId(SecretMetadataId.class, SecretMetadataId::parse);
         addId(SecretBindingId.class, SecretBindingId::parse);
+        addId(KnowledgeBaseId.class, KnowledgeBaseId::parse);
+        addId(DataSourceId.class, DataSourceId::parse);
+        addId(DocumentId.class, DocumentId::parse);
+        addId(DocumentRevisionId.class, DocumentRevisionId::parse);
+        addId(ParserProfileId.class, ParserProfileId::parse);
+        addId(ChunkProfileId.class, ChunkProfileId::parse);
+        addId(EmbeddingProfileId.class, EmbeddingProfileId::parse);
+        addId(RetrievalProfileId.class, RetrievalProfileId::parse);
+        addId(IngestionRequestId.class, IngestionRequestId::parse);
     }
 
     /**

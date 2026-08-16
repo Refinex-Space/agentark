@@ -22,6 +22,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 06 执行证据 | [MySQL 持久化基线](implementation/phase-06-persistence-baseline.md) | 复核三套 Flyway、DataSource Owner、MySQL Contract Test 与门禁 |
 | Phase 07 执行证据 | [IAM 与多租户基线](implementation/phase-07-iam-tenancy.md) | 复核身份映射、租户资源树、角色授权、API Key、越权测试与 Public API |
 | Phase 08 执行证据 | [AI 资产目录](implementation/phase-08-asset-catalog.md) | 复核不可变资产版本、Secret 引用、Skill ObjectRef、Public API 与租户隔离 |
+| Phase 09 执行证据 | [Knowledge 元数据与 Provider Ports](implementation/phase-09-knowledge-metadata.md) | 复核中立 Knowledge 领域、不可变版本、状态机、V4、Public API、Ports 与租户隔离 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |

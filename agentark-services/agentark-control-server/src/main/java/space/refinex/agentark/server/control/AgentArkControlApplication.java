@@ -19,19 +19,24 @@ package space.refinex.agentark.server.control;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
+import space.refinex.agentark.control.catalog.CatalogControlConfiguration;
 import space.refinex.agentark.control.iam.IamControlConfiguration;
 
 /**
- * AgentArk Control Plane 启动入口，装配 Spring MVC、IAM 租户授权和管理端点。
+ * AgentArk Control Plane 启动入口，装配 Spring MVC、IAM、资产目录和 Knowledge 管理端点。
  *
  * @author refinex
  */
 @SpringBootApplication
-@Import(IamControlConfiguration.class)
+@Import({
+    IamControlConfiguration.class,
+    CatalogControlConfiguration.class,
+    KnowledgeControlBridgeConfiguration.class
+})
 public class AgentArkControlApplication {
 
     /**
-     * 启动 Control Spring Boot 应用并装配 Phase 07 IAM 能力。
+     * 启动 Control Spring Boot 应用并装配 Phase 09 前已完成的 Control 能力。
      *
      * @param args 传递给 Spring Boot 的命令行参数
      */

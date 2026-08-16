@@ -45,4 +45,13 @@ Phase 08 增加以下资产目录契约约束：
 - Secret API 只接收和返回 Provider、External Path/Version、Scope、状态和 Binding，不存在接收或读取 Secret 值的 Endpoint；
 - `contracts/schemas/catalog-public/v1.json` 是 Catalog、ObjectRef 与 Secret Public DTO 的版本化 Schema，Golden File 由 Kernel 契约测试验证。
 
+Phase 09 增加以下 Knowledge 契约约束：
+
+- Public Control 增加 Knowledge Base、Data Source、Document/Revision、四类 Profile、Knowledge Revision、摄取描述和删除状态转换的八组真实路径；契约测试继续精确比较完整 Path 集合；
+- 所有列表使用项目 Scope 内 UUIDv7 稳定排序的不透明 Cursor，`limit` 范围为 1–100。游标只携带上一页末资源标识，不携带 Project、ACL 或授权事实；
+- `contracts/schemas/knowledge-public/v1.json` 是 Knowledge Public DTO 的版本化 Schema。持久化 JSON 在 Adapter 中还原为对象，不向调用方暴露双重编码字符串、MyBatis 行或 AgentScope/Qdrant 类型；
+- 原文件上传使用服务端生成对象路径并返回无授权参数的 `ObjectRef`；客户端可提供 SHA-256 做完整性校验，但不能指定授权路径；
+- 摄取接口只持久化 `DESCRIBED` 意图并返回 `202`，不声称已经创建 Scheduler Job 或完成 Embedding。重复幂等键只能指向同一 Knowledge Revision；
+- Knowledge Revision 只有 `READY` 可供 Agent Revision Resolver 引用；状态转换、不可变内容绑定、失败代码和清理状态必须由领域状态机约束。
+
 Golden File、明文 Secret 负例和文档结构 Lint 由 `agentark-kernel` 测试执行，必需文件与 Kernel/Server 边界由知识门禁检查。首次发布后的修改必须增加 Breaking Change 检测；在不存在已发布前一版本的 Phase 03 不伪造兼容比较结果。

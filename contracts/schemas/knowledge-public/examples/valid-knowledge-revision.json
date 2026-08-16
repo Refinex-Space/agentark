@@ -1,0 +1,20 @@
+{
+  "id": "0198a4b0-1001-7101-8101-000000000001",
+  "organizationId": "0198a4b0-1002-7102-8102-000000000002",
+  "projectId": "0198a4b0-1003-7103-8103-000000000003",
+  "knowledgeBaseId": "0198a4b0-1004-7104-8104-000000000004",
+  "revisionNumber": 1,
+  "documentRevisionIds": [
+    "0198a4b0-1005-7105-8105-000000000005"
+  ],
+  "parserProfileId": "0198a4b0-1006-7106-8106-000000000006",
+  "chunkProfileId": "0198a4b0-1007-7107-8107-000000000007",
+  "embeddingProfileId": "0198a4b0-1008-7108-8108-000000000008",
+  "retrievalProfileId": "0198a4b0-1009-7109-8109-000000000009",
+  "contentHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "status": "READY",
+  "failureCode": "",
+  "version": 3,
+  "createdAt": "2026-08-16T00:00:00Z",
+  "updatedAt": "2026-08-16T00:05:00Z"
+}

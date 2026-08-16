@@ -59,7 +59,7 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 | ID | 候选源路径/资源 | 分类 | 目标模块/Phase | Disposition |
 |---|---|---|---|---|
 | AIO-01 | `internal/product/handlers_auth.go`、`handlers_admin.go` | REFERENCE | `agentark-control` / P07 | P07 已参考身份传递与管理 API 语义重建 OIDC/JWT/API Key IAM；拒绝 7 天 HS256、本地用户名密码库、明文 Seed 用户和共享 Internal Token |
-| AIO-02 | Agent/Workspace/Marketplace/File Handlers | ADAPT | `agentark-control` / P08–10 | P08 已独立建立 Agent 稳定身份、Workspace Profile 与 Skill ObjectRef；Draft/Revision/Snapshot 继续由 P09–10 重建 |
+| AIO-02 | Agent/Workspace/Marketplace/File Handlers | ADAPT | `agentark-control` / P08、P10 | P08 已独立建立 Agent 稳定身份、Workspace Profile 与 Skill ObjectRef；Draft/Revision/Snapshot 由 P10 重建 |
 | AIO-03 | Product Session Handlers/Internal resolve | ADAPT | Control Contract + Runtime / P10–13 | 拆 Session 生命周期 Owner，版本化 Internal Contract |
 | AIO-04 | Environment/Vault/Memory Handlers | ADAPT | Control / P08–10 | P08 已独立建立 Secret Metadata/Binding、Memory Profile、Resolver SPI 和审计；拒绝明文 Vault 请求 |
 | AIO-05 | Deployment/Webhook/Channel Handlers | ADAPT | Control + Scheduling / P10、P15 | Control 保存意图，Scheduler 拥有执行记录 |
@@ -153,6 +153,19 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 
 Phase 08 新增代码均为 AgentArk 独立实现，没有迁入固定上游源码、文件头、品牌资源或第三方资产。运行时转换继续由 Phase 12 的 Provider 防腐层负责。
 
-## 9. 变更协议
+## 9. Phase 09 实际处置
+
+| 来源范围 | 分类 | 实际结果 | 明确延后或拒绝 |
+|---|---|---|---|
+| Core deprecated `rag/Knowledge`、Document 模型 | `REFERENCE` | 只提炼检索能力边界；AgentArk 独立建立 KnowledgeBase、Document/Revision、ACL 与不可变 KnowledgeRevision | 不复制旧类型，不让其进入 Domain/API |
+| RAG Simple `SimpleKnowledge` | `REFERENCE` | 独立拆出 Parser、Chunk、Embedding、VectorIndex、Retriever、Reranker Ports 与 Fake Adapter | 不直接组合 Provider 实现，不同步执行大文档摄取 |
+| Reader/Chunker/Embedding | `REFERENCE/DEFER` | Phase 09 只建立中立 Port 和版本化 Profile | PDF/Word/Tika、真实 Embedding 与模型 SDK 延后 P14 |
+| Qdrant/Elasticsearch/Milvus/PgVector Store | `DEFER` | `VectorIndex` 显式要求可信 `ProjectId + KnowledgeRevisionId` | 不引入客户端依赖，不把 Collection 名当授权机制 |
+| Bailian/Dify/Haystack/RAGFlow | `DEFER/REJECT` | 仅记录托管检索和 Rerank 语义 | P14 未逐个做安全、许可和产品决策前不得进入运行闭包 |
+| AgentScope Service/Aistio/Frontend Knowledge | `REFERENCE` | 全量索引确认没有独立 Knowledge/Document 管理 API/UI 可迁移 | 不虚构上游 Service 功能或复制无关页面 |
+
+Phase 09 实现源码均为 AgentArk 独立实现。`agentark-knowledge` 的 Domain/Application 无 `io.agentscope`、Qdrant、Elasticsearch、Milvus 或 PgVector 类型；未来 AgentScope 适配只允许进入 `adapter.out.vector.agentscope`，且归 Phase 14 单独审计。
+
+## 10. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

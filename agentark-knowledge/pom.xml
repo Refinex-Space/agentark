@@ -11,6 +11,115 @@
 
     <artifactId>agentark-knowledge</artifactId>
     <name>AgentArk Knowledge</name>
-    <description>Knowledge 领域模块占位，计划在 Phase 09 开始实现</description>
+    <description>提供 Knowledge 元数据、不可变版本、摄取端口与 Control 持久化边界</description>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- 导入 AgentArk BOM，统一管理 Spring Boot、MyBatis-Plus、Testcontainers 与内部模块版本。 -->
+            <dependency>
+                <groupId>${project.groupId}</groupId>
+                <artifactId>agentark-bom</artifactId>
+                <version>${project.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <!-- 提供 Knowledge、Document、Profile 和 Revision 强类型 UUIDv7 及对象引用。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-kernel</artifactId>
+        </dependency>
+
+        <!-- 提供 AgentArkPrincipal 与组合根授权 Port 所需的安全契约。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-security</artifactId>
+        </dependency>
+
+        <!-- 提供 RFC 9457、Cursor Pagination、请求上下文与强类型 ID JSON 映射。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-web</artifactId>
+        </dependency>
+
+        <!-- 提供 Control Schema 所属 MyBatis、Flyway、事务与受控类型处理能力。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-persistence</artifactId>
+        </dependency>
+
+        <!-- 提供原始文件受控上传、SHA-256 校验和非授权 ObjectRef。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-storage</artifactId>
+        </dependency>
+
+        <!-- 提供 Knowledge Public API 的 Spring MVC、Multipart 和 Bean Validation 运行时。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
+        </dependency>
+
+        <!-- 仅在测试中提供真实 IAM 组合根与 Phase 08 Control 迁移，不进入 Knowledge 生产依赖。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-control</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 Knowledge Migration Test 使用的 MySQL 8.4 JDBC 驱动。 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 复用三平面一致的 MySQL 迁移测试夹具，不进入生产制品。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-persistence</artifactId>
+            <version>${project.version}</version>
+            <type>test-jar</type>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 Knowledge V4 迁移与真实 Repository 往返使用的 MySQL 8.4 容器。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-mysql</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 将 Testcontainers 生命周期接入 Knowledge 的 JUnit Jupiter 集成测试。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 Knowledge 单元、契约、Spring 上下文和 AssertJ 测试能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 Knowledge 跨租户 HTTP 测试的已认证主体注入能力。 -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 提供 Knowledge Domain/Application 禁止依赖厂商类型的架构规则。 -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
 
 </project>

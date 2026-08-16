@@ -38,7 +38,7 @@
             <artifactId>agentark-control</artifactId>
         </dependency>
 
-        <!-- 提供 Knowledge 元数据领域边界，当前 Phase 仅为空实现占位。 -->
+        <!-- 提供 Knowledge 元数据、不可变版本、文档上传与 Public API。 -->
         <dependency>
             <groupId>${project.groupId}</groupId>
             <artifactId>agentark-knowledge</artifactId>

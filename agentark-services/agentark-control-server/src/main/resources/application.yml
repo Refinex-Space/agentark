@@ -150,3 +150,11 @@ agentark:
       enabled: true
       # 单节点本地缓存最多陈旧十五秒，成员或角色变化在提交后主动失效。
       authorization-cache-ttl: 15s
+    # AI 资产目录和 Secret Metadata 由 Control Server 组合根显式装配。
+    catalog:
+      # 正常服务默认启用资产目录；无数据库测试必须显式关闭。
+      enabled: true
+    # Knowledge 元数据、文档 ACL、不可变 Revision 和摄取描述由 Control 所有。
+    knowledge:
+      # 正常服务默认启用 Knowledge；真实向量摄取仍留在后续 Phase。
+      enabled: true

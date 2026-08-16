@@ -22,6 +22,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
+import org.springframework.context.annotation.Import;
+import space.refinex.agentark.control.catalog.CatalogControlConfiguration;
+import space.refinex.agentark.control.iam.IamControlConfiguration;
 
 /**
  * 验证 Control 空业务应用能以 Spring MVC 容器独立启动。
@@ -33,6 +36,8 @@ import org.springframework.core.env.Environment;
     properties = {
         "spring.profiles.active=test",
         "agentark.control.iam.enabled=false",
+        "agentark.control.catalog.enabled=false",
+        "agentark.control.knowledge.enabled=false",
         "spring.autoconfigure.exclude="
             + "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration,"
             + "org.springframework.boot.flyway.autoconfigure.FlywayAutoConfiguration,"
@@ -61,5 +66,17 @@ class AgentArkControlApplicationTest {
         assertThat(environment.getProperty("local.server.port", Integer.class)).isPositive();
         assertThat(environment.getProperty("spring.application.name"))
             .isEqualTo("agentark-control-server");
+    }
+
+    /**
+     * 证明生产组合根显式导入 IAM、Catalog 和 Knowledge，防止模块仅在集成测试中生效。
+     */
+    @Test
+    void importsAllControlCapabilitiesAtCompositionRoot() {
+        Import imports = AgentArkControlApplication.class.getAnnotation(Import.class);
+        assertThat(imports.value()).containsExactlyInAnyOrder(
+            IamControlConfiguration.class,
+            CatalogControlConfiguration.class,
+            KnowledgeControlBridgeConfiguration.class);
     }
 }

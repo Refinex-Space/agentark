@@ -121,6 +121,21 @@ public final class PermissionRegistry {
     public static final String SECRET_MANAGE = "secret:manage";
 
     /**
+     * 允许读取 Knowledge 元数据、文档 ACL 和可用 Revision。
+     */
+    public static final String KNOWLEDGE_READ = "knowledge:read";
+
+    /**
+     * 允许管理 Knowledge Base、文档、Profile 与 Revision。
+     */
+    public static final String KNOWLEDGE_MANAGE = "knowledge:manage";
+
+    /**
+     * 允许描述 Knowledge 摄取请求并推进受控状态机。
+     */
+    public static final String KNOWLEDGE_INGEST = "knowledge:ingest";
+
+    /**
      * 按固定顺序保存所有注册权限，便于 Flyway 和 OpenAPI 对齐校验。
      */
     private static final Map<String, Definition> DEFINITIONS = definitions();
@@ -149,7 +164,10 @@ public final class PermissionRegistry {
         CATALOG_READ,
         CATALOG_MANAGE,
         SECRET_READ,
-        SECRET_MANAGE);
+        SECRET_MANAGE,
+        KNOWLEDGE_READ,
+        KNOWLEDGE_MANAGE,
+        KNOWLEDGE_INGEST);
 
     /**
      * 项目开发者拥有的非授权管理权限。
@@ -161,7 +179,10 @@ public final class PermissionRegistry {
         SERVICE_ACCOUNT_READ,
         API_KEY_READ,
         CATALOG_READ,
-        CATALOG_MANAGE);
+        CATALOG_MANAGE,
+        KNOWLEDGE_READ,
+        KNOWLEDGE_MANAGE,
+        KNOWLEDGE_INGEST);
 
     /**
      * 项目只读角色拥有的最低读取权限。
@@ -174,7 +195,8 @@ public final class PermissionRegistry {
         ROLE_READ,
         SERVICE_ACCOUNT_READ,
         API_KEY_READ,
-        CATALOG_READ);
+        CATALOG_READ,
+        KNOWLEDGE_READ);
 
     /**
      * 禁止实例化静态权限注册表。
@@ -268,6 +290,9 @@ public final class PermissionRegistry {
         values.put(CATALOG_MANAGE, new Definition("管理 AI 资产目录", PermissionRiskLevel.HIGH));
         values.put(SECRET_READ, new Definition("读取 Secret 非敏感元数据", PermissionRiskLevel.MEDIUM));
         values.put(SECRET_MANAGE, new Definition("管理 Secret 元数据与环境绑定", PermissionRiskLevel.HIGH));
+        values.put(KNOWLEDGE_READ, new Definition("读取 Knowledge 元数据", PermissionRiskLevel.LOW));
+        values.put(KNOWLEDGE_MANAGE, new Definition("管理 Knowledge 元数据", PermissionRiskLevel.HIGH));
+        values.put(KNOWLEDGE_INGEST, new Definition("描述 Knowledge 摄取请求", PermissionRiskLevel.HIGH));
         return Collections.unmodifiableMap(new LinkedHashMap<>(values));
     }
 

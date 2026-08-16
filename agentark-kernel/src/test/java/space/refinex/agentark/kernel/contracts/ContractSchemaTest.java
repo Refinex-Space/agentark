@@ -66,6 +66,14 @@ class ContractSchemaTest {
         "schemas/catalog-public/examples/valid-catalog-version.json");
   }
 
+  /** 验证 Knowledge Revision Golden File 符合版本化公共 Schema。 */
+  @Test
+  void knowledgeRevisionGoldenFileConformsToPublicSchema() throws IOException {
+    assertValid(
+        "schemas/knowledge-public/v1.json",
+        "schemas/knowledge-public/examples/valid-knowledge-revision.json");
+  }
+
   /** 验证 Snapshot Schema 拒绝明文凭证字段、值和带用户信息的端点。 */
   @Test
   void snapshotSchemaRejectsPlaintextCredentials() throws IOException {

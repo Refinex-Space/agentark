@@ -22,7 +22,7 @@ Phase 08 在 Control Plane 建立了项目级 AI 资产目录：Agent 稳定身�
 
 ## 领域与版本约束
 
-九类稳定身份由 `CatalogAssetKind` 固定映射到受信表和强类型 UUIDv7，调用方不能提供动态表名。Agent 仅建立稳定身份，Draft、Revision 和 Snapshot 仍归 Phase 09。其余八类行为资产都有 Owner 内单调版本号、规范 JSON、SHA-256 `contentHash` 和 `DRAFT/PUBLISHED/ARCHIVED` 创建语义。
+九类稳定身份由 `CatalogAssetKind` 固定映射到受信表和强类型 UUIDv7，调用方不能提供动态表名。Agent 仅建立稳定身份，Draft、Revision 和 Snapshot 仍归 Phase 10。其余八类行为资产都有 Owner 内单调版本号、规范 JSON、SHA-256 `contentHash` 和 `DRAFT/PUBLISHED/ARCHIVED` 创建语义。
 
 版本 Repository 只提供追加与读取，不提供更新和物理删除；稳定身份使用乐观锁归档，历史版本继续可读。Prompt 版本保存模板、变量 JSON Schema、用途和 Diff；Model Profile 保存 Tool/Vision/Structured Output/Streaming 能力与参数约束；Profile/Policy 保存语言中立策略，不进入 Runtime 执行。
 
@@ -59,4 +59,4 @@ Catalog 与 Secret Controller 复用 Phase 07 的 Project Owner、Principal → 
 
 ## 后续边界
 
-Phase 09 必须引用 Phase 08 的稳定资产版本构建 Draft、Validation、Revision 和 Snapshot，不能覆盖旧版本或把 Secret 值编译进 Snapshot。Phase 12 Provider Adapter 才把平台中立描述转换为 AgentScope 类型；Phase 19 延续同一 Secret Owner 补轮换、过期和治理，不另建第二套 Secret 模型。
+Phase 10 必须引用 Phase 08 的稳定资产版本和 Phase 09 的 READY KnowledgeRevision 构建 Draft、Validation、Revision 和 Snapshot，不能覆盖旧版本或把 Secret 值编译进 Snapshot。Phase 12 Provider Adapter 才把平台中立描述转换为 AgentScope 类型；Phase 19 延续同一 Secret Owner 补轮换、过期和治理，不另建第二套 Secret 模型。

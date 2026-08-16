@@ -64,7 +64,16 @@ public sealed interface StrongId
     PermissionPolicyId,
     PermissionPolicyVersionId,
     SecretMetadataId,
-    SecretBindingId {
+    SecretBindingId,
+    KnowledgeBaseId,
+    DataSourceId,
+    DocumentId,
+    DocumentRevisionId,
+    ParserProfileId,
+    ChunkProfileId,
+    EmbeddingProfileId,
+    RetrievalProfileId,
+    IngestionRequestId {
 
     /**
      * 返回领域标识持有的 UUIDv7 原始值。

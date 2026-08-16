@@ -1,0 +1,339 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/knowledge-public/v1.json",
+  "title": "AgentArk Knowledge 公共契约",
+  "oneOf": [
+    { "$ref": "#/$defs/KnowledgeBase" },
+    { "$ref": "#/$defs/DataSource" },
+    { "$ref": "#/$defs/Document" },
+    { "$ref": "#/$defs/DocumentRevision" },
+    { "$ref": "#/$defs/KnowledgeProfile" },
+    { "$ref": "#/$defs/KnowledgeRevision" },
+    { "$ref": "#/$defs/IngestionRequest" }
+  ],
+  "$defs": {
+    "UuidV7": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "Checksum": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "SecretRef": {
+      "type": "string",
+      "pattern": "^secret://[^/?#]+/[^?#]+$"
+    },
+    "ObjectRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri", "checksum", "size", "mediaType"],
+      "properties": {
+        "uri": { "type": "string", "pattern": "^(object|s3|oss|cos)://[^/?#]+/[^?#]+$" },
+        "checksum": { "$ref": "#/$defs/Checksum" },
+        "size": { "type": "integer", "minimum": 0 },
+        "mediaType": { "type": "string", "minLength": 3, "maxLength": 255 }
+      }
+    },
+    "KnowledgeBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "organizationId", "projectId", "key", "name", "description", "status",
+        "version", "createdAt", "updatedAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 512 },
+        "status": { "type": "string", "enum": ["ACTIVE", "ARCHIVED"] },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "DataSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "organizationId", "projectId", "knowledgeBaseId", "type", "name",
+        "descriptor", "createdAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "knowledgeBaseId": { "$ref": "#/$defs/UuidV7" },
+        "type": { "type": "string", "enum": ["UPLOAD", "URI", "CONNECTOR"] },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "descriptor": { "type": "object" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "DocumentAcl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["subjectType", "subjectId", "accessLevel"],
+      "properties": {
+        "subjectType": {
+          "type": "string",
+          "enum": ["PROJECT", "USER", "SERVICE_ACCOUNT", "ROLE"]
+        },
+        "subjectId": { "$ref": "#/$defs/UuidV7" },
+        "accessLevel": { "type": "string", "enum": ["READ", "WRITE", "MANAGE"] }
+      }
+    },
+    "Document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "organizationId", "projectId", "knowledgeBaseId", "dataSourceId", "title",
+        "metadata", "acl", "status", "version", "createdAt", "updatedAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "knowledgeBaseId": { "$ref": "#/$defs/UuidV7" },
+        "dataSourceId": { "$ref": "#/$defs/UuidV7" },
+        "title": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "metadata": {
+          "type": "object",
+          "maxProperties": 64,
+          "propertyNames": { "pattern": "^[a-z][a-z0-9_.-]{0,62}$" },
+          "additionalProperties": { "type": "string", "maxLength": 1024 }
+        },
+        "acl": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/DocumentAcl" }
+        },
+        "status": { "type": "string", "enum": ["ACTIVE", "DELETING", "DELETED"] },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "DocumentRevision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "organizationId", "projectId", "knowledgeBaseId", "documentId",
+        "revisionNumber", "originalFileName", "objectRef", "createdAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "knowledgeBaseId": { "$ref": "#/$defs/UuidV7" },
+        "documentId": { "$ref": "#/$defs/UuidV7" },
+        "revisionNumber": { "type": "integer", "minimum": 1 },
+        "originalFileName": { "type": "string", "minLength": 1, "maxLength": 255 },
+        "objectRef": { "$ref": "#/$defs/ObjectRef" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "KnowledgeProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "profileKind", "organizationId", "projectId", "key", "versionNumber",
+        "config", "credentialSecretRef", "contentHash", "status", "createdAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "profileKind": {
+          "type": "string",
+          "enum": ["PARSER", "CHUNK", "EMBEDDING", "RETRIEVAL"]
+        },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+        "versionNumber": { "type": "integer", "minimum": 1 },
+        "config": { "type": "object" },
+        "credentialSecretRef": {
+          "oneOf": [
+            { "$ref": "#/$defs/SecretRef" },
+            { "type": "null" }
+          ]
+        },
+        "contentHash": { "$ref": "#/$defs/Checksum" },
+        "status": { "type": "string", "enum": ["DRAFT", "PUBLISHED", "DEPRECATED"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "KnowledgeRevision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "organizationId", "projectId", "knowledgeBaseId", "revisionNumber",
+        "documentRevisionIds", "parserProfileId", "chunkProfileId", "embeddingProfileId",
+        "retrievalProfileId", "contentHash", "status", "failureCode", "version", "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "knowledgeBaseId": { "$ref": "#/$defs/UuidV7" },
+        "revisionNumber": { "type": "integer", "minimum": 1 },
+        "documentRevisionIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/UuidV7" }
+        },
+        "parserProfileId": { "$ref": "#/$defs/UuidV7" },
+        "chunkProfileId": { "$ref": "#/$defs/UuidV7" },
+        "embeddingProfileId": { "$ref": "#/$defs/UuidV7" },
+        "retrievalProfileId": { "$ref": "#/$defs/UuidV7" },
+        "contentHash": { "$ref": "#/$defs/Checksum" },
+        "status": {
+          "type": "string",
+          "enum": [
+            "CREATED", "INGESTING", "VERIFYING", "READY", "FAILED", "DEPRECATED",
+            "DELETING", "DELETED"
+          ]
+        },
+        "failureCode": { "type": "string", "pattern": "^(|[A-Z][A-Z0-9_]{0,63})$" },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "IngestionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "organizationId", "projectId", "knowledgeRevisionId", "idempotencyKey",
+        "status", "requestedAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "knowledgeRevisionId": { "$ref": "#/$defs/UuidV7" },
+        "idempotencyKey": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+        },
+        "status": { "type": "string", "enum": ["DESCRIBED", "CANCELLED"] },
+        "requestedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CreateKnowledgeBaseRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 512 }
+      }
+    },
+    "CreateDataSourceRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "name", "descriptor"],
+      "properties": {
+        "type": { "type": "string", "enum": ["UPLOAD", "URI", "CONNECTOR"] },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "descriptor": { "type": "object" }
+      }
+    },
+    "CreateProfileRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "config", "status"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$" },
+        "config": { "type": "object" },
+        "credentialSecretRef": {
+          "oneOf": [
+            { "$ref": "#/$defs/SecretRef" },
+            { "type": "null" }
+          ]
+        },
+        "status": { "type": "string", "enum": ["DRAFT", "PUBLISHED", "DEPRECATED"] }
+      }
+    },
+    "CreateKnowledgeRevisionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "documentRevisionIds", "parserProfileId", "chunkProfileId", "embeddingProfileId",
+        "retrievalProfileId"
+      ],
+      "properties": {
+        "documentRevisionIds": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/UuidV7" }
+        },
+        "parserProfileId": { "$ref": "#/$defs/UuidV7" },
+        "chunkProfileId": { "$ref": "#/$defs/UuidV7" },
+        "embeddingProfileId": { "$ref": "#/$defs/UuidV7" },
+        "retrievalProfileId": { "$ref": "#/$defs/UuidV7" }
+      }
+    },
+    "CreateIngestionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["idempotencyKey"],
+      "properties": {
+        "idempotencyKey": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$"
+        }
+      }
+    },
+    "CursorPageKnowledgeBase": { "$ref": "#/$defs/CursorPageTemplateKnowledgeBase" },
+    "CursorPageDataSource": { "$ref": "#/$defs/CursorPageTemplateDataSource" },
+    "CursorPageDocument": { "$ref": "#/$defs/CursorPageTemplateDocument" },
+    "CursorPageKnowledgeRevision": { "$ref": "#/$defs/CursorPageTemplateKnowledgeRevision" },
+    "CursorPageTemplateKnowledgeBase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "nextCursor", "hasMore"],
+      "properties": {
+        "items": { "type": "array", "items": { "$ref": "#/$defs/KnowledgeBase" } },
+        "nextCursor": { "type": ["string", "null"] },
+        "hasMore": { "type": "boolean" }
+      }
+    },
+    "CursorPageTemplateDataSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "nextCursor", "hasMore"],
+      "properties": {
+        "items": { "type": "array", "items": { "$ref": "#/$defs/DataSource" } },
+        "nextCursor": { "type": ["string", "null"] },
+        "hasMore": { "type": "boolean" }
+      }
+    },
+    "CursorPageTemplateDocument": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "nextCursor", "hasMore"],
+      "properties": {
+        "items": { "type": "array", "items": { "$ref": "#/$defs/Document" } },
+        "nextCursor": { "type": ["string", "null"] },
+        "hasMore": { "type": "boolean" }
+      }
+    },
+    "CursorPageTemplateKnowledgeRevision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "nextCursor", "hasMore"],
+      "properties": {
+        "items": { "type": "array", "items": { "$ref": "#/$defs/KnowledgeRevision" } },
+        "nextCursor": { "type": ["string", "null"] },
+        "hasMore": { "type": "boolean" }
+      }
+    }
+  }
+}

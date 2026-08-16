@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-16
 status: active
 referenced_by: docs/README.md#上游迁移审计
 ---
@@ -147,6 +147,12 @@ Phase 01 只做只读取证；Phase 02 已在同一固定 SHA 的隔离可写完
 |---|---|---|
 | Core/Harness 代表测试：`RuntimeContextTest`、`EventTest`、`PermissionEngineTest`、`HarnessAgentTest`、`HarnessMiddlewareOrderTest`、`WorkspaceManagerPathSafetyTest`、`SandboxManagerIsolationTest`、`McpToolTest` | Core/Harness 已提供 Agent 循环、事件、权限、中间件、Workspace、Sandbox、MCP 等能力 | 通过依赖使用；Provider Compatibility Suite 固定 2.0.2 行为；升级 AgentScope 时先跑 Contract Test，再改 Adapter；禁止复制框架核心 |
 
+## KNO-01 RAG 组合与平台版本边界
+
+| 证据 | 上游行为 | AgentArk 门禁 |
+|---|---|---|
+| `agentscope-extensions-rag-simple/.../SimpleKnowledge.java`、`VDBStoreBase.java`、Reader/Embedding/Store 测试 | Simple Knowledge 在单个对象中直接组合 Reader/Chunk、Embedding 和 Vector Store；Core 旧 Knowledge/Document 自 2.0.0 起 deprecated；未提供租户、ACL、不可变 Revision 或摄取状态机 | Phase 09 先建立中立 Knowledge/Document/Profile/Revision、READY 引用门禁和 Provider Ports；真实 Parser/Embedding/Qdrant 只能在 P14 Adapter 实现；任何向量操作必须携带可信 Project 与 Revision，Collection 名不是授权事实 |
+
 ## DSH-01 Web 视觉与交互参考
 
 | 证据 | 上游行为 | AgentArk 门禁 |
@@ -170,6 +176,7 @@ Phase 01 只做只读取证；Phase 02 已在同一固定 SHA 的隔离可写完
 | AgentScope Service 独立构建 | Service Parent 和 `agentscope-extensions-aistio` 依赖只能由完整 Monorepo Reactor 解析 | P02 机械基线只作证据；最终 AgentArk 通过发布依赖使用 Framework |
 | AgentScope Frontend Build | lint 未声明 ESLint；源码缺 `src/features/build/`，固定 Commit 无法完成 lint/build | P17–18 只参考功能语义并独立实现 |
 | 开发默认凭据日志 | Dataplane/Scheduler 测试启动会打印默认管理员明文密码 `admin` | P20 明确拒绝并增加 Secret/Log Gate |
+| Knowledge Service/API/UI | 固定 Aistio、Java Service 和 Frontend 未发现独立 Knowledge Base/Document/Ingestion 管理功能 | P09 独立建立平台元数据和契约；不得描述成上游 Service 迁移 |
 
 ## 3. 数据一致性检查清单
 
@@ -196,6 +203,7 @@ Phase 01 只做只读取证；Phase 02 已在同一固定 SHA 的隔离可写完
 | Scheduler | `ChannelExternalKeysTest`、`SelfHostedHandsUnitTest`、`SchedulerAppContextLoadTest` |
 | Aistio | `event_paging_test.go`、`queue_test.go`、`matrix_test.go`、`team_auth_test.go`、`team_deleted_writes_test.go`、`lifecycle_cleanup_test.go`、`postgres_test.go` |
 | Core/Harness | `RuntimeContextTest`、`EventTest`、`PermissionEngineTest`、`AgentStateStoreVersioningContractTest`、`HarnessAgentTest`、`HarnessMiddlewareOrderTest`、`SubagentIsolationIntegrationTest`、`SandboxManagerIsolationTest` |
+| RAG/Knowledge | `KnowledgeTest`、`SimpleKnowledgeTest`、`VDBStoreBaseTest`、`TextChunkerTest`、`RAGInMemoryE2ETest`、各 Vector Store Test |
 | Protocol/Provider | `AguiAgentAdapterV2Test`、`AguiResumeCoordinatorTest`、`A2aAgentTest`、各 Model Provider Test |
 | DeepSeek Web | `approval-composer.e2e.ts`、`chat-scroll-contract.e2e.ts`、`trajectory-virtualization.e2e.ts`、`pwsh-terminal.e2e.ts`、`workspace-management.e2e.ts`、`runtime/tests/manager.client.spec.ts` |
 
@@ -207,8 +215,9 @@ Phase 01 只做只读取证；Phase 02 已在同一固定 SHA 的隔离可写完
 | P03–04 | ERR-01、AIO-02、AgentScope 类型隔离 |
 | P06 | AIO-02 与三 Schema Owner |
 | P07–10 | AIO-01、RT-06、资源 ACL/Snapshot |
+| P09 | KNO-01、AIO-02、资源 ACL 与中立契约 |
 | P11–13 | RT-01–09、GW-02 |
-| P14 | Core RAG/Knowledge 依赖边界 |
+| P14 | KNO-01、Core RAG/Knowledge 依赖边界 |
 | P15 | SCH-01–03 |
 | P16 | GW-01–03 |
 | P17–18 | FE-01、DSH-01 |

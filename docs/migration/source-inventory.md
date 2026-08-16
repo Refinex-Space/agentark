@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-16
 status: active
 referenced_by: docs/README.md#上游迁移审计
 ---
@@ -257,6 +257,21 @@ Core 有 304 个主文件、204 个测试文件；Harness 有 262 个主文件�
 | A2A | Extensions Protocol `agentscope-extensions-a2a-client/server` | `A2aAgentTest`、Server Converter tests | 延后到对应协议 Phase |
 | AG-UI | `agentscope-extensions-agui`、AGUI Spring Boot Starter | `AguiAgentAdapterV2Test`、`AguiResumeCoordinatorTest` | 延后并契约适配 |
 | Model Provider | Core `ModelProvider` SPI；Extensions `openai/dashscope/anthropic/gemini/ollama` | 每个 Provider Test 与 Model E2E | 按需依赖，不复制 SDK 封装 |
+
+### 10.1 Phase 09 RAG/Knowledge 定位结果
+
+固定 AgentScope `0c61e7494197ded54eefdeaf9bdeb51807beb752` 的 RAG 能力分为旧 Core 抽象、Simple 实现和外部托管集成三层：
+
+| 能力 | 固定源码 | 代表测试 | Phase 09 结论 |
+|---|---|---|---|
+| 旧 Knowledge 契约 | `agentscope-core/src/main/java/io/agentscope/core/rag/Knowledge.java`、`model/Document.java`、`DocumentMetadata.java` | `agentscope-core/src/test/java/io/agentscope/core/legacy/rag/KnowledgeTest.java` | 2.0.0 起已标记 deprecated；只参考检索输入输出，不作为平台模型 |
+| Simple Knowledge | `agentscope-extensions-rag-simple/.../knowledge/SimpleKnowledge.java` | `SimpleKnowledgeTest`、`RAGInMemoryE2ETest` | 直接组合 Embedding 与 VDB Store，缺少租户、不可变版本、ACL 和摄取状态；只 `REFERENCE` |
+| Reader/Parser/Chunk | `reader/Reader.java`、`AbstractChunkingReader.java`、`TextChunker.java`、PDF/Word/Tika/Image Reader | `TextChunkerTest`、`PDFReaderTest`、`WordReaderTest`、`TikaReaderTest` | 提炼为 `DocumentParser` 与 `ChunkingStrategy` Port；实现延后到 P14 |
+| Embedding | `embedding/EmbeddingModel.java` 及 OpenAI/DashScope/Ollama 实现 | 各 Embedding 单元与 E2E 测试 | 提炼为 `EmbeddingProvider` Port；凭据只通过 Phase 08 `SecretRef` |
+| Vector Store | `store/VDBStoreBase.java`、`QdrantStore.java`、`ElasticsearchStore.java`、`MilvusStore.java`、`PgVectorStore.java` | `VDBStoreBaseTest` 与各 Store Test | 提炼为 `VectorIndex` Port；Collection 名绝不作为租户授权 |
+| Retriever/Reranker | `SimpleKnowledge.retrieve(...)`、Bailian/Dify/Haystack/RAGFlow 配置与转换 | 各集成 `KnowledgeTest`、Rerank Config Test | 拆成 `Retriever`、`Reranker` 和不可变 Retrieval Profile；托管产品 API 延后评估 |
+
+AgentScope Service 的 Aistio Product Handler、Java Service Controller 和 Frontend 全量索引中没有独立 Knowledge Base、Document、Ingestion 管理 API 或页面。Phase 09 因此不能声称“迁移了现成 Service 功能”，而是依据 Framework RAG 行为和 AgentArk Control Owner 独立建立平台模型。
 
 Extension 后端还包括 Redis/MySQL/PostgreSQL/OSS/COS Distributed Store，E2B/Daytona/Kubernetes/AgentRun Sandbox，Simple/Bailian/Dify/Haystack/RAGFlow RAG，以及 Channel、Scheduler 和 Spring Boot Starters。是否引入必须由对应 Phase 按目标基础设施和许可单独决策，不能把整个 `agentscope-extensions` 加入运行闭包。
 

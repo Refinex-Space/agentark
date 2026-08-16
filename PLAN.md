@@ -443,7 +443,7 @@ flowchart LR
 | 06 | DONE | 2026-08-15 | `docs/implementation/phase-06-persistence-baseline.md` | 三 Schema、Flyway、MyBatis-Plus、Testcontainers 与迁移规范已验收 |
 | 07 | DONE | 2026-08-16 | `docs/implementation/phase-07-iam-tenancy.md` | IAM、租户隔离、授权、API Key、契约与越权测试已验收 |
 | 08 | DONE | 2026-08-16 | `docs/implementation/phase-08-asset-catalog.md` | 版本化 AI 资产目录、Secret 引用、Skill Object Store、契约与租户隔离已验收 |
-| 09 | NOT_STARTED | — | `docs/implementation/phase-09-knowledge-metadata.md` | |
+| 09 | DONE | 2026-08-16 | `docs/implementation/phase-09-knowledge-metadata.md` | Knowledge 中立领域、V4、Public Contract、Provider Ports、租户隔离与验收已完成 |
 | 10 | NOT_STARTED | — | `docs/implementation/phase-10-revision-deployment.md` | |
 | 11 | NOT_STARTED | — | `docs/implementation/phase-11-runtime-domain.md` | |
 | 12 | NOT_STARTED | — | `docs/implementation/phase-12-agentscope-adapter.md` | |
@@ -1655,23 +1655,23 @@ DELETED
 
 ### 任务
 
-- [ ] 建立 Knowledge Domain 与状态转换；
-- [ ] 建立 Document/DocumentRevision；
-- [ ] 建立不可变 KnowledgeRevision；
-- [ ] READY 前不可被 Agent Revision 引用；
-- [ ] 建立 Parser/Chunk/Embedding/Retrieval Profile；
-- [ ] 建立 `DocumentParser` Port；
-- [ ] 建立 `ChunkingStrategy` Port；
-- [ ] 建立 `EmbeddingProvider` Port；
-- [ ] 建立 `VectorIndex` Port；
-- [ ] 建立 `Retriever`/`Reranker` Port；
-- [ ] 建立 Document ACL/Metadata；
-- [ ] 原文件存 Object Store；
-- [ ] 实现元数据 API、Repository、Flyway、授权、审计；
-- [ ] 创建 Ingestion Job 描述，但本阶段不执行真实向量摄取；
-- [ ] 创建 Fake/InMemory Adapter 用于测试；
-- [ ] AgentScope RAG 类型只能预留在 `adapter.out.vector.agentscope`；
-- [ ] 不让 Qdrant Collection 名成为租户授权机制。
+- [x] 建立 Knowledge Domain 与状态转换；
+- [x] 建立 Document/DocumentRevision；
+- [x] 建立不可变 KnowledgeRevision；
+- [x] READY 前不可被 Agent Revision 引用；
+- [x] 建立 Parser/Chunk/Embedding/Retrieval Profile；
+- [x] 建立 `DocumentParser` Port；
+- [x] 建立 `ChunkingStrategy` Port；
+- [x] 建立 `EmbeddingProvider` Port；
+- [x] 建立 `VectorIndex` Port；
+- [x] 建立 `Retriever`/`Reranker` Port；
+- [x] 建立 Document ACL/Metadata；
+- [x] 原文件存 Object Store；
+- [x] 实现元数据 API、Repository、Flyway、授权、审计；
+- [x] 创建 Ingestion Job 描述，但本阶段不执行真实向量摄取；
+- [x] 创建 Fake/InMemory Adapter 用于测试；
+- [x] AgentScope RAG 类型只能预留在 `adapter.out.vector.agentscope`；
+- [x] 不让 Qdrant Collection 名成为租户授权机制。
 
 ### 产物
 
@@ -1686,15 +1686,15 @@ docs/implementation/phase-09-knowledge-metadata.md
 
 ### 验收条件
 
-- [ ] KnowledgeRevision READY 后不可修改；
-- [ ] 修改 Parser/Chunk/Embedding 生成新 Revision；
-- [ ] 原文件可追踪并有 Hash；
-- [ ] 文档 ACL 和租户字段完整；
-- [ ] Domain 不依赖 AgentScope/Qdrant；
-- [ ] Fake Adapter 可完成状态机测试；
-- [ ] Agent Revision Resolver 只能解析 READY Revision；
-- [ ] 删除流程有派生数据清理状态；
-- [ ] 无同步大文档 Embedding。
+- [x] KnowledgeRevision READY 后不可修改；
+- [x] 修改 Parser/Chunk/Embedding 生成新 Revision；
+- [x] 原文件可追踪并有 Hash；
+- [x] 文档 ACL 和租户字段完整；
+- [x] Domain 不依赖 AgentScope/Qdrant；
+- [x] Fake Adapter 可完成状态机测试；
+- [x] Agent Revision Resolver 只能解析 READY Revision；
+- [x] 删除流程有派生数据清理状态；
+- [x] 无同步大文档 Embedding。
 
 ### 验收命令
 

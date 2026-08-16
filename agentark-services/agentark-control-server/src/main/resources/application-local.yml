@@ -63,6 +63,10 @@ agentark:
       enabled: true
       # 单次 Skill Artifact 上传上限，避免内存和磁盘被无界请求占用。
       max-artifact-size: 10MB
+    # Knowledge 元数据和原始文档本地能力配置。
+    knowledge:
+      # 本地启用 Knowledge 元数据 API；摄取请求只记录描述，不执行向量化。
+      enabled: true
     # 开发 Secret Provider 只解析本地文件，不伪造生产云 Provider。
     secret:
       # 仅 local Profile 可启用本地文件解析器。

@@ -86,7 +86,15 @@ class ContractDocumentLintTest {
                     "/api/v1/projects/{projectId}/catalog/{assetKind}/{assetId}/archive",
                     "/api/v1/projects/{projectId}/skill-artifacts",
                     "/api/v1/projects/{projectId}/secrets",
-                    "/api/v1/projects/{projectId}/environments/{environmentId}/secret-bindings"));
+                    "/api/v1/projects/{projectId}/environments/{environmentId}/secret-bindings",
+                    "/api/v1/projects/{projectId}/knowledge-bases",
+                    "/api/v1/projects/{projectId}/knowledge-bases/{knowledgeBaseId}/data-sources",
+                    "/api/v1/projects/{projectId}/knowledge-bases/{knowledgeBaseId}/documents",
+                    "/api/v1/projects/{projectId}/knowledge-profiles/{profileKind}",
+                    "/api/v1/projects/{projectId}/knowledge-bases/{knowledgeBaseId}/revisions",
+                    "/api/v1/projects/{projectId}/knowledge-revisions/{revisionId}/ingestion-requests",
+                    "/api/v1/projects/{projectId}/knowledge-revisions/{revisionId}/deprecate",
+                    "/api/v1/projects/{projectId}/knowledge-revisions/{revisionId}/deletion"));
       } else {
         assertThat(document.get("paths")).isEqualTo(Map.of());
       }
@@ -128,6 +136,24 @@ class ContractDocumentLintTest {
         .doesNotContain("secretValue")
         .doesNotContain("apiKey")
         .doesNotContain("plaintext");
+  }
+
+  /** 验证 Knowledge 公共 Schema 已版本化且只使用 SecretRef 和中立 Provider 契约。 */
+  @Test
+  void knowledgePublicSchemaIsVersionedAndProviderNeutral() throws IOException {
+    Path schema = CONTRACTS.resolve("schemas/knowledge-public/v1.json");
+    String content = Files.readString(schema);
+
+    assertThat(schema).exists();
+    assertThat(content)
+        .contains("https://agentark.refinex.space/contracts/knowledge-public/v1.json")
+        .contains("\"KnowledgeRevision\"")
+        .contains("\"DocumentAcl\"")
+        .contains("\"SecretRef\"")
+        .doesNotContain("Qdrant")
+        .doesNotContain("AgentScope")
+        .doesNotContain("collectionName")
+        .doesNotContain("apiKey");
   }
 
   /** 验证 AsyncAPI 骨架已版本化且引用统一的运行时事件 Schema。 */

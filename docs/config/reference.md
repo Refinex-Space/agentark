@@ -9,7 +9,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2；Phase 08 已接入资产目录 V3、Skill Object Store 和开发 Local Secret Provider。Runtime 和 Scheduler 仍只有各自的 Migration History，Gateway 不连接业务数据库。生产 Object Store 和云 Secret Provider 仍必须由部署方提供受支持 Adapter。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2；Phase 08 已接入资产目录 V3、Skill Object Store 和开发 Local Secret Provider；Phase 09 已接入 Knowledge 元数据 V4、原文件 Object Store、不可变 Revision 与摄取意图描述。Runtime 和 Scheduler 仍只有各自的 Migration History，Gateway 不连接业务数据库。生产 Object Store 和云 Secret Provider 仍必须由部署方提供受支持 Adapter。
 
 ## Server 与本地 Profile
 
@@ -120,6 +120,16 @@ Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334`
 | `agentark.control.secret.local-root` / `AGENTARK_LOCAL_SECRET_ROOT` | `.agentark/secrets` | Local Provider 启用 | 只允许根目录内普通文件；拒绝目录穿越、符号链接和超过 64 KiB 的值 |
 
 生产 Vault、AWS、Azure、GCP 和 Custom Provider 当前只有枚举与 `SecretResolver` SPI。没有配置实际 Provider Bean 时不会伪造解析成功，也不存在读取 Secret 值的 Public API。
+
+## Control Knowledge 配置
+
+| 属性/环境变量 | 默认值 | 启用/必填条件 | 安全与所有权说明 |
+|---|---|---|---|
+| `agentark.control.knowledge.enabled` | `true` | Control 正常运行 | 装配 Knowledge 元数据、Document ACL、不可变 Revision、Public API 与 MyBatis Adapter；不执行 Parser、Embedding、向量写入或检索 |
+| `agentark.foundation.storage.enabled` | `false`；`local` 为 `true` | Document 原文件上传必须有 ObjectStore | 本地与 Skill 共用受 Authority 隔离的 Local ObjectStore；生产必须提供受支持 Bean，数据库只保存带 Hash、大小和媒体类型的 `ObjectRef` |
+| `AGENTARK_LOCAL_OBJECT_ROOT` | `.agentark/data/objects` | `local` Storage 启用 | 原文件路径由服务端生成且保持在专用根目录；客户端文件名不能选择授权路径 |
+
+Knowledge 摄取 Endpoint 返回 `202` 只表示幂等请求已经记录且 Revision 进入 `INGESTING`，当前没有 Qdrant、Embedding Provider 或 Scheduler Worker 配置项。不得通过启用 `rag` Compose Profile 推断摄取已实现；真实 Provider、超时、重试、索引和清理配置必须在 Phase 14 Adapter 落地时另行登记。
 
 连接、池化、TLS、事务和 Migration 使用 Spring Boot 所属标准属性，例如 `spring.datasource.*`、`spring.flyway.*` 和 `spring.data.redis.*`。Phase 06 已固定 MySQL/Flyway 基线；生产 TLS 信任材料与强制模式仍必须由实际部署环境显式提供，不能依赖本地 Compose 的明文内部网络设置。
 

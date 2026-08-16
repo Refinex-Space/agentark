@@ -18,9 +18,9 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 | 06 | `V1__phase_06_schema_baseline.sql` | 只建立 Control 独立 Migration History 起点，不创建业务表 |
 | 07 | `V2__phase_07_iam_tenancy.sql`：Organization、Project、Environment、Identity、Membership、Role、Permission、Binding、API Key | IAM 与租户授权事实；十二张业务表 |
 | 08 | Agent、资产稳定身份与不可变版本、Secret Metadata 与 Environment Binding | 不包含发布 Revision/Snapshot；只保存外部 Secret 定位信息，不保存值 |
-| 09 | Draft、Validation、Revision、Snapshot、Publish Operation、Control Outbox | 发布事务必须原子提交 |
-| 10 | Deployment 与 Deployment Revision | 固定目标 Revision，不写 Runtime Session |
-| 14 | Knowledge Metadata、Revision、Ingestion Result | Scheduler 只提交命令结果，不写 Control 表 |
+| 09 | Knowledge Metadata、Document Revision、Knowledge Revision、Profile 与 Ingestion Request | 只描述摄取工作，不执行 Embedding 或向量写入 |
+| 10 | Agent Draft、Validation、Revision、Snapshot、Publish Operation、Control Outbox、Deployment 与 Deployment Revision | 发布事务原子提交，Deployment 固定目标 Revision |
+| 14 | Knowledge Ingestion Result、实际 Parser/Chunk/Embedding/Vector Adapter 和检索能力 | Scheduler 只提交命令结果，不写 Control 表 |
 | 19 | Secret 轮换治理、Quota、Audit、Usage/Cost、Evaluation、可靠性补齐 | 延续 Phase 08 Secret Owner，不保存 Secret 明文 |
 
 任何表提前、延后或转移 Owner 都必须先修改本模型；影响平台边界或发布一致性时同步提交 ADR。
@@ -90,18 +90,23 @@ Phase 08 建立 Secret 元数据、Environment Binding、Resolver Port 和开发
 
 | 表 | 关键内容 | 关键约束与索引 |
 |---|---|---|
-| `knowledge_base` | id, organization_id, project_id, key, name, status, version | `(project_id, key)` 唯一 |
-| `data_source` | id, knowledge_base_id, type, config_without_secret, secret_ref, status | Source key 在 KnowledgeBase 内唯一 |
-| `document` | id, knowledge_base_id, source_key, status | `(knowledge_base_id, source_key)` 唯一 |
-| `document_revision` | id, document_id, revision_number, source_object_ref, content_hash, status | `(document_id, revision_number)`、Hash 唯一 |
-| `parser_profile` | id, project_id, key, version_number, immutable_config, content_hash | `(project_id, key, version_number)` 唯一 |
-| `chunk_profile` | id, project_id, key, version_number, immutable_config, content_hash | 同上 |
-| `embedding_profile` | id, project_id, key, version_number, immutable_config, secret_ref, content_hash | 同上 |
-| `retrieval_profile` | id, project_id, key, version_number, immutable_config, content_hash | 同上 |
-| `knowledge_revision` | id, knowledge_base_id, revision_number, profile refs, status, count, checksum, artifact refs | `(knowledge_base_id, revision_number)` 唯一；READY 后不可修改 |
-| `knowledge_ingestion_result` | id, knowledge_revision_id, scheduler_job_id, attempt_id, idempotency_key, count, checksum, artifact_refs, status | `(knowledge_revision_id, attempt_id)`、idempotency 唯一 |
+| `knowledge_base` | id, organization_id, project_id, knowledge_key, name, description, status, version, audit | `(project_id, knowledge_key)` 唯一；`ACTIVE/ARCHIVED` |
+| `data_source` | id, owner chain, knowledge_base_id, source_type, name, descriptor_json, audit | `(project_id, id)` Owner 复合约束；`UPLOAD/URI/CONNECTOR`；descriptor 不含凭据 |
+| `document` | id, owner chain, knowledge_base_id, data_source_id, title, metadata_json, status, version, audit | 复合外键保证 Base 与 Source 同 Project；`ACTIVE/DELETING/DELETED` |
+| `document_acl` | document_id, owner chain, subject_type/id, access_level, audit | `(document_id, subject_type, subject_id)` 主键；主体为 `PROJECT/USER/SERVICE_ACCOUNT/ROLE`，级别为 `READ/WRITE/MANAGE` |
+| `document_revision` | id, owner chain, knowledge_base_id, document_id, revision_number, original_file_name, object_uri, content_hash/size/type, audit | `(document_id, revision_number)` 唯一；原文件 Hash 可追踪；Object URI 不含授权参数 |
+| `parser_profile` | id, owner chain, profile_key, version_number, config_json, content_hash, status, audit | `(project_id, profile_key, version_number)` 与 `(project_id, content_hash)` 唯一；只追加 |
+| `chunk_profile` | 同 Parser Profile | 同上；切分策略只保存中立配置 |
+| `embedding_profile` | 同 Parser Profile，另含可空 credential_secret_ref | 只允许 SecretRef，不保存凭据值；只追加 |
+| `retrieval_profile` | 同 Parser Profile | 同上；不保存向量库 Collection 名作为授权事实 |
+| `knowledge_revision` | id, owner chain, knowledge_base_id, revision_number, 四类 Profile 引用, content_hash, status, failure_code, version, audit | `(knowledge_base_id, revision_number)` 和 `(project_id, content_hash)` 唯一；内容绑定不可更新，只有状态字段通过乐观锁转换 |
+| `knowledge_revision_document` | knowledge_revision_id, owner chain, document_revision_id, ordinal_value, audit | `(knowledge_revision_id, document_revision_id)` 主键且 ordinal 唯一；固定文档修订集合与顺序 |
+| `knowledge_ingestion_request` | id, owner chain, knowledge_revision_id, idempotency_key, status, requested_at/by | `(project_id, idempotency_key)` 唯一；Phase 09 只保存 `DESCRIBED/CANCELLED`，不代表 Scheduler Job 已创建 |
+| `knowledge_ingestion_result` | id, knowledge_revision_id, scheduler_job_id, attempt_id, idempotency_key, count, checksum, artifact_refs, status | Phase 14 实现；`(knowledge_revision_id, attempt_id)`、idempotency 唯一 |
 
-Scheduler 不写这些表。它调用幂等完成命令；Control 校验 Result 后转换 Revision 状态并写 Outbox。
+V4 只创建前十二张 Phase 09 表及 `knowledge:read/manage/ingest` 权限，不创建 `knowledge_ingestion_result`。四类 Profile 与 Document Revision 均不可变；变更解析、切分、Embedding 或检索配置必须新建 Profile 和 Knowledge Revision。只有 `READY` Revision 可被 Agent Revision Resolver 引用。
+
+Scheduler 不写这些表。Phase 14 由 Scheduler 调用幂等完成命令；Control 校验 Result 后转换 Revision 状态并写 Outbox。Qdrant Collection、Embedding Provider 资源名和派生索引都不是租户授权依据，任何 Adapter 请求必须同时携带可信 `ProjectId` 与 `KnowledgeRevisionId`。
 
 ## Governance
 
