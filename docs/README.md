@@ -24,6 +24,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 08 执行证据 | [AI 资产目录](implementation/phase-08-asset-catalog.md) | 复核不可变资产版本、Secret 引用、Skill ObjectRef、Public API 与租户隔离 |
 | Phase 09 执行证据 | [Knowledge 元数据与 Provider Ports](implementation/phase-09-knowledge-metadata.md) | 复核中立 Knowledge 领域、不可变版本、状态机、V4、Public API、Ports 与租户隔离 |
 | Phase 10 执行证据 | [Agent Revision 与 Deployment](implementation/phase-10-revision-deployment.md) | 复核 Draft、发布事务、不可变 Snapshot、V5、Deployment 指针和 Runtime Internal Contract |
+| Phase 11 执行证据 | [Runtime 中立领域](implementation/phase-11-runtime-domain.md) | 复核状态机、持久 Work Queue、双层 Event Sequence、Fencing、V2、Fake Engine 与 MySQL 恢复 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |

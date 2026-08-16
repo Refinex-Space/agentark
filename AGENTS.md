@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phase 08 has established four service shells, isolated MySQL/Flyway owners, Control IAM, a versioned AI asset catalog, Skill Object Store integration, and Secret Metadata/Binding; Runtime execution remains owned by later `PLAN.md` phases.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phases 07–10 have established Control IAM, versioned AI and Knowledge assets, immutable Agent Revision/Snapshot, Deployment and Internal Contracts. Phase 11 has established the provider-neutral Runtime domain, state machines, durable Event/Work/State persistence and Fake Engine; AgentScope execution and Runtime API/SSE remain owned by Phases 12–13.
 
 ## Authority
 

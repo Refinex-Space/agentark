@@ -8,6 +8,7 @@
   "required": [
     "schemaVersion",
     "eventId",
+    "sessionSequence",
     "sequence",
     "eventType",
     "occurredAt",
@@ -17,12 +18,13 @@
     "turnId",
     "runId",
     "traceId",
-    "payload"
+    "fencingToken"
   ],
   "properties": {
     "schemaVersion": { "description": "运行时事件信封 Schema 版本，v1 固定为 1。", "const": 1 },
     "eventId": { "description": "全局唯一且按时间有序的事件标识。", "$ref": "#/$defs/uuidV7" },
-    "sequence": { "description": "同一 Run 内从 1 开始单调递增的事件序号。", "type": "integer", "minimum": 1 },
+    "sessionSequence": { "description": "同一 Session 内从 1 开始单调递增且唯一的事件序号。", "type": "integer", "minimum": 1 },
+    "sequence": { "description": "同一 Run 内从 1 开始单调递增且唯一的事件序号；数据库字段名为 run_sequence。", "type": "integer", "minimum": 1 },
     "eventType": {
       "description": "使用点号分段的稳定事件类型名称。",
       "type": "string",
@@ -37,13 +39,31 @@
     "turnId": { "description": "事件关联的轮次标识。", "$ref": "#/$defs/uuidV7" },
     "runId": { "description": "事件关联的运行标识。", "$ref": "#/$defs/uuidV7" },
     "traceId": { "description": "用于跨服务追踪的 16 字节小写十六进制标识。", "type": "string", "pattern": "^[0-9a-f]{32}$" },
-    "payload": { "description": "由 eventType 决定结构的事件专属负载。", "type": "object" }
+    "fencingToken": { "description": "写入事件时的当前栅栏令牌；0 仅用于尚未 Claim 的接受事件。", "type": "integer", "minimum": 0 },
+    "payload": { "description": "小型事件的内联负载；不得包含秘密或隐藏 Chain-of-Thought。", "type": "object" },
+    "payloadRef": { "description": "大型事件负载的受控 ObjectRef；URI 不是授权凭据。", "$ref": "#/$defs/objectRef" }
   },
+  "oneOf": [
+    { "required": ["payload"], "not": { "required": ["payloadRef"] } },
+    { "required": ["payloadRef"], "not": { "required": ["payload"] } }
+  ],
   "$defs": {
     "uuidV7": {
       "description": "符合 RFC 9562 的小写规范 UUIDv7 文本。",
       "type": "string",
       "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "objectRef": {
+      "description": "保存大型 Event Payload 的完整性元数据。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri", "checksum", "size", "mediaType"],
+      "properties": {
+        "uri": { "description": "由 Runtime Object Store 命名空间产生的受控 URI。", "type": "string", "format": "uri", "maxLength": 1024 },
+        "checksum": { "description": "规范 SHA-256 校验和。", "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "size": { "description": "对象大小，单位字节。", "type": "integer", "minimum": 0 },
+        "mediaType": { "description": "对象具体媒体类型。", "type": "string", "minLength": 1, "maxLength": 255 }
+      }
     }
   }
 }

@@ -63,4 +63,12 @@ Phase 10 增加以下 Release 契约约束：
 - Snapshot 响应的 `ETag` 基于 `contentHash`，`If-None-Match` 精确命中返回 `304`。Deployment Descriptor 不暴露 Control Entity、DO、Mapper、Draft 或 Catalog Payload；
 - Publish Outbox 的 Diff Summary 只允许上一 Revision ID 与变化的顶层区段名，禁止包含 Prompt、文档、Tool 参数、Secret 或资产旧值/新值。
 
+Phase 11 增加以下 Runtime Event 契约约束：
+
+- `contracts/schemas/runtime-event/v1.json` 中 `sessionSequence` 是 Session 回放游标，兼容保留的 `sequence` 是 Run 内游标；两者均从 1 开始、分别单调且不可复用；
+- Event 必须包含全局唯一 `eventId`、`sessionId`、`turnId`、`runId`、`traceId`、`fencingToken`、`schemaVersion` 和 `occurredAt`。Event Store 先持久化事实，SSE、AsyncAPI 和 Outbox 都只是消费或投递机制；
+- Payload 必须在 Inline JSON 与 `ObjectRef` 之间二选一。`ObjectRef` 只描述对象标识、Hash、大小和媒体类型，不携带签名 URL、Secret 或授权事实；
+- Event 不得包含隐藏 Chain-of-Thought。Provider 原始事件必须在 Phase 12 防腐层转换为公开 Message、Tool、Usage、Approval、Error 或安全的未知事件载荷；
+- 终态必须有明确持久 Event；数据库拒绝 Event Update/Delete 和旧 Fencing Token 写入。Phase 13 的 SSE `id` 与 `Last-Event-ID` 必须基于已提交的 `sessionSequence`，不能使用进程内 Preview 序号替代。
+
 Golden File、明文 Secret 负例和文档结构 Lint 由 `agentark-kernel` 测试执行，必需文件与 Kernel/Server 边界由知识门禁检查。首次发布后的修改必须增加 Breaking Change 检测；在不存在已发布前一版本的 Phase 03 不伪造兼容比较结果。

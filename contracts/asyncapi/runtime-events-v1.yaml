@@ -6,8 +6,8 @@ info:
   title: AgentArk Runtime Events
   # 声明该事件契约骨架的语义版本。
   version: 1.0.0
-  # 说明本阶段只固定事件信封，不提前定义通道。
-  description: Provider-neutral runtime event contract skeleton.
+  # 说明 Phase 11 已固定双重序号、Fencing 与 ObjectRef 载荷边界。
+  description: 供应商中立的 Runtime Event v1；MySQL Event Log 是权威事实来源。
   # 声明契约文档采用的开源许可证。
   license:
     # 提供便于阅读的 SPDX 许可证名称。
@@ -16,9 +16,9 @@ info:
     url: https://www.apache.org/licenses/LICENSE-2.0
 # 固定未单独声明时使用的消息内容类型。
 defaultContentType: application/json
-# Phase 03 不提前虚构消息通道，通道由 Runtime 所有者阶段补充。
+# Phase 11 不虚构消息 Broker；Phase 13 的 SSE 只消费 Event Store，届时再声明真实通道。
 channels: {}
-# Phase 03 不提前虚构发布或订阅操作。
+# 当前没有真实 Broker 发布或订阅操作。
 operations: {}
 # 汇总可复用的消息组件。
 components:

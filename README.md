@@ -437,8 +437,8 @@ The migration sequence is designed to avoid changing package names, modules, JDK
 | Milestone | Scope | Status |
 |---|---|---|
 | **A — Architecture & Engineering Foundation** | BOM, Kernel, starters, contracts, four service shells, CI, Compose | ✅ Complete — service shells, Core profile, and persistence baseline verified |
-| **B — Control Plane MVP** | IAM, Agent catalog, assets, revisions, snapshots, deployments | ⚪ Planned |
-| **C — Runtime MVP** | Session, Turn, Run, events, SSE, AgentScope compiler, HITL, recovery | ⚪ Planned |
+| **B — Control Plane MVP** | IAM, Agent catalog, assets, revisions, snapshots, deployments | ✅ Complete — Control owner, immutable release and deployment contracts verified |
+| **C — Runtime MVP** | Session, Turn, Run, events, SSE, AgentScope compiler, HITL, recovery | 🟡 In progress — neutral domain and durable persistence verified; Provider and API/SSE remain |
 | **D — Knowledge / RAG** | ingestion, Qdrant, Knowledge Revision, retrieval, citations | ⚪ Planned |
 | **E — Scheduler & Integrations** | cron, webhook, channels, retry/dead-letter | ⚪ Planned |
 | **F — AgentArk Web** | design system, Agent builder, runtime console, governance | ⚪ Planned |

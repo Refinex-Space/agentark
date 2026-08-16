@@ -292,3 +292,19 @@ DSH_SNAPSHOT=replay pnpm run test:web:built
 | `npm run build` | FAIL；两个 `features/build` 页面 Module 缺失 | 固定 Commit 源码缺目录，不在机械基线修复 |
 
 测试日志还观察到 Scheduler Context 对本机 Control 重试 12 次、开发默认管理员密码被打印以及 Netty macOS native resolver 警告。后续 AgentArk 兼容测试必须把这些行为区分为“需要保留的契约”与“明确拒绝的上游缺陷”。
+
+## 8. Phase 11 Runtime 行为落地
+
+| 基线 | Phase 11 实际覆盖 | 剩余阶段边界 |
+|---|---|---|
+| RT-01 | 同一本地事务创建 Turn、Run Attempt、Work Item、幂等记录、`run.accepted` Event 与 Outbox；相同 Key/Hash 重放，相同 Key/不同 Hash 冲突 | 鉴权、HTTP `202` 和跨服务命令由 P13 装配 |
+| RT-02 | MySQL Event Store 同时分配 Session/Run 单调 Sequence；20 并发连接验证两层序号唯一；Event Update/Delete 被 Trigger 拒绝 | 跨实例订阅通知和 Purge 生命周期由 P13/后续可靠性阶段实现 |
+| RT-03 | Contract 已固定持久 `sessionSequence`，SSE 仍未实现 | SSE `id`、`Last-Event-ID`、Preview 分离和重连 E2E 归 P13 |
+| RT-04 | Provider 中立 Event Envelope、Payload/ObjectRef 和隐藏思维链禁止规则已建立 | AgentScope Event 转换与未知类型兼容归 P12 |
+| RT-05 | Session 只保存不可变 Snapshot 引用，执行端口按固定 Snapshot 加载 | Harness 编译、Hash Cache Key 和 Evict 生命周期归 P12 |
+| RT-06 | Session 构造与 MySQL Trigger 双重拒绝 Deployment/Revision/Snapshot/Hash 变化 | Runtime API 禁止 Override 的契约验证归 P13 |
+| RT-07 | 中立 Approval 聚合、状态机、Argument Hash、暂停/恢复命令和 Fake Engine 测试已完成 | AgentScope Middleware、决策 API、超时扫描与跨实例通知归 P12–13 |
+| RT-08 | Claim 递增 Fencing Token；Event、Agent State、Checkpoint 在数据库校验当前 Token；覆盖过期 Owner 和旧 Token | Runtime Instance Heartbeat、Drain、GC Pause/真实双实例 E2E 归 P13/P22 |
+| RT-09 | Durable Work Item 支持 Claim、Complete、Release、Attempt、Visibility Timeout 与过期回收 | Self-hosted Worker Controller、Heartbeat、Stop、权限和 Dead Letter 运维归 P13/P21 |
+
+Phase 11 没有迁入上游源码、JPA Entity、Go Store、AgentScope Event 或 Provider 自动建表。Fake Adapter 只证明中立状态机，不能替代 Phase 12 的真实 Provider Compatibility Test 或 Phase 13 的服务 E2E。

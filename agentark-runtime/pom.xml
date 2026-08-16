@@ -27,6 +27,12 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- 复用 Session、Turn、Run、Approval、Revision、Snapshot、ObjectRef 与 Checksum 强类型契约。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-kernel</artifactId>
+        </dependency>
+
         <!-- 提供 Runtime 所属 MyBatis-Plus、Flyway、事务与受控类型处理能力。 -->
         <dependency>
             <groupId>${project.groupId}</groupId>

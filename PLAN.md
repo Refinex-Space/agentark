@@ -445,7 +445,7 @@ flowchart LR
 | 08 | DONE | 2026-08-16 | `docs/implementation/phase-08-asset-catalog.md` | 版本化 AI 资产目录、Secret 引用、Skill Object Store、契约与租户隔离已验收 |
 | 09 | DONE | 2026-08-16 | `docs/implementation/phase-09-knowledge-metadata.md` | Knowledge 中立领域、V4、Public Contract、Provider Ports、租户隔离与验收已完成 |
 | 10 | DONE | 2026-08-16 | `docs/implementation/phase-10-revision-deployment.md` | Draft、不可变 Revision/Snapshot、Deployment、Internal Contract 与真实 MySQL E2E 已验收 |
-| 11 | NOT_STARTED | — | `docs/implementation/phase-11-runtime-domain.md` | |
+| 11 | DONE | 2026-08-16 | `docs/implementation/phase-11-runtime-domain.md` | 中立领域、状态机、MySQL V2、双 Sequence Event、Fencing、恢复与 Fake Engine 已验收 |
 | 12 | NOT_STARTED | — | `docs/implementation/phase-12-agentscope-adapter.md` | |
 | 13 | NOT_STARTED | — | `docs/implementation/phase-13-runtime-api.md` | |
 | 14 | NOT_STARTED | — | `docs/implementation/phase-14-knowledge-rag.md` | |
@@ -1947,34 +1947,34 @@ CANCELLED
 
 ### 任务
 
-- [ ] 建立 Runtime Domain/Application/Port/Adapter 包；
-- [ ] 实现 Session 固定 Deployment/Revision/Snapshot；
-- [ ] 实现 Turn 与 Run 分离；
-- [ ] 实现 Run Attempt；
-- [ ] 实现状态转换不变量；
-- [ ] 定义 `AgentExecutionEngine`；
-- [ ] 定义 `SnapshotLoader`；
-- [ ] 定义 `RuntimeEventStore`；
-- [ ] 定义 `CheckpointStore`；
-- [ ] 定义 Provider 中立的 `AgentStateStore`；
-- [ ] 定义 `ApprovalRepository`；
-- [ ] 定义 `LeaseManager`/Fencing Port；
-- [ ] 定义 `RuntimeWorkQueue`；
-- [ ] 定义 `UsageRecorder`；
-- [ ] 定义 Cancellation/Resume Command；
-- [ ] Runtime DB Flyway；
-- [ ] `runtime_work_item` 持久 Claim 索引与状态迁移；
-- [ ] `runtime_agent_state` 版本、Hash、ObjectRef 和 Checkpoint 可见性；
-- [ ] 追加式 Event 表；
-- [ ] 每个 Run/Session 单调 Sequence；
-- [ ] 大 Payload `ObjectRef`；
-- [ ] 关键写入带 Fencing Token；
-- [ ] Idempotency Record；
-- [ ] Runtime Outbox；
-- [ ] 禁止 AgentScope/MyBatis/Application Auto-DDL；
-- [ ] Fake `AgentExecutionEngine`；
-- [ ] 状态机、并发、过期 Owner、重复命令测试；
-- [ ] Domain/Application 禁止 AgentScope Import。
+- [x] 建立 Runtime Domain/Application/Port/Adapter 包；
+- [x] 实现 Session 固定 Deployment/Revision/Snapshot；
+- [x] 实现 Turn 与 Run 分离；
+- [x] 实现 Run Attempt；
+- [x] 实现状态转换不变量；
+- [x] 定义 `AgentExecutionEngine`；
+- [x] 定义 `SnapshotLoader`；
+- [x] 定义 `RuntimeEventStore`；
+- [x] 定义 `CheckpointStore`；
+- [x] 定义 Provider 中立的 `AgentStateStore`；
+- [x] 定义 `ApprovalRepository`；
+- [x] 定义 `LeaseManager`/Fencing Port；
+- [x] 定义 `RuntimeWorkQueue`；
+- [x] 定义 `UsageRecorder`；
+- [x] 定义 Cancellation/Resume Command；
+- [x] Runtime DB Flyway；
+- [x] `runtime_work_item` 持久 Claim 索引与状态迁移；
+- [x] `runtime_agent_state` 版本、Hash、ObjectRef 和 Checkpoint 可见性；
+- [x] 追加式 Event 表；
+- [x] 每个 Run/Session 单调 Sequence；
+- [x] 大 Payload `ObjectRef`；
+- [x] 关键写入带 Fencing Token；
+- [x] Idempotency Record；
+- [x] Runtime Outbox；
+- [x] 禁止 AgentScope/MyBatis/Application Auto-DDL；
+- [x] Fake `AgentExecutionEngine`；
+- [x] 状态机、并发、过期 Owner、重复命令测试；
+- [x] Domain/Application 禁止 AgentScope Import。
 
 ### Event 规则
 
@@ -2001,18 +2001,18 @@ docs/implementation/phase-11-runtime-domain.md
 
 ### 验收条件
 
-- [ ] Fake Engine 可完成成功、失败、取消、暂停/恢复；
-- [ ] Session 创建后固定 Revision/Snapshot；
-- [ ] Turn 重试创建新 Run，不覆盖旧 Run；
-- [ ] 非法状态转换被拒绝；
-- [ ] Event Sequence 并发下单调且唯一；
-- [ ] 旧 Fencing Token 写入被数据库拒绝；
-- [ ] Idempotency Key 重复返回同一资源；
-- [ ] 同 Key 不同 Request Hash 返回冲突；
-- [ ] Event/Object Payload 一致；
-- [ ] Runtime Domain/Application 无 AgentScope 类型；
-- [ ] Runtime DB 不访问 Control Schema。
-- [ ] Redis 全量丢失后可从 Runtime MySQL/Object Storage 恢复权威状态。
+- [x] Fake Engine 可完成成功、失败、取消、暂停/恢复；
+- [x] Session 创建后固定 Revision/Snapshot；
+- [x] Turn 重试创建新 Run，不覆盖旧 Run；
+- [x] 非法状态转换被拒绝；
+- [x] Event Sequence 并发下单调且唯一；
+- [x] 旧 Fencing Token 写入被数据库拒绝；
+- [x] Idempotency Key 重复返回同一资源；
+- [x] 同 Key 不同 Request Hash 返回冲突；
+- [x] Event/Object Payload 一致；
+- [x] Runtime Domain/Application 无 AgentScope 类型；
+- [x] Runtime DB 不访问 Control Schema。
+- [x] Redis 全量丢失后可从 Runtime MySQL/Object Storage 恢复权威状态。
 
 ### 验收命令
 

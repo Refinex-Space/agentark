@@ -27,7 +27,7 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 | SVC-COM-02 | `service-common/web/auth` | ADAPT | `agentark-starter-security` + `agentark-control` / P04、P07 | P04 已替换为 HTTPS Issuer/JWK、Audience、服务身份和严格 JWT Principal 转换；P07 已实现 Issuer/Subject 映射、Membership、Role/Permission/Binding、项目服务账号和摘要 API Key；拒绝共享 Secret 与客户端 Tenant Header 授权 |
 | SVC-COM-03 | `service-common/runtime/config` | ADAPT | `agentark-control`、`agentark-scheduling` / P08、P15 | 按资产 Owner 拆分，不保留共享配置对象 |
 | SVC-COM-04 | `service-common/web/catalog*` | ADAPT | `agentark-control` + Provider / P08、P10、P12 | Spec 语义进入不可变 Snapshot；Codec 留在防腐层 |
-| SVC-COM-05 | `service-common/web/coord` | ADAPT | Redis Starter + `agentark-runtime` + `agentark-scheduling` / P04、P11、P13、P15 | P04 已提供原子 Lease/Fencing/Idempotency/Rate Limit 基础；HITL、Queue、Cron 和持久事实仍按 Owner 留给后续阶段 |
+| SVC-COM-05 | `service-common/web/coord` | ADAPT | Redis Starter + `agentark-runtime` + `agentark-scheduling` / P04、P11、P13、P15 | P04 提供缓存侧 Lease/Fencing/Idempotency 基础；P11 已建立 Runtime Approval、持久 Work Queue、MySQL Fencing 和幂等权威事实；API/Worker 装配归 P13，Cron 归 P15，Redis 不作权威状态 |
 | SVC-COM-06 | `service-common/web/managed*` | ADAPT | Control/Runtime Contract Adapter / P09–13 | DTO 按契约重建，禁止 shared DTO 包 |
 | SVC-COM-07 | `service-common/web/persistence/jpa` | REJECT | 无 | 不迁入 JPA Entity、Repository、`ddl-auto=update` 或共享表 |
 | SVC-COM-08 | `service-common/web/share` | ADAPT | `agentark-control` / P07–10 | P07 已以 Organization/Project/Environment Owner 链和 Scope-aware Role Binding 建立资源级授权基线；P08–10 资源继续复用该检查，不能退化为 Owner 字符串 |
@@ -37,15 +37,15 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 | SVC-GW-02 | Gateway Header 清洗 | ADAPT | `agentark-gateway-server` / P16 | 外部不能注入服务身份；扩展 OIDC/CORS/Rate Limit |
 | SVC-GW-03 | Gateway App 启动类 | REJECT | 无 | 薄启动类不值得复制 |
 | SVC-DP-01 | `DataSessionApiController` | ADAPT | `agentark-runtime` Adapter / P13 | 保留 Event/SSE/HITL 语义，改为版本化契约、SSE id/重连 |
-| SVC-DP-02 | `DataSessionService` | ADAPT | `agentark-runtime` / P11、P13 | Session Owner 与 Runtime 状态机重建；禁止跨平面查询表 |
-| SVC-DP-03 | `SessionTurnRunner` | ADAPT | Runtime + Provider / P13 | 先 Lease 后 Admission、取消/释放/恢复；增加 fencing 和幂等 |
+| SVC-DP-02 | `DataSessionService` | ADAPT | `agentark-runtime` / P11、P13 | P11 已重建 Session Owner、固定 Snapshot、Turn/Run 状态机与持久化；P13 只装配 API/Worker，禁止跨平面查询表 |
+| SVC-DP-03 | `SessionTurnRunner` | ADAPT | Runtime + Provider / P11–13 | P11 已实现持久 Admission、Claim、Fencing、幂等、取消/恢复命令和 Fake Engine；P12 接 Provider，P13 装配 Worker 与外部命令 |
 | SVC-DP-04 | `HarnessAgentBuildService` | ADAPT | `agentark-runtime-provider-agentscope` / P12 | 只消费 `AgentRevisionSnapshot`，缓存键包含 Snapshot Hash |
 | SVC-DP-05 | `EnvironmentSpecFactory` | ADAPT | Provider / P12 | local/remote/sandbox/self-hosted 语义；禁止 remote 静默降级 |
 | SVC-DP-06 | `SessionEventMapper` | REUSE | Provider / P12–13 | 仅纯映射候选；许可补齐、源头测试和 AgentArk Event 契约通过后才能迁入 |
-| SVC-DP-07 | `SessionEventLog` | ADAPT | `agentark-runtime` / P11、P13 | 保留 per-session seq/cursor；重建 MySQL 事务与 SSE 续传 |
-| SVC-DP-08 | `TurnLeaseService` / `JdbcCoordinationStore` | ADAPT | `agentark-runtime` / P11、P13 | 增加 fencing token、Owner、过期/抢占测试；不复制共享 Repo |
-| SVC-DP-09 | Tool Notification/Confirmation | ADAPT | Provider + Runtime Approval / P12–13 | Middleware 依赖 AgentScope，Ticket/审批归中立 Runtime |
-| SVC-DP-10 | Hands Work Queue/Controller | ADAPT | `agentark-runtime` / P11、P13 | Durable Work、claim/ack/heartbeat/stop；增加 attempt/dead-letter 语义 |
+| SVC-DP-07 | `SessionEventLog` | ADAPT | `agentark-runtime` / P11、P13 | P11 已建立 MySQL 追加式 Event Store、Session/Run 双 Sequence、ObjectRef 和并发测试；P13 只实现 SSE `id`/续传与通知 |
+| SVC-DP-08 | `TurnLeaseService` / `JdbcCoordinationStore` | ADAPT | `agentark-runtime` / P11、P13 | P11 已建立 Work Claim Fencing、Owner、过期回收和数据库拒绝旧 Token；P13 补 Runtime Instance Heartbeat/Drain，不复制共享 Repo |
+| SVC-DP-09 | Tool Notification/Confirmation | ADAPT | Provider + Runtime Approval / P11–13 | P11 已建立中立 Approval 聚合、状态机、参数 Hash 与恢复命令；AgentScope Middleware 转换归 P12，决策 API 归 P13 |
+| SVC-DP-10 | Hands Work Queue/Controller | ADAPT | `agentark-runtime` / P11、P13 | P11 已建立 Durable Work、Claim、Complete、Release、Attempt 和过期回收；P13 装配 poll/heartbeat/stop 与运维行为 |
 | SVC-DP-11 | 默认 Secret、CORS、Auto-DDL | REJECT | 无 | 不安全开发默认不得进入任何环境配置 |
 | SVC-SCH-01 | `CronDeploymentScheduler` | REFERENCE | `agentark-scheduling` / P15 | 只借鉴 due/fire lease；目标必须有 Trigger/Job/Attempt/Retry |
 | SVC-SCH-02 | `SchedulerChannelRuntime` | ADAPT | `agentark-scheduling` / P15 | Channel 配置 reconcile、启动状态与退避 |
@@ -64,7 +64,7 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 | AIO-04 | Environment/Vault/Memory Handlers | ADAPT | Control / P08–10 | P08 已独立建立 Secret Metadata/Binding、Memory Profile、Resolver SPI 和审计；拒绝明文 Vault 请求 |
 | AIO-05 | Deployment/Webhook/Channel Handlers | ADAPT | Control + Scheduling / P10、P15 | Control 保存意图，Scheduler 拥有执行记录 |
 | AIO-06 | Team REST/Store/Controller | DEFER | Control/Runtime Collaboration / P21 | Team 契约、权限、恢复 Gate 后迁移 |
-| AIO-07 | Runtime Store Session/Turn/Event/Command | REFERENCE | Runtime / P11–13 | 状态语义和测试参考，不复制 Go Store/SQL |
+| AIO-07 | Runtime Store Session/Turn/Event/Command | REFERENCE | Runtime / P11–13 | P11 已按中立 Domain 与 MySQL V2 独立实现状态、Event、Command 和恢复语义；不复制 Go Store/PostgreSQL SQL，P13 再装配 API |
 | AIO-08 | `internal/product/migrate.go` | REJECT | 无 | 拒绝启动时大段幂等 DDL |
 | AIO-09 | `internal/store/postgres/migrations` | REFERENCE | MySQL Runtime Schema / P06、P11 | 只参考实体和索引语义，不翻译 PostgreSQL DDL |
 | AIO-10 | CRD/Controller/Helm | DEFER | Deployment / P22 | v1 不把 Kubernetes CRD 作为产品域权威 |
@@ -179,6 +179,19 @@ Phase 09 实现源码均为 AgentArk 独立实现。`agentark-knowledge` 的 Dom
 
 Phase 10 新增源码、SQL、Schema 与 OpenAPI 均为 AgentArk 独立实现。发布 Outbox 的 Diff Summary 只列上一 Revision 和变化区段，不包含资产正文；Canary 仅保留模型并由应用拒绝执行，真实分流属于后续 Runtime/Routing 阶段。
 
-## 11. 变更协议
+## 11. Phase 11 实际处置
+
+| 来源范围 | 分类 | 实际结果 | 明确延后或拒绝 |
+|---|---|---|---|
+| Dataplane Session/Turn/Run 与 Admission | `ADAPT` | 独立建立固定 Snapshot Session、Turn/Run Attempt、持久 Work Item、幂等和中立 Application Service | 不复制 JPA Entity/DTO；Public/Internal Runtime API 和 Worker 装配延后 P13 |
+| `SessionEventLog` 与 Aistio Event Store | `ADAPT/REFERENCE` | 建立 MySQL 追加式 Event Store、Session/Run 双 Sequence、ObjectRef Payload 与 Outbox | 不复制 JPA/Go SQL；SSE、Preview 和 `Last-Event-ID` 延后 P13 |
+| Lease、Interrupt 与 Work Queue | `ADAPT` | 建立 Claim Fencing、过期回收、取消/恢复命令、数据库旧 Token 防御和并发测试 | 不保留进程内 Active Turn Registry；Instance Heartbeat/Drain 延后 P13 |
+| HITL Ticket 与 Tool Confirmation | `ADAPT` | 建立中立 Approval 聚合、参数 Hash、状态机和 Repository Port | AgentScope Middleware 映射归 P12，决策 Endpoint 和跨副本通知归 P13 |
+| Agent State/Checkpoint | `REFERENCE` | Runtime MySQL 保存版本、Hash、ObjectRef、Commit 可见性、Checkpoint 与 Fencing | 拒绝 Provider Auto-DDL 和 `agentscope_sessions` 私表；Provider Codec 归 P12 |
+| AgentScope Message/Event/Runtime 类型 | `REJECT/DEPENDENCY` | Domain/Application/Contract 不含 `io.agentscope`，Fake Engine 独立验证执行闭环 | 只有 P12 Provider 防腐层可依赖并转换 AgentScope 类型 |
+
+Phase 11 新增源码、SQL 与 Runtime Event Schema 均为 AgentArk 独立实现。Redis 只可加速 Lease/通知，MySQL Event、Work、State、Checkpoint 与 Object Storage Ref 始终是恢复权威；不能把缓存存活误写为 Runtime 可恢复性。
+
+## 12. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

@@ -350,3 +350,18 @@ Phase 10 继续使用 AgentScope 固定 Commit `0c61e7494197ded54eefdeaf9bdeb518
 | Harness `HarnessAgent` Builder | Builder 需要模型、Prompt、Tool/MCP、Skill、Workspace、Memory、Sandbox、Permission 等运行时能力 | `DEPENDENCY/REFERENCE`；Snapshot v1 使用语言中立字段，Phase 12 防腐层转换，禁止复制 Framework 类型 |
 
 固定上游没有提供 AgentArk 所需的 Canonical Snapshot Schema、SHA-256 内容哈希、跨资产发布事务、Outbox、Environment Revision 指针或 ETag Internal Contract。上述能力属于 AgentArk 新设计，不能描述为上游已有实现。
+
+## 14. Phase 11 Runtime 行为消费复核
+
+Phase 11 继续使用同一固定 Commit，只读取 Dataplane、Service Common、Core 与 Harness 已登记源码，没有迁入实现文件。行为消费结果如下：
+
+| 上游证据 | 消费的行为语义 | AgentArk 落点与差异 |
+|---|---|---|
+| `DataSessionService`、`SessionTurnRunner`、Admission 测试 | Session、Turn 接受、执行与取消生命周期 | 独立拆分 Session、Turn、Run Attempt 与持久 Work Item；Session 固定 Phase 10 Snapshot，禁止 Runtime 直读 Catalog |
+| `SessionEventLog` 与跨进程测试 | 数据库 Event Log、Session Sequence 和游标回放 | MySQL Event Store 增加 Run Sequence、全局 Event ID、Fencing、ObjectRef 和不可变 Trigger；SSE 留给 P13 |
+| `TurnLeaseService`、`JdbcCoordinationStore`、Interrupt 测试 | Owner 竞争、过期、跨副本取消/恢复 | Claim 时递增 Fencing Token，数据库拒绝旧 Owner 写 Event/State/Checkpoint；不保留进程内权威 Registry |
+| HITL Ticket、Tool Confirmation Middleware | PENDING/Decision、参数确认和恢复 | 中立 Approval 保存 Argument Hash 与 Policy Version；AgentScope Middleware 只允许在 P12 Provider 转换 |
+| Hands Work Queue 与 Self-hosted 测试 | Poll、Claim、Heartbeat、Ack/Stop 和恢复 | P11 只建立 Durable Queue/Claim/Release/Complete；Controller、Worker Heartbeat、Stop 与权限归 P13/P21 |
+| AgentState Store、Checkpoint 相关测试 | 版本化 State 与恢复点 | Runtime MySQL 保存 State Version、Hash、ObjectRef、Commit 可见性和 Checkpoint；拒绝 AgentScope Auto-DDL |
+
+上游只有 Session 级 Event 序号且缺少单调 Fencing Token；AgentArk 的双 Sequence、旧 Token 数据库 Trigger、幂等记录、Runtime Outbox 和 ObjectRef Payload 是为满足既定架构约束新增的中立能力，不能归因于上游已有实现。
