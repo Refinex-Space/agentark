@@ -26,13 +26,15 @@ import java.time.temporal.ChronoUnit;
  */
 final class CatalogFieldPolicy {
 
-    /** 禁止实例化静态字段策略。 */
+    /**
+     * 禁止实例化静态字段策略。
+     */
     private CatalogFieldPolicy() {
     }
 
     /**
      * @param value 待校验稳定 Key
-     * @param name 字段名
+     * @param name  字段名
      * @return 合法原值
      */
     static String key(String value, String name) {
@@ -43,8 +45,8 @@ final class CatalogFieldPolicy {
     }
 
     /**
-     * @param value 待校验文本
-     * @param name 字段名
+     * @param value     待校验文本
+     * @param name      字段名
      * @param maxLength 最大字符数
      * @return 去除首尾空白的文本
      */
@@ -56,8 +58,8 @@ final class CatalogFieldPolicy {
     }
 
     /**
-     * @param value 可选文本
-     * @param name 字段名
+     * @param value     可选文本
+     * @param name      字段名
      * @param maxLength 最大字符数
      * @return 空串或规范文本
      */
@@ -67,7 +69,7 @@ final class CatalogFieldPolicy {
 
     /**
      * @param value JSON 字符串
-     * @param name 字段名
+     * @param name  字段名
      * @return 非空 JSON 字符串
      */
     static String json(String value, String name) {
@@ -79,7 +81,7 @@ final class CatalogFieldPolicy {
 
     /**
      * @param value 时刻
-     * @param name 字段名
+     * @param name  字段名
      * @return MySQL 可稳定往返的微秒精度时刻
      */
     static Instant instant(Instant value, String name) {

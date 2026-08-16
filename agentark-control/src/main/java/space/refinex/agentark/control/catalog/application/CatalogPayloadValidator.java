@@ -31,11 +31,15 @@ import java.util.*;
  */
 public final class CatalogPayloadValidator {
 
-    /** 被视为疑似明文凭据且禁止进入资产 JSON 的字段名。 */
+    /**
+     * 被视为疑似明文凭据且禁止进入资产 JSON 的字段名。
+     */
     private static final Set<String> FORBIDDEN_SECRET_FIELDS = Set.of(
         "apikey", "api_key", "token", "password", "secretvalue", "secret_value", "credentials");
 
-    /** 统一 JSON 映射器。 */
+    /**
+     * 统一 JSON 映射器。
+     */
     private final JsonMapper jsonMapper;
 
     /**
@@ -46,7 +50,7 @@ public final class CatalogPayloadValidator {
     }
 
     /**
-     * @param kind 资产分类
+     * @param kind    资产分类
      * @param payload 调用方语言中立载荷
      * @return 完成校验且键顺序稳定的载荷
      */
@@ -59,8 +63,7 @@ public final class CatalogPayloadValidator {
             case MODEL_PROVIDER -> validateModelProfile(checked);
             case MCP_SERVER -> validateMcpServer(checked);
             case SKILL -> validateSkill(checked);
-            case MEMORY_PROFILE, WORKSPACE_PROFILE, SANDBOX_PROFILE ->
-                validateProfile(checked);
+            case MEMORY_PROFILE, WORKSPACE_PROFILE, SANDBOX_PROFILE -> validateProfile(checked);
             case PERMISSION_POLICY -> validatePermissionPolicy(checked);
             case AGENT -> throw new IllegalArgumentException("agent does not support versions");
         };
@@ -68,7 +71,7 @@ public final class CatalogPayloadValidator {
     }
 
     /**
-     * @param kind 资产分类
+     * @param kind     资产分类
      * @param metadata 分类专属元数据
      * @return 规范 JSON
      */
@@ -254,7 +257,7 @@ public final class CatalogPayloadValidator {
 
     /**
      * @param payload 载荷
-     * @param field SecretRef 字段
+     * @param field   SecretRef 字段
      */
     private void optionalSecretRef(Map<String, Object> payload, String field) {
         Object value = payload.get(field);
@@ -282,7 +285,7 @@ public final class CatalogPayloadValidator {
 
     /**
      * @param value 当前 JSON 结构
-     * @param refs 收集目标
+     * @param refs  收集目标
      */
     private void collectSecretRefs(Object value, Set<SecretRef> refs) {
         if (value instanceof Map<?, ?> map) {
@@ -299,8 +302,8 @@ public final class CatalogPayloadValidator {
     }
 
     /**
-     * @param map 对象
-     * @param field 字段
+     * @param map     对象
+     * @param field   字段
      * @param allowed 合法值
      * @return 合法枚举字符串
      */
@@ -314,8 +317,8 @@ public final class CatalogPayloadValidator {
     }
 
     /**
-     * @param map 对象
-     * @param field 字段
+     * @param map       对象
+     * @param field     字段
      * @param maxLength 最大字符数
      * @return 非空字符串
      */
@@ -328,8 +331,8 @@ public final class CatalogPayloadValidator {
     }
 
     /**
-     * @param map 对象
-     * @param field 字段
+     * @param map     对象
+     * @param field   字段
      * @param minimum 最小值
      * @return 合法长整数
      */
@@ -342,7 +345,7 @@ public final class CatalogPayloadValidator {
     }
 
     /**
-     * @param map 对象
+     * @param map   对象
      * @param field 字段
      * @return 非空列表
      */
@@ -355,7 +358,7 @@ public final class CatalogPayloadValidator {
     }
 
     /**
-     * @param map 对象
+     * @param map   对象
      * @param field 必须为 true 的字段
      */
     private void requireTrue(Map<String, Object> map, String field) {
@@ -366,7 +369,7 @@ public final class CatalogPayloadValidator {
 
     /**
      * @param value 对象候选
-     * @param name 错误字段名
+     * @param name  错误字段名
      * @return 字符串 Key 的对象
      */
     @SuppressWarnings("unchecked")

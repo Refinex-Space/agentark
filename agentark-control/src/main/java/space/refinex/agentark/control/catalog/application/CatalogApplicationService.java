@@ -25,9 +25,15 @@ import space.refinex.agentark.control.iam.application.port.TenantCatalogReposito
 import space.refinex.agentark.control.iam.domain.Project;
 import space.refinex.agentark.control.secret.application.port.SecretRepository;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
-import space.refinex.agentark.foundation.storage.*;
+import space.refinex.agentark.foundation.storage.ObjectMetadata;
+import space.refinex.agentark.foundation.storage.ObjectNamespace;
+import space.refinex.agentark.foundation.storage.ObjectStore;
+import space.refinex.agentark.foundation.storage.PutObjectCommand;
 import space.refinex.agentark.foundation.web.CursorPage;
-import space.refinex.agentark.kernel.id.*;
+import space.refinex.agentark.kernel.id.McpServerVersionId;
+import space.refinex.agentark.kernel.id.McpToolDescriptorId;
+import space.refinex.agentark.kernel.id.ProjectId;
+import space.refinex.agentark.kernel.id.StrongId;
 import space.refinex.agentark.kernel.ref.Checksum;
 import space.refinex.agentark.kernel.ref.ObjectRef;
 import tools.jackson.databind.json.JsonMapper;
@@ -45,47 +51,67 @@ import java.util.*;
  */
 public class CatalogApplicationService {
 
-    /** 资产持久化端口。 */
+    /**
+     * 资产持久化端口。
+     */
     private final CatalogRepository repository;
 
-    /** IAM 租户目录端口。 */
+    /**
+     * IAM 租户目录端口。
+     */
     private final TenantCatalogRepository tenantRepository;
 
-    /** IAM 应用授权服务。 */
+    /**
+     * IAM 应用授权服务。
+     */
     private final IamAuthorizationService authorizationService;
 
-    /** 事务感知审计发布器。 */
+    /**
+     * 事务感知审计发布器。
+     */
     private final IamAuditPublisher auditPublisher;
 
-    /** 分类载荷校验器。 */
+    /**
+     * 分类载荷校验器。
+     */
     private final CatalogPayloadValidator payloadValidator;
 
-    /** SecretRef 同项目存在性检查端口。 */
+    /**
+     * SecretRef 同项目存在性检查端口。
+     */
     private final SecretRepository secretRepository;
 
-    /** 可选对象存储；生产未提供时 Skill 上传显式失败。 */
+    /**
+     * 可选对象存储；生产未提供时 Skill 上传显式失败。
+     */
     private final Optional<ObjectStore> objectStore;
 
-    /** Catalog 配置。 */
+    /**
+     * Catalog 配置。
+     */
     private final CatalogProperties properties;
 
-    /** UTC 时钟。 */
+    /**
+     * UTC 时钟。
+     */
     private final Clock clock;
 
-    /** JSON 映射器，仅用于无值差异路径计算。 */
+    /**
+     * JSON 映射器，仅用于无值差异路径计算。
+     */
     private final JsonMapper jsonMapper;
 
     /**
-     * @param repository 资产持久化端口
-     * @param tenantRepository IAM 租户端口
+     * @param repository           资产持久化端口
+     * @param tenantRepository     IAM 租户端口
      * @param authorizationService IAM 授权服务
-     * @param auditPublisher 审计发布器
-     * @param payloadValidator 载荷校验器
-     * @param secretRepository SecretRef 检查端口
-     * @param objectStore 可选对象存储
-     * @param properties Catalog 配置
-     * @param clock UTC 时钟
-     * @param jsonMapper JSON 映射器
+     * @param auditPublisher       审计发布器
+     * @param payloadValidator     载荷校验器
+     * @param secretRepository     SecretRef 检查端口
+     * @param objectStore          可选对象存储
+     * @param properties           Catalog 配置
+     * @param clock                UTC 时钟
+     * @param jsonMapper           JSON 映射器
      */
     public CatalogApplicationService(
         CatalogRepository repository,
@@ -116,13 +142,13 @@ public class CatalogApplicationService {
     }
 
     /**
-     * @param principal 已认证主体
-     * @param projectId 项目标识
-     * @param kind 资产分类
-     * @param key 稳定 Key
-     * @param name 显示名称
+     * @param principal   已认证主体
+     * @param projectId   项目标识
+     * @param kind        资产分类
+     * @param key         稳定 Key
+     * @param name        显示名称
      * @param description 可选说明
-     * @param metadata 分类元数据
+     * @param metadata    分类元数据
      * @return 新稳定身份
      */
     @Transactional
@@ -148,9 +174,9 @@ public class CatalogApplicationService {
     /**
      * @param principal 已认证主体
      * @param projectId 项目标识
-     * @param kind 资产分类
-     * @param cursor 可选不透明游标
-     * @param limit 正数页大小
+     * @param kind      资产分类
+     * @param cursor    可选不透明游标
+     * @param limit     正数页大小
      * @return 资产游标页
      */
     @Transactional(readOnly = true)
@@ -173,10 +199,10 @@ public class CatalogApplicationService {
     }
 
     /**
-     * @param principal 已认证主体
-     * @param projectId 项目标识
-     * @param kind 资产分类
-     * @param assetId 稳定身份
+     * @param principal       已认证主体
+     * @param projectId       项目标识
+     * @param kind            资产分类
+     * @param assetId         稳定身份
      * @param expectedVersion 乐观锁版本
      */
     @Transactional
@@ -199,10 +225,10 @@ public class CatalogApplicationService {
     /**
      * @param principal 已认证主体
      * @param projectId 项目标识
-     * @param kind 资产分类
-     * @param assetId 稳定身份
-     * @param payload 版本载荷
-     * @param status 创建时版本状态
+     * @param kind      资产分类
+     * @param assetId   稳定身份
+     * @param payload   版本载荷
+     * @param status    创建时版本状态
      * @return 新不可变版本
      */
     @Transactional
@@ -240,10 +266,10 @@ public class CatalogApplicationService {
     /**
      * @param principal 已认证主体
      * @param projectId 项目标识
-     * @param kind 资产分类
-     * @param assetId 稳定身份
-     * @param cursor 可选版本号游标
-     * @param limit 页大小
+     * @param kind      资产分类
+     * @param assetId   稳定身份
+     * @param cursor    可选版本号游标
+     * @param limit     页大小
      * @return 不可变版本游标页
      */
     @Transactional(readOnly = true)
@@ -264,17 +290,17 @@ public class CatalogApplicationService {
         List<CatalogVersion> items = loaded.stream().limit(pageSize).toList();
         Optional<String> next = hasMore
             ? Optional.of(CatalogCursorCodec.encode(
-                Long.toString(items.get(items.size() - 1).versionNumber())))
+            Long.toString(items.get(items.size() - 1).versionNumber())))
             : Optional.empty();
         return new CursorPage<>(items, next, hasMore);
     }
 
     /**
-     * @param principal 已认证主体
-     * @param projectId 项目标识
-     * @param kind 资产分类
-     * @param assetId 稳定身份
-     * @param baseVersionId 基准版本
+     * @param principal       已认证主体
+     * @param projectId       项目标识
+     * @param kind            资产分类
+     * @param assetId         稳定身份
+     * @param baseVersionId   基准版本
      * @param targetVersionId 目标版本
      * @return 不回显值的变更路径
      */
@@ -297,11 +323,11 @@ public class CatalogApplicationService {
     }
 
     /**
-     * @param principal 已认证主体
-     * @param projectId 项目标识
-     * @param content Artifact 输入流
-     * @param size 声明字节数
-     * @param contentType 媒体类型
+     * @param principal        已认证主体
+     * @param projectId        项目标识
+     * @param content          Artifact 输入流
+     * @param size             声明字节数
+     * @param contentType      媒体类型
      * @param expectedChecksum 可选预期校验和
      * @return 已完整性校验的持久 ObjectRef
      */
@@ -328,8 +354,8 @@ public class CatalogApplicationService {
     }
 
     /**
-     * @param principal 已认证主体
-     * @param projectId 项目标识
+     * @param principal  已认证主体
+     * @param projectId  项目标识
      * @param permission 必需权限
      * @return 已授权项目
      */
@@ -369,11 +395,11 @@ public class CatalogApplicationService {
     }
 
     /**
-     * @param kind 资产分类
-     * @param project 项目
+     * @param kind      资产分类
+     * @param project   项目
      * @param versionId 版本标识
-     * @param payloads Tool 载荷
-     * @param now 创建时刻
+     * @param payloads  Tool 载荷
+     * @param now       创建时刻
      * @return MCP Tool Descriptor 快照
      */
     private List<McpToolDescriptorSnapshot> descriptors(
@@ -399,9 +425,9 @@ public class CatalogApplicationService {
     }
 
     /**
-     * @param kind 资产分类
+     * @param kind      资产分类
      * @param projectId 项目标识
-     * @param ownerId Owner 标识
+     * @param ownerId   Owner 标识
      * @param versionId 版本标识
      * @return 必须存在的版本
      */
@@ -415,7 +441,7 @@ public class CatalogApplicationService {
     }
 
     /**
-     * @param baseJson 基准 JSON
+     * @param baseJson   基准 JSON
      * @param targetJson 目标 JSON
      * @return 发生变化的顶层 JSON Pointer
      */
@@ -485,12 +511,12 @@ public class CatalogApplicationService {
     }
 
     /**
-     * @param principal 已认证主体
-     * @param action 操作代码
+     * @param principal    已认证主体
+     * @param action       操作代码
      * @param resourceType 资源类型
-     * @param resourceId 资源标识
-     * @param project 项目
-     * @param now 操作时刻
+     * @param resourceId   资源标识
+     * @param project      项目
+     * @param now          操作时刻
      */
     private void audit(
         AgentArkPrincipal principal,

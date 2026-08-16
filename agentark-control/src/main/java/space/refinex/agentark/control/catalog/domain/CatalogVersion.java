@@ -27,16 +27,16 @@ import java.util.Objects;
 /**
  * 表示行为资产的只追加不可变版本；内容更新只能创建下一版本。
  *
- * @param id 强类型版本标识
- * @param kind 资产分类
+ * @param id             强类型版本标识
+ * @param kind           资产分类
  * @param organizationId 所属组织
- * @param projectId 所属项目
- * @param ownerId 稳定身份标识
- * @param versionNumber Owner 内单调递增版本号
- * @param payloadJson 规范化语言中立 JSON
- * @param contentHash 内容 SHA-256
- * @param status 版本创建状态
- * @param createdAt 创建时刻
+ * @param projectId      所属项目
+ * @param ownerId        稳定身份标识
+ * @param versionNumber  Owner 内单调递增版本号
+ * @param payloadJson    规范化语言中立 JSON
+ * @param contentHash    内容 SHA-256
+ * @param status         版本创建状态
+ * @param createdAt      创建时刻
  * @author refinex
  */
 public record CatalogVersion(
@@ -54,16 +54,16 @@ public record CatalogVersion(
     /**
      * 校验版本内容、Hash 和 Owner 归属。
      *
-     * @param id 强类型版本标识
-     * @param kind 资产分类
+     * @param id             强类型版本标识
+     * @param kind           资产分类
      * @param organizationId 所属组织
-     * @param projectId 所属项目
-     * @param ownerId 稳定身份标识
-     * @param versionNumber 正数版本号
-     * @param payloadJson 规范 JSON
-     * @param contentHash 内容 Hash
-     * @param status 版本状态
-     * @param createdAt 创建时刻
+     * @param projectId      所属项目
+     * @param ownerId        稳定身份标识
+     * @param versionNumber  正数版本号
+     * @param payloadJson    规范 JSON
+     * @param contentHash    内容 Hash
+     * @param status         版本状态
+     * @param createdAt      创建时刻
      */
     public CatalogVersion {
         Objects.requireNonNull(id, "id must not be null");

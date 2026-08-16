@@ -28,19 +28,19 @@ import java.util.Objects;
 /**
  * 表示从 MCP Server Version 派生的工具描述、安全风险、读写与幂等语义快照。
  *
- * @param id Descriptor 标识
- * @param organizationId 所属组织
- * @param projectId 所属项目
- * @param serverVersionId 所属 MCP Server Version
- * @param toolName 工具名称
- * @param description 用途说明
- * @param argumentSchemaJson 参数 JSON Schema
- * @param accessMode 读写模式
- * @param riskLevel 风险等级
- * @param idempotency 幂等语义
+ * @param id                     Descriptor 标识
+ * @param organizationId         所属组织
+ * @param projectId              所属项目
+ * @param serverVersionId        所属 MCP Server Version
+ * @param toolName               工具名称
+ * @param description            用途说明
+ * @param argumentSchemaJson     参数 JSON Schema
+ * @param accessMode             读写模式
+ * @param riskLevel              风险等级
+ * @param idempotency            幂等语义
  * @param permissionMetadataJson Allowlist、权限和审批元数据
- * @param contentHash Descriptor 内容 Hash
- * @param createdAt 创建时刻
+ * @param contentHash            Descriptor 内容 Hash
+ * @param createdAt              创建时刻
  * @author refinex
  */
 public record McpToolDescriptorSnapshot(
@@ -61,19 +61,19 @@ public record McpToolDescriptorSnapshot(
     /**
      * 校验工具元数据完整性和可穷举安全字段。
      *
-     * @param id Descriptor 标识
-     * @param organizationId 所属组织
-     * @param projectId 所属项目
-     * @param serverVersionId 所属版本
-     * @param toolName 工具名称
-     * @param description 用途说明
-     * @param argumentSchemaJson 参数 Schema
-     * @param accessMode 访问模式
-     * @param riskLevel 风险等级
-     * @param idempotency 幂等语义
+     * @param id                     Descriptor 标识
+     * @param organizationId         所属组织
+     * @param projectId              所属项目
+     * @param serverVersionId        所属版本
+     * @param toolName               工具名称
+     * @param description            用途说明
+     * @param argumentSchemaJson     参数 Schema
+     * @param accessMode             访问模式
+     * @param riskLevel              风险等级
+     * @param idempotency            幂等语义
      * @param permissionMetadataJson 权限元数据
-     * @param contentHash 内容 Hash
-     * @param createdAt 创建时刻
+     * @param contentHash            内容 Hash
+     * @param createdAt              创建时刻
      */
     public McpToolDescriptorSnapshot {
         Objects.requireNonNull(id, "id must not be null");

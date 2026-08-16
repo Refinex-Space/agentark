@@ -23,13 +23,15 @@ import java.util.Map;
  * 表示完成分类约束和敏感字段检查后的规范 JSON 及 MCP Tool 快照载荷。
  *
  * @param canonicalJson 键顺序稳定的规范 JSON
- * @param toolPayloads MCP Tool Descriptor 载荷；其他分类为空
+ * @param toolPayloads  MCP Tool Descriptor 载荷；其他分类为空
  * @author refinex
  */
 record CatalogValidatedPayload(
     String canonicalJson, List<Map<String, Object>> toolPayloads) {
 
-    /** 防御性复制 MCP Tool 载荷列表。 */
+    /**
+     * 防御性复制 MCP Tool 载荷列表。
+     */
     CatalogValidatedPayload {
         if (canonicalJson == null || canonicalJson.isBlank()) {
             throw new IllegalArgumentException("canonicalJson must not be blank");

@@ -29,70 +29,100 @@ import java.util.function.Supplier;
  */
 public enum CatalogAssetKind {
 
-    /** Agent 稳定身份；Draft、Revision 和 Snapshot 由 Phase 09 创建。 */
+    /**
+     * Agent 稳定身份；Draft、Revision 和 Snapshot 由 Phase 09 创建。
+     */
     AGENT("agent", null, AgentId::generate, AgentId::parse, null, null),
 
-    /** Prompt 稳定身份与 PromptVersion。 */
+    /**
+     * Prompt 稳定身份与 PromptVersion。
+     */
     PROMPT("prompt", "prompt_version", PromptId::generate, PromptId::parse,
         PromptVersionId::generate, PromptVersionId::parse),
 
-    /** Model Provider 稳定描述符与 ModelProfile。 */
+    /**
+     * Model Provider 稳定描述符与 ModelProfile。
+     */
     MODEL_PROVIDER("model_provider", "model_profile", ModelProviderId::generate,
         ModelProviderId::parse, ModelProfileId::generate, ModelProfileId::parse),
 
-    /** MCP Server 稳定身份与连接版本。 */
+    /**
+     * MCP Server 稳定身份与连接版本。
+     */
     MCP_SERVER("mcp_server", "mcp_server_version", McpServerId::generate, McpServerId::parse,
         McpServerVersionId::generate, McpServerVersionId::parse),
 
-    /** Skill 稳定身份与 Artifact 版本。 */
+    /**
+     * Skill 稳定身份与 Artifact 版本。
+     */
     SKILL("skill", "skill_version", SkillId::generate, SkillId::parse,
         SkillVersionId::generate, SkillVersionId::parse),
 
-    /** Memory Profile 稳定身份与策略版本。 */
+    /**
+     * Memory Profile 稳定身份与策略版本。
+     */
     MEMORY_PROFILE("memory_profile", "memory_profile_version", MemoryProfileId::generate,
         MemoryProfileId::parse, MemoryProfileVersionId::generate, MemoryProfileVersionId::parse),
 
-    /** Workspace Profile 稳定身份与隔离版本。 */
+    /**
+     * Workspace Profile 稳定身份与隔离版本。
+     */
     WORKSPACE_PROFILE("workspace_profile", "workspace_profile_version",
         WorkspaceProfileId::generate, WorkspaceProfileId::parse,
         WorkspaceProfileVersionId::generate, WorkspaceProfileVersionId::parse),
 
-    /** Sandbox Profile 稳定身份与运行策略版本。 */
+    /**
+     * Sandbox Profile 稳定身份与运行策略版本。
+     */
     SANDBOX_PROFILE("sandbox_profile", "sandbox_profile_version", SandboxProfileId::generate,
         SandboxProfileId::parse, SandboxProfileVersionId::generate, SandboxProfileVersionId::parse),
 
-    /** Permission Policy 稳定身份与组合规则版本。 */
+    /**
+     * Permission Policy 稳定身份与组合规则版本。
+     */
     PERMISSION_POLICY("permission_policy", "permission_policy_version",
         PermissionPolicyId::generate, PermissionPolicyId::parse,
         PermissionPolicyVersionId::generate, PermissionPolicyVersionId::parse);
 
-    /** 受信稳定身份表名，仅持久化适配器使用。 */
+    /**
+     * 受信稳定身份表名，仅持久化适配器使用。
+     */
     private final String tableName;
 
-    /** 受信版本表名；Agent 没有版本表。 */
+    /**
+     * 受信版本表名；Agent 没有版本表。
+     */
     private final String versionTableName;
 
-    /** 稳定身份生成器。 */
+    /**
+     * 稳定身份生成器。
+     */
     private final Supplier<? extends StrongId> idGenerator;
 
-    /** 稳定身份解析器。 */
+    /**
+     * 稳定身份解析器。
+     */
     private final Function<String, ? extends StrongId> idParser;
 
-    /** 版本标识生成器；Agent 为空。 */
+    /**
+     * 版本标识生成器；Agent 为空。
+     */
     private final Supplier<? extends StrongId> versionIdGenerator;
 
-    /** 版本标识解析器；Agent 为空。 */
+    /**
+     * 版本标识解析器；Agent 为空。
+     */
     private final Function<String, ? extends StrongId> versionIdParser;
 
     /**
      * 创建受控资产分类。
      *
-     * @param tableName 稳定身份表名
-     * @param versionTableName 可选版本表名
-     * @param idGenerator 稳定身份生成器
-     * @param idParser 稳定身份解析器
+     * @param tableName          稳定身份表名
+     * @param versionTableName   可选版本表名
+     * @param idGenerator        稳定身份生成器
+     * @param idParser           稳定身份解析器
      * @param versionIdGenerator 可选版本标识生成器
-     * @param versionIdParser 可选版本标识解析器
+     * @param versionIdParser    可选版本标识解析器
      */
     CatalogAssetKind(
         String tableName,
@@ -109,12 +139,15 @@ public enum CatalogAssetKind {
         this.versionIdParser = versionIdParser;
     }
 
-    /** @return 受信稳定身份表名 */
+    /**
+     * @return 受信稳定身份表名
+     */
     public String tableName() {
         return tableName;
     }
 
-    /** @return 受信版本表名
+    /**
+     * @return 受信版本表名
      * @throws IllegalArgumentException 当前分类不支持版本时抛出
      */
     public String versionTableName() {
@@ -124,7 +157,9 @@ public enum CatalogAssetKind {
         return versionTableName;
     }
 
-    /** @return 新稳定身份强类型 UUIDv7 */
+    /**
+     * @return 新稳定身份强类型 UUIDv7
+     */
     public StrongId generateId() {
         return idGenerator.get();
     }
@@ -137,7 +172,8 @@ public enum CatalogAssetKind {
         return idParser.apply(value);
     }
 
-    /** @return 新版本强类型 UUIDv7
+    /**
+     * @return 新版本强类型 UUIDv7
      * @throws IllegalArgumentException 当前分类不支持版本时抛出
      */
     public StrongId generateVersionId() {
@@ -173,7 +209,9 @@ public enum CatalogAssetKind {
         return valueOf(value.replace('-', '_').toUpperCase(Locale.ROOT));
     }
 
-    /** @return Public API 使用的小写连字符分类值 */
+    /**
+     * @return Public API 使用的小写连字符分类值
+     */
     public String apiValue() {
         return name().toLowerCase(Locale.ROOT).replace('_', '-');
     }

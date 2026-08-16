@@ -17,11 +17,15 @@
 package space.refinex.agentark.control.catalog.adapter.in.web;
 
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.*;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ProblemDetail;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-import org.springframework.web.bind.annotation.*;
-import space.refinex.agentark.control.iam.application.*;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
+import space.refinex.agentark.control.iam.application.IamAccessDeniedException;
+import space.refinex.agentark.control.iam.application.IamConflictException;
+import space.refinex.agentark.control.iam.application.IamNotFoundException;
 import space.refinex.agentark.foundation.web.RequestContextAccessor;
 
 import java.net.URI;
@@ -35,7 +39,9 @@ import java.util.UUID;
 @RestControllerAdvice(assignableTypes = CatalogController.class)
 public final class CatalogProblemDetailAdvice {
 
-    /** 请求上下文访问器。 */
+    /**
+     * 请求上下文访问器。
+     */
     private final RequestContextAccessor requestContextAccessor;
 
     /**
@@ -88,8 +94,8 @@ public final class CatalogProblemDetailAdvice {
 
     /**
      * @param status HTTP 状态
-     * @param code 稳定错误码
-     * @param title 中文标题
+     * @param code   稳定错误码
+     * @param title  中文标题
      * @param detail 安全详情
      * @return RFC 9457 响应
      */

@@ -25,7 +25,9 @@ import space.refinex.agentark.control.catalog.domain.CatalogAssetKind;
  */
 public final class CatalogSqlProvider {
 
-    /** 创建无状态 SQL Provider。 */
+    /**
+     * 创建无状态 SQL Provider。
+     */
     public CatalogSqlProvider() {
     }
 

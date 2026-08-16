@@ -23,15 +23,17 @@ import java.util.List;
 /**
  * 表示两个不可变版本间发生变化的 JSON Pointer 路径，不回显 Secret 值。
  *
- * @param baseVersionId 基准版本
+ * @param baseVersionId   基准版本
  * @param targetVersionId 目标版本
- * @param changedPaths 发生变化的 JSON Pointer 路径
+ * @param changedPaths    发生变化的 JSON Pointer 路径
  * @author refinex
  */
 public record CatalogVersionDiff(
     StrongId baseVersionId, StrongId targetVersionId, List<String> changedPaths) {
 
-    /** 防御性复制差异路径。 */
+    /**
+     * 防御性复制差异路径。
+     */
     public CatalogVersionDiff {
         java.util.Objects.requireNonNull(baseVersionId, "baseVersionId must not be null");
         java.util.Objects.requireNonNull(targetVersionId, "targetVersionId must not be null");

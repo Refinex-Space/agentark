@@ -20,19 +20,28 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.*;
-import space.refinex.agentark.control.catalog.adapter.in.web.*;
-import space.refinex.agentark.control.catalog.adapter.out.persistence.*;
-import space.refinex.agentark.control.catalog.application.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
+import space.refinex.agentark.control.catalog.adapter.in.web.CatalogController;
+import space.refinex.agentark.control.catalog.adapter.in.web.CatalogProblemDetailAdvice;
+import space.refinex.agentark.control.catalog.adapter.out.persistence.CatalogMapper;
+import space.refinex.agentark.control.catalog.adapter.out.persistence.MybatisCatalogRepository;
+import space.refinex.agentark.control.catalog.application.CatalogApplicationService;
+import space.refinex.agentark.control.catalog.application.CatalogPayloadValidator;
 import space.refinex.agentark.control.catalog.application.port.CatalogRepository;
-import space.refinex.agentark.control.iam.application.*;
+import space.refinex.agentark.control.iam.application.IamAuditPublisher;
+import space.refinex.agentark.control.iam.application.IamAuthorizationService;
 import space.refinex.agentark.control.iam.application.port.TenantCatalogRepository;
 import space.refinex.agentark.control.secret.SecretProperties;
-import space.refinex.agentark.control.secret.adapter.in.web.*;
+import space.refinex.agentark.control.secret.adapter.in.web.SecretController;
+import space.refinex.agentark.control.secret.adapter.in.web.SecretProblemDetailAdvice;
 import space.refinex.agentark.control.secret.adapter.out.local.LocalFileSecretResolver;
-import space.refinex.agentark.control.secret.adapter.out.persistence.*;
+import space.refinex.agentark.control.secret.adapter.out.persistence.MybatisSecretRepository;
+import space.refinex.agentark.control.secret.adapter.out.persistence.SecretMapper;
 import space.refinex.agentark.control.secret.application.SecretApplicationService;
-import space.refinex.agentark.control.secret.application.port.*;
+import space.refinex.agentark.control.secret.application.port.SecretRepository;
+import space.refinex.agentark.control.secret.application.port.SecretResolver;
 import space.refinex.agentark.foundation.storage.ObjectStore;
 import space.refinex.agentark.foundation.web.RequestContextAccessor;
 import tools.jackson.databind.json.JsonMapper;
@@ -56,7 +65,9 @@ import java.util.Optional;
 @MapperScan(basePackageClasses = {CatalogMapper.class, SecretMapper.class})
 public class CatalogControlConfiguration {
 
-    /** 创建 Catalog Control 装配。 */
+    /**
+     * 创建 Catalog Control 装配。
+     */
     public CatalogControlConfiguration() {
         // Spring 通过公开无参构造器创建配置实例。
     }
@@ -89,16 +100,16 @@ public class CatalogControlConfiguration {
     }
 
     /**
-     * @param repository Catalog Repository
-     * @param tenantRepository IAM 租户目录
+     * @param repository           Catalog Repository
+     * @param tenantRepository     IAM 租户目录
      * @param authorizationService IAM 授权服务
-     * @param auditPublisher 审计发布器
-     * @param payloadValidator 载荷校验器
-     * @param secretRepository SecretRef 检查端口
-     * @param objectStoreProvider 可选 ObjectStore
-     * @param properties Catalog 配置
-     * @param clock UTC 时钟
-     * @param jsonMapper JSON 映射器
+     * @param auditPublisher       审计发布器
+     * @param payloadValidator     载荷校验器
+     * @param secretRepository     SecretRef 检查端口
+     * @param objectStoreProvider  可选 ObjectStore
+     * @param properties           Catalog 配置
+     * @param clock                UTC 时钟
+     * @param jsonMapper           JSON 映射器
      * @return Catalog 应用服务
      */
     @Bean
@@ -120,11 +131,11 @@ public class CatalogControlConfiguration {
     }
 
     /**
-     * @param repository Secret Repository
-     * @param tenantRepository IAM 租户目录
+     * @param repository           Secret Repository
+     * @param tenantRepository     IAM 租户目录
      * @param authorizationService IAM 授权服务
-     * @param auditPublisher 审计发布器
-     * @param clock UTC 时钟
+     * @param auditPublisher       审计发布器
+     * @param clock                UTC 时钟
      * @return Secret 应用服务
      */
     @Bean
@@ -139,7 +150,7 @@ public class CatalogControlConfiguration {
     }
 
     /**
-     * @param service Catalog 应用服务
+     * @param service    Catalog 应用服务
      * @param jsonMapper JSON 映射器
      * @return Catalog Public API
      */

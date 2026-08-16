@@ -22,9 +22,13 @@ package space.refinex.agentark.control.catalog.domain;
  * @author refinex
  */
 public enum CatalogAssetStatus {
-    /** 允许创建新版本和引用。 */
+    /**
+     * 允许创建新版本和引用。
+     */
     ACTIVE,
-    /** 仅保留历史读取和既有引用，不允许创建新版本。 */
+    /**
+     * 仅保留历史读取和既有引用，不允许创建新版本。
+     */
     ARCHIVED
 }
 

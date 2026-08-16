@@ -27,13 +27,19 @@ import org.springframework.util.unit.DataSize;
 @ConfigurationProperties("agentark.control.catalog")
 public class CatalogProperties {
 
-    /** 是否启用资产目录；默认启用以保持 Control 领域完整。 */
+    /**
+     * 是否启用资产目录；默认启用以保持 Control 领域完整。
+     */
     private boolean enabled = true;
 
-    /** 单次 Skill Artifact 最大字节数。 */
+    /**
+     * 单次 Skill Artifact 最大字节数。
+     */
     private DataSize maxArtifactSize = DataSize.ofMegabytes(10);
 
-    /** @return 资产目录是否启用 */
+    /**
+     * @return 资产目录是否启用
+     */
     public boolean isEnabled() {
         return enabled;
     }
@@ -45,7 +51,9 @@ public class CatalogProperties {
         this.enabled = enabled;
     }
 
-    /** @return 单次 Artifact 最大字节数 */
+    /**
+     * @return 单次 Artifact 最大字节数
+     */
     public DataSize getMaxArtifactSize() {
         return maxArtifactSize;
     }

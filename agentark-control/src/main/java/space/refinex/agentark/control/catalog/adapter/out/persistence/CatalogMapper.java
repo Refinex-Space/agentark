@@ -39,15 +39,15 @@ public interface CatalogMapper {
 
     /**
      * @param kind 受控资产分类
-     * @param row 稳定身份数据库行
+     * @param row  稳定身份数据库行
      */
     @InsertProvider(type = CatalogSqlProvider.class, method = "insertAsset")
     void insertAsset(@Param("kind") CatalogAssetKind kind, @Param("row") AssetRow row);
 
     /**
-     * @param kind 资产分类
+     * @param kind      资产分类
      * @param projectId 项目 UUIDv7
-     * @param id 资产 UUIDv7
+     * @param id        资产 UUIDv7
      * @return 同项目资产行
      */
     @SelectProvider(type = CatalogSqlProvider.class, method = "findAsset")
@@ -57,10 +57,10 @@ public interface CatalogMapper {
         @Param("id") UUID id);
 
     /**
-     * @param kind 资产分类
+     * @param kind      资产分类
      * @param projectId 项目 UUIDv7
-     * @param afterKey 游标 Key
-     * @param limit 读取上限
+     * @param afterKey  游标 Key
+     * @param limit     读取上限
      * @return 资产行
      */
     @SelectProvider(type = CatalogSqlProvider.class, method = "listAssets")
@@ -71,12 +71,12 @@ public interface CatalogMapper {
         @Param("limit") int limit);
 
     /**
-     * @param kind 资产分类
-     * @param projectId 项目 UUIDv7
-     * @param id 资产 UUIDv7
+     * @param kind            资产分类
+     * @param projectId       项目 UUIDv7
+     * @param id              资产 UUIDv7
      * @param expectedVersion 乐观锁版本
-     * @param actor 更新主体
-     * @param now 更新时间
+     * @param actor           更新主体
+     * @param now             更新时间
      * @return 更新行数
      */
     @UpdateProvider(type = CatalogSqlProvider.class, method = "archiveAsset")
@@ -89,9 +89,9 @@ public interface CatalogMapper {
         @Param("now") Instant now);
 
     /**
-     * @param kind 资产分类
+     * @param kind      资产分类
      * @param projectId 项目 UUIDv7
-     * @param ownerId Owner UUIDv7
+     * @param ownerId   Owner UUIDv7
      * @return 存在时返回被锁定 Owner
      */
     @SelectProvider(type = CatalogSqlProvider.class, method = "lockAsset")
@@ -101,9 +101,9 @@ public interface CatalogMapper {
         @Param("ownerId") UUID ownerId);
 
     /**
-     * @param kind 资产分类
+     * @param kind      资产分类
      * @param projectId 项目 UUIDv7
-     * @param ownerId Owner UUIDv7
+     * @param ownerId   Owner UUIDv7
      * @return 下一版本号
      */
     @SelectProvider(type = CatalogSqlProvider.class, method = "nextVersionNumber")
@@ -114,15 +114,15 @@ public interface CatalogMapper {
 
     /**
      * @param kind 资产分类
-     * @param row 版本数据库行
+     * @param row  版本数据库行
      */
     @InsertProvider(type = CatalogSqlProvider.class, method = "insertVersion")
     void insertVersion(@Param("kind") CatalogAssetKind kind, @Param("row") VersionRow row);
 
     /**
-     * @param kind 资产分类
+     * @param kind      资产分类
      * @param projectId 项目 UUIDv7
-     * @param ownerId Owner UUIDv7
+     * @param ownerId   Owner UUIDv7
      * @param versionId 版本 UUIDv7
      * @return 同项目版本行
      */
@@ -134,11 +134,11 @@ public interface CatalogMapper {
         @Param("versionId") UUID versionId);
 
     /**
-     * @param kind 资产分类
-     * @param projectId 项目 UUIDv7
-     * @param ownerId Owner UUIDv7
+     * @param kind               资产分类
+     * @param projectId          项目 UUIDv7
+     * @param ownerId            Owner UUIDv7
      * @param afterVersionNumber 游标版本号
-     * @param limit 读取上限
+     * @param limit              读取上限
      * @return 不可变版本行
      */
     @SelectProvider(type = CatalogSqlProvider.class, method = "listVersions")

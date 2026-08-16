@@ -16,12 +16,14 @@
 
 package space.refinex.agentark.control.catalog.adapter.in.web;
 
-import java.time.Instant;
-import java.util.Map;
 import jakarta.validation.constraints.*;
-import space.refinex.agentark.control.catalog.domain.*;
+import space.refinex.agentark.control.catalog.domain.CatalogAsset;
+import space.refinex.agentark.control.catalog.domain.CatalogVersion;
 import space.refinex.agentark.kernel.ref.ObjectRef;
 import tools.jackson.databind.json.JsonMapper;
+
+import java.time.Instant;
+import java.util.Map;
 
 /**
  * 集中定义 Catalog Public API 请求契约，响应直接使用不含厂商类型的领域只读模型。
@@ -30,15 +32,17 @@ import tools.jackson.databind.json.JsonMapper;
  */
 public final class CatalogApiModels {
 
-    /** 禁止实例化 API 模型容器。 */
+    /**
+     * 禁止实例化 API 模型容器。
+     */
     private CatalogApiModels() {
     }
 
     /**
-     * @param key 项目内稳定 Key
-     * @param name 显示名称
+     * @param key         项目内稳定 Key
+     * @param name        显示名称
      * @param description 可选用途说明
-     * @param metadata 分类专属非敏感元数据
+     * @param metadata    分类专属非敏感元数据
      * @author refinex
      */
     public record CreateAssetRequest(
@@ -47,7 +51,9 @@ public final class CatalogApiModels {
         @Size(max = 512) String description,
         @NotNull Map<String, Object> metadata) {
 
-        /** 防御性复制顶层元数据。 */
+        /**
+         * 防御性复制顶层元数据。
+         */
         public CreateAssetRequest {
             metadata = metadata == null ? null : Map.copyOf(metadata);
         }
@@ -55,14 +61,16 @@ public final class CatalogApiModels {
 
     /**
      * @param payload 分类专属不可变载荷
-     * @param status 版本状态：DRAFT、PUBLISHED 或 ARCHIVED
+     * @param status  版本状态：DRAFT、PUBLISHED 或 ARCHIVED
      * @author refinex
      */
     public record CreateVersionRequest(
         @NotNull Map<String, Object> payload,
         @NotBlank @Pattern(regexp = "DRAFT|PUBLISHED|ARCHIVED") String status) {
 
-        /** 防御性复制顶层载荷。 */
+        /**
+         * 防御性复制顶层载荷。
+         */
         public CreateVersionRequest {
             payload = payload == null ? null : Map.copyOf(payload);
         }
@@ -76,18 +84,18 @@ public final class CatalogApiModels {
     }
 
     /**
-     * @param id 稳定身份 UUIDv7
-     * @param kind 资产分类
+     * @param id             稳定身份 UUIDv7
+     * @param kind           资产分类
      * @param organizationId 组织 UUIDv7
-     * @param projectId 项目 UUIDv7
-     * @param key 稳定 Key
-     * @param name 显示名称
-     * @param description 用途说明
-     * @param metadata 分类专属 JSON 对象
-     * @param status 生命周期状态
-     * @param version 乐观锁版本
-     * @param createdAt 创建时刻
-     * @param updatedAt 更新时间
+     * @param projectId      项目 UUIDv7
+     * @param key            稳定 Key
+     * @param name           显示名称
+     * @param description    用途说明
+     * @param metadata       分类专属 JSON 对象
+     * @param status         生命周期状态
+     * @param version        乐观锁版本
+     * @param createdAt      创建时刻
+     * @param updatedAt      更新时间
      * @author refinex
      */
     public record CatalogAssetView(
@@ -104,13 +112,15 @@ public final class CatalogApiModels {
         Instant createdAt,
         Instant updatedAt) {
 
-        /** 防御性复制顶层元数据。 */
+        /**
+         * 防御性复制顶层元数据。
+         */
         public CatalogAssetView {
             metadata = metadata == null ? null : Map.copyOf(metadata);
         }
 
         /**
-         * @param asset 领域资产
+         * @param asset  领域资产
          * @param mapper JSON 映射器
          * @return 不把 JSON 双重编码为字符串的 Public API 视图
          */
@@ -129,16 +139,16 @@ public final class CatalogApiModels {
     }
 
     /**
-     * @param id 版本 UUIDv7
-     * @param kind 资产分类
+     * @param id             版本 UUIDv7
+     * @param kind           资产分类
      * @param organizationId 组织 UUIDv7
-     * @param projectId 项目 UUIDv7
-     * @param ownerId 稳定身份 UUIDv7
-     * @param versionNumber 正数版本号
-     * @param payload 分类专属 JSON 对象
-     * @param contentHash 规范 SHA-256
-     * @param status 版本状态
-     * @param createdAt 创建时刻
+     * @param projectId      项目 UUIDv7
+     * @param ownerId        稳定身份 UUIDv7
+     * @param versionNumber  正数版本号
+     * @param payload        分类专属 JSON 对象
+     * @param contentHash    规范 SHA-256
+     * @param status         版本状态
+     * @param createdAt      创建时刻
      * @author refinex
      */
     public record CatalogVersionView(
@@ -153,14 +163,16 @@ public final class CatalogApiModels {
         String status,
         Instant createdAt) {
 
-        /** 防御性复制顶层载荷。 */
+        /**
+         * 防御性复制顶层载荷。
+         */
         public CatalogVersionView {
             payload = payload == null ? null : Map.copyOf(payload);
         }
 
         /**
          * @param version 领域版本
-         * @param mapper JSON 映射器
+         * @param mapper  JSON 映射器
          * @return 语言中立 JSON 载荷视图
          */
         @SuppressWarnings("unchecked")
@@ -181,9 +193,9 @@ public final class CatalogApiModels {
     /**
      * 将 Kernel ObjectRef 映射为字符串化的语言中立 Public API 契约。
      *
-     * @param uri 不携带授权参数的对象 URI
-     * @param checksum SHA-256 完整性校验和
-     * @param size 对象字节数
+     * @param uri       不携带授权参数的对象 URI
+     * @param checksum  SHA-256 完整性校验和
+     * @param size      对象字节数
      * @param mediaType 媒体类型
      * @author refinex
      */

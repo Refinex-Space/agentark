@@ -26,7 +26,9 @@ import java.util.Base64;
  */
 final class CatalogCursorCodec {
 
-    /** 禁止实例化游标工具。 */
+    /**
+     * 禁止实例化游标工具。
+     */
     private CatalogCursorCodec() {
     }
 
@@ -40,7 +42,7 @@ final class CatalogCursorCodec {
     }
 
     /**
-     * @param cursor 可选游标
+     * @param cursor       可选游标
      * @param defaultValue 未提供时默认值
      * @return 解码值
      */

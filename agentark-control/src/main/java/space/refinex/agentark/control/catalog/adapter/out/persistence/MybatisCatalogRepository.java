@@ -35,7 +35,9 @@ import java.util.Optional;
  */
 public final class MybatisCatalogRepository implements CatalogRepository {
 
-    /** 资产目录 Mapper。 */
+    /**
+     * 资产目录 Mapper。
+     */
     private final CatalogMapper mapper;
 
     /**
@@ -59,9 +61,9 @@ public final class MybatisCatalogRepository implements CatalogRepository {
     }
 
     /**
-     * @param kind 资产分类
+     * @param kind      资产分类
      * @param projectId 项目标识
-     * @param id 稳定身份
+     * @param id        稳定身份
      * @return 同项目资产
      */
     @Override
@@ -72,10 +74,10 @@ public final class MybatisCatalogRepository implements CatalogRepository {
     }
 
     /**
-     * @param kind 资产分类
+     * @param kind      资产分类
      * @param projectId 项目标识
-     * @param afterKey 游标 Key
-     * @param limit 读取上限
+     * @param afterKey  游标 Key
+     * @param limit     读取上限
      * @return 按 Key 排序的资产
      */
     @Override
@@ -86,12 +88,12 @@ public final class MybatisCatalogRepository implements CatalogRepository {
     }
 
     /**
-     * @param kind 资产分类
-     * @param projectId 项目标识
-     * @param id 稳定身份
+     * @param kind            资产分类
+     * @param projectId       项目标识
+     * @param id              稳定身份
      * @param expectedVersion 乐观锁版本
-     * @param actor 操作主体
-     * @param now 操作时刻
+     * @param actor           操作主体
+     * @param now             操作时刻
      * @return 更新行数
      */
     @Override
@@ -107,9 +109,9 @@ public final class MybatisCatalogRepository implements CatalogRepository {
     }
 
     /**
-     * @param kind 资产分类
+     * @param kind      资产分类
      * @param projectId 项目标识
-     * @param ownerId 稳定身份
+     * @param ownerId   稳定身份
      * @return Owner 存在时下一版本号
      */
     @Override
@@ -121,8 +123,8 @@ public final class MybatisCatalogRepository implements CatalogRepository {
 
     /**
      * @param version 待追加不可变版本
-     * @param tools MCP Tool Descriptor 快照
-     * @param actor 创建主体稳定引用
+     * @param tools   MCP Tool Descriptor 快照
+     * @param actor   创建主体稳定引用
      */
     @Override
     public void insertVersion(
@@ -143,9 +145,9 @@ public final class MybatisCatalogRepository implements CatalogRepository {
     }
 
     /**
-     * @param kind 资产分类
+     * @param kind      资产分类
      * @param projectId 项目标识
-     * @param ownerId 稳定身份
+     * @param ownerId   稳定身份
      * @param versionId 版本标识
      * @return 同项目版本
      */
@@ -161,11 +163,11 @@ public final class MybatisCatalogRepository implements CatalogRepository {
     }
 
     /**
-     * @param kind 资产分类
-     * @param projectId 项目标识
-     * @param ownerId 稳定身份
+     * @param kind               资产分类
+     * @param projectId          项目标识
+     * @param ownerId            稳定身份
      * @param afterVersionNumber 游标版本号
-     * @param limit 读取上限
+     * @param limit              读取上限
      * @return 版本列表
      */
     @Override
@@ -182,7 +184,7 @@ public final class MybatisCatalogRepository implements CatalogRepository {
 
     /**
      * @param kind 资产分类
-     * @param row 稳定身份行
+     * @param row  稳定身份行
      * @return 领域资产
      */
     private CatalogAsset asset(
@@ -196,7 +198,7 @@ public final class MybatisCatalogRepository implements CatalogRepository {
 
     /**
      * @param kind 资产分类
-     * @param row 版本行
+     * @param row  版本行
      * @return 领域版本
      */
     private CatalogVersion version(

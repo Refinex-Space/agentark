@@ -26,18 +26,18 @@ import java.util.Objects;
 /**
  * 表示 Prompt、Model Provider、MCP Server、Skill、Profile、Policy 或 Agent 的稳定身份。
  *
- * @param id 强类型稳定身份
- * @param kind 资产分类
+ * @param id             强类型稳定身份
+ * @param kind           资产分类
  * @param organizationId 所属组织
- * @param projectId 所属项目
- * @param key 项目内稳定 Key
- * @param name 显示名称
- * @param description 可选用途说明
- * @param metadataJson 分类专属非敏感元数据规范 JSON
- * @param status 生命周期状态
- * @param version 乐观锁版本
- * @param createdAt 创建时刻
- * @param updatedAt 最后更新时间
+ * @param projectId      所属项目
+ * @param key            项目内稳定 Key
+ * @param name           显示名称
+ * @param description    可选用途说明
+ * @param metadataJson   分类专属非敏感元数据规范 JSON
+ * @param status         生命周期状态
+ * @param version        乐观锁版本
+ * @param createdAt      创建时刻
+ * @param updatedAt      最后更新时间
  * @author refinex
  */
 public record CatalogAsset(
@@ -57,18 +57,18 @@ public record CatalogAsset(
     /**
      * 校验稳定身份和项目归属。
      *
-     * @param id 强类型稳定身份
-     * @param kind 资产分类
+     * @param id             强类型稳定身份
+     * @param kind           资产分类
      * @param organizationId 所属组织
-     * @param projectId 所属项目
-     * @param key 稳定 Key
-     * @param name 显示名称
-     * @param description 可选说明
-     * @param metadataJson 非敏感元数据 JSON
-     * @param status 生命周期状态
-     * @param version 非负乐观锁版本
-     * @param createdAt 创建时刻
-     * @param updatedAt 更新时间
+     * @param projectId      所属项目
+     * @param key            稳定 Key
+     * @param name           显示名称
+     * @param description    可选说明
+     * @param metadataJson   非敏感元数据 JSON
+     * @param status         生命周期状态
+     * @param version        非负乐观锁版本
+     * @param createdAt      创建时刻
+     * @param updatedAt      更新时间
      */
     public CatalogAsset {
         Objects.requireNonNull(id, "id must not be null");

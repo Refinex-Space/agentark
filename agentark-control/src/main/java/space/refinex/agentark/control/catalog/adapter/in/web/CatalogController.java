@@ -25,7 +25,10 @@ import org.springframework.web.multipart.MultipartFile;
 import space.refinex.agentark.control.catalog.adapter.in.web.CatalogApiModels.*;
 import space.refinex.agentark.control.catalog.application.CatalogApplicationService;
 import space.refinex.agentark.control.catalog.application.CatalogVersionDiff;
-import space.refinex.agentark.control.catalog.domain.*;
+import space.refinex.agentark.control.catalog.domain.CatalogAsset;
+import space.refinex.agentark.control.catalog.domain.CatalogAssetKind;
+import space.refinex.agentark.control.catalog.domain.CatalogVersion;
+import space.refinex.agentark.control.catalog.domain.CatalogVersionStatus;
 import space.refinex.agentark.control.iam.application.IamAccessDeniedException;
 import space.refinex.agentark.control.iam.application.IamConflictException;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
@@ -33,11 +36,11 @@ import space.refinex.agentark.foundation.web.CursorPage;
 import space.refinex.agentark.kernel.id.ProjectId;
 import space.refinex.agentark.kernel.ref.Checksum;
 import space.refinex.agentark.kernel.ref.ObjectRef;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.net.URI;
 import java.util.Optional;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 暴露项目 Scope 的资产目录、不可变版本、Diff 和 Skill Artifact Public API。
@@ -49,14 +52,18 @@ import tools.jackson.databind.json.JsonMapper;
 @PreAuthorize("isAuthenticated()")
 public class CatalogController {
 
-    /** Catalog 应用服务。 */
+    /**
+     * Catalog 应用服务。
+     */
     private final CatalogApplicationService service;
 
-    /** 应用统一 JSON 映射器。 */
+    /**
+     * 应用统一 JSON 映射器。
+     */
     private final JsonMapper jsonMapper;
 
     /**
-     * @param service Catalog 应用服务
+     * @param service    Catalog 应用服务
      * @param jsonMapper JSON 映射器
      */
     public CatalogController(CatalogApplicationService service, JsonMapper jsonMapper) {
@@ -66,9 +73,9 @@ public class CatalogController {
 
     /**
      * @param authentication 已认证安全上下文
-     * @param projectId 项目 UUIDv7
-     * @param assetKind 资产分类
-     * @param request 创建请求
+     * @param projectId      项目 UUIDv7
+     * @param assetKind      资产分类
+     * @param request        创建请求
      * @return 带地址的新稳定身份
      */
     @PostMapping("/catalog/{assetKind}")
@@ -88,10 +95,10 @@ public class CatalogController {
 
     /**
      * @param authentication 已认证安全上下文
-     * @param projectId 项目 UUIDv7
-     * @param assetKind 资产分类
-     * @param cursor 可选不透明游标
-     * @param limit 页大小
+     * @param projectId      项目 UUIDv7
+     * @param assetKind      资产分类
+     * @param cursor         可选不透明游标
+     * @param limit          页大小
      * @return 资产游标页
      */
     @GetMapping("/catalog/{assetKind}")
@@ -111,10 +118,10 @@ public class CatalogController {
 
     /**
      * @param authentication 已认证安全上下文
-     * @param projectId 项目 UUIDv7
-     * @param assetKind 资产分类
-     * @param assetId 稳定身份 UUIDv7
-     * @param request 只追加版本请求
+     * @param projectId      项目 UUIDv7
+     * @param assetKind      资产分类
+     * @param assetId        稳定身份 UUIDv7
+     * @param request        只追加版本请求
      * @return 带地址的新不可变版本
      */
     @PostMapping("/catalog/{assetKind}/{assetId}/versions")
@@ -129,18 +136,18 @@ public class CatalogController {
             principal(authentication), ProjectId.parse(projectId), kind, assetId,
             request.payload(), CatalogVersionStatus.valueOf(request.status()));
         return ResponseEntity.created(URI.create(
-            "/api/v1/projects/" + projectId + "/catalog/" + kind.apiValue() + "/" + assetId
-                + "/versions/" + created.id().asString()))
+                "/api/v1/projects/" + projectId + "/catalog/" + kind.apiValue() + "/" + assetId
+                    + "/versions/" + created.id().asString()))
             .body(CatalogVersionView.from(created, jsonMapper));
     }
 
     /**
      * @param authentication 已认证安全上下文
-     * @param projectId 项目 UUIDv7
-     * @param assetKind 资产分类
-     * @param assetId 稳定身份 UUIDv7
-     * @param cursor 可选版本游标
-     * @param limit 页大小
+     * @param projectId      项目 UUIDv7
+     * @param assetKind      资产分类
+     * @param assetId        稳定身份 UUIDv7
+     * @param cursor         可选版本游标
+     * @param limit          页大小
      * @return 不可变版本游标页
      */
     @GetMapping("/catalog/{assetKind}/{assetId}/versions")
@@ -160,11 +167,11 @@ public class CatalogController {
     }
 
     /**
-     * @param authentication 已认证安全上下文
-     * @param projectId 项目 UUIDv7
-     * @param assetKind 资产分类
-     * @param assetId 稳定身份 UUIDv7
-     * @param baseVersionId 基准版本 UUIDv7
+     * @param authentication  已认证安全上下文
+     * @param projectId       项目 UUIDv7
+     * @param assetKind       资产分类
+     * @param assetId         稳定身份 UUIDv7
+     * @param baseVersionId   基准版本 UUIDv7
      * @param targetVersionId 目标版本 UUIDv7
      * @return 只含变化路径的版本 Diff
      */
@@ -183,10 +190,10 @@ public class CatalogController {
 
     /**
      * @param authentication 已认证安全上下文
-     * @param projectId 项目 UUIDv7
-     * @param assetKind 资产分类
-     * @param assetId 稳定身份 UUIDv7
-     * @param request 乐观锁归档请求
+     * @param projectId      项目 UUIDv7
+     * @param assetKind      资产分类
+     * @param assetId        稳定身份 UUIDv7
+     * @param request        乐观锁归档请求
      * @return 无响应体
      */
     @PostMapping("/catalog/{assetKind}/{assetId}/archive")
@@ -204,9 +211,9 @@ public class CatalogController {
 
     /**
      * @param authentication 已认证安全上下文
-     * @param projectId 项目 UUIDv7
-     * @param file Skill Artifact
-     * @param checksum 可选预期 SHA-256
+     * @param projectId      项目 UUIDv7
+     * @param file           Skill Artifact
+     * @param checksum       可选预期 SHA-256
      * @return 已完整性校验的 ObjectRef
      */
     @PostMapping(value = "/skill-artifacts", consumes = "multipart/form-data")
