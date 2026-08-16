@@ -231,6 +231,20 @@ Phase 13 没有迁入上游实现代码或新增 Provider 私表。Runtime V2、
 
 Phase 14 未复制上游源码或第三方资产。新增 `agentscope-core` 依赖只用于正式 `Toolkit`/`@Tool` API，许可证继续由既有 SBOM/NOTICE 门禁跟踪；Qdrant 通过标准 REST 调用，没有引入 Qdrant SDK 依赖。
 
-## 14. 变更协议
+## 15. Phase 15 实际处置
+
+| 候选能力 | 分类 | AgentArk 落点 | 明确边界 |
+|---|---|---|---|
+| `CronDeploymentScheduler` 分钟扫描与 Fire Lease | `ADAPT` | `TriggerDefinitionService`、`CronCalculator`、`CronTriggerService`、`trigger_cursor` | 计算、Cursor 推进和 Handler 执行分离；拒绝失败只写日志和进程时间窗去重 |
+| Scheduler Channel Runtime | `ADAPT/REJECT` | 中立 `ChannelGateway`、`ChannelMessageJobHandler` 与 `adapter.out.channel.agentscope` Bridge | 不阻塞轮询 Runtime Event，不导入 Harness，不在 Scheduler 执行推理循环 |
+| Outbound/Hands Worker | `ADAPT` | Durable Job/Attempt/Lease、Delivery、Retry Budget、Dead Letter、类型隔离 Worker Pool | 拒绝无 Attempt/Fencing 的进程内重试；无幂等声明的写操作默认不自动重试 |
+| `service-common` Coordination/Entity | `REFERENCE/REJECT` | Scheduler 独占 MyBatis Mapper、V2 Flyway、Owner + Fencing Token | 不复制 JPA Entity、共享 Repository、跨 Schema SQL 或 Auto-DDL |
+| AgentScope Channel 能力 | `REFERENCE` | 独立 Bridge SPI 只映射中立消息 | 固定上游没有可直接迁入的 Durable Job 语义；具体 Provider 和许可在组合层单独评审 |
+| Knowledge Ingestion 调度 | `ADAPT` | `KnowledgeIngestionJobHandler` 调用 Phase 14 Worker，结果经 Control Internal Client 幂等提交 | Worker 不写 Control DB；缺少真实扫描/Parser/Embedding/Object/Qdrant Provider 时 Handler 不注册 |
+| Agent Turn 调度 | `ADAPT` | `RuntimeTurnJobHandler` 调用 `/internal/v1/runtime/turns` | Scheduler POM 不依赖 Runtime 或 AgentScope Provider；Runtime 事务提交后才返回稳定 Run ID |
+
+Phase 15 新增源码、SQL 和 Contract 均为 AgentArk 独立实现，没有复制上游文件或第三方资产。Scheduler 只依赖 AgentArk 中立 Knowledge 契约；AgentScope Channel 适配包当前是版本 Bridge SPI，不把框架类型引入 Scheduler 制品。
+
+## 16. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

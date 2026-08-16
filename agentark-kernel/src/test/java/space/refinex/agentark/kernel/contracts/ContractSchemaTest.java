@@ -90,6 +90,14 @@ class ContractSchemaTest {
         "schemas/knowledge-retrieval/examples/valid.json");
   }
 
+  /** 验证 Scheduler Durable Job 接单 Golden File 符合版本化语言中立 Schema。 */
+  @Test
+  void schedulerJobGoldenFileConformsToInternalSchema() throws IOException {
+    assertValid(
+        "schemas/scheduler-job/v1.json",
+        "schemas/scheduler-job/examples/valid-enqueue-job.json");
+  }
+
   /** 验证 Agent Revision Golden File 符合 Phase 10 Release 公共 Schema。 */
   @Test
   void releaseRevisionGoldenFileConformsToPublicSchema() throws IOException {

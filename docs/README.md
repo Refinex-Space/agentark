@@ -28,6 +28,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 12 执行证据 | [AgentScope 防腐层](implementation/phase-12-agentscope-adapter.md) | 复核 Snapshot Compiler、Provider Descriptor、Event/State 防腐、Secret 生命周期、执行引擎与测试边界 |
 | Phase 13 执行证据 | [Runtime API 与托管执行](implementation/phase-13-runtime-api.md) | 复核接单事务、Worker、Lease/Fencing、SSE、HITL、取消、恢复与服务装配 |
 | Phase 14 执行证据 | [Knowledge Ingestion 与 RAG](implementation/phase-14-knowledge-rag.md) | 复核安全异步摄取、Qdrant、固定 Revision 检索、Citation/Trace 与 AgentScope Tool 防腐层 |
+| Phase 15 执行证据 | [Scheduler 与持久 Job](implementation/phase-15-scheduler.md) | 复核 Trigger、Job/Attempt/Lease、Cron/Webhook、Channel、Retry/Dead Letter 与 Internal Client |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |
@@ -47,6 +48,7 @@ referenced_by: AGENTS.md#knowledge-map
 | 运维与 Loop | [当前 Runbook](guides/runbook.md) | 本地检查、故障定位、回滚和 Loop 就绪性 |
 | Runtime 运维 | [Runtime Runbook](guides/runtime-operations.md) | 排查 Runtime 接单、Lease、SSE、HITL、孤儿恢复、排空和回滚 |
 | Knowledge/RAG 运维 | [Knowledge Runbook](guides/knowledge-operations.md) | 排查摄取、Qdrant、Revision 校验、检索、Snapshot、删除与回滚 |
+| Scheduler 运维 | [Scheduler Runbook](guides/scheduler-operations.md) | 排查 Trigger、Job Claim、Lease/Fencing、Retry、Dead Letter、Webhook、Channel 与回滚 |
 | 上游来源 | [上游基线](migration/upstream-baseline.md) | 读取参考源码或执行迁移审计 |
 | 上游迁移审计 | [源码清单](migration/source-inventory.md) | 定位 Service/Core/Harness/Extensions/Frontend 的具体来源 |
 | 迁移分类 | [迁移清单](migration/migration-manifest.md) | 决定候选路径的取用类型、目标模块和明确拒绝项 |

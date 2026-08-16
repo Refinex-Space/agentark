@@ -1,0 +1,19 @@
+{
+  "organizationId": "0198b116-f400-7001-8001-000000000001",
+  "projectId": "0198b116-f400-7002-8002-000000000002",
+  "type": "RUNTIME_TURN",
+  "businessKey": "cron:daily-summary:2026-08-16T10:00:00Z",
+  "payload": "{\"sessionId\":\"0198b116-f400-7003-8003-000000000003\",\"input\":\"summarize\",\"priority\":0}",
+  "payloadHash": "sha256:ce25cbf6b7bcfcbd8b29656b1343e02f647b3ebc720b8a335ba0649f57e74f59",
+  "priority": 0,
+  "availableAt": "2026-08-16T10:00:00Z",
+  "retryPolicy": {
+    "maxAttempts": 3,
+    "initialBackoffMillis": 1000,
+    "maxBackoffMillis": 60000,
+    "multiplier": 2.0,
+    "jitterRatio": 0.2,
+    "timeoutMillis": 30000
+  },
+  "idempotencyCapability": "PROVIDER_KEY"
+}

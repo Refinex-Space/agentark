@@ -14,12 +14,116 @@ info:
     identifier: Apache-2.0
 # 固定所有内联 Schema 使用 JSON Schema Draft 2020-12 方言。
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
-# Phase 03 不提前虚构业务端点，端点由其所有者阶段补充。
-paths: {}
+# Internal Runtime API 只允许 Audience 受限服务身份调用。
+security:
+  # 使用统一 Bearer JWT 安全方案。
+  - BearerAuth: []
+# 声明 Scheduler 实际调用的 Runtime v1 Internal Endpoint。
+paths:
+  # 幂等创建固定 Session 下的新 Turn。
+  /internal/v1/runtime/turns:
+    # 接收内部 Turn 命令。
+    post:
+      # 固定生成客户端使用的操作标识。
+      operationId: createInternalRuntimeTurn
+      # 声明 Scheduler 派生幂等键请求头。
+      parameters:
+        # 复用幂等键参数。
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      # 声明内部 Turn 请求正文。
+      requestBody:
+        # 内部命令正文不可省略。
+        required: true
+        # 声明 JSON 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 复用内部 Turn 请求结构。
+            schema: { $ref: "#/components/schemas/InternalTurnRequest" }
+      # 声明接单结果与稳定错误。
+      responses:
+        # Runtime 权威事务提交后返回稳定标识。
+        "202":
+          # 说明 Turn 已持久接收。
+          description: Turn 已接收并创建稳定 Run
+          # 声明 JSON 响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 复用内部 Turn 响应结构。
+              schema: { $ref: "#/components/schemas/InternalTurnResponse" }
+        # 请求字段、Hash 或幂等键非法。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 服务身份缺失或无正确 Audience。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Session 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 幂等内容或 Provider 状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
 # 汇总可复用的 Schema 与响应组件。
 components:
+  # 注册 Internal API 安全方案。
+  securitySchemes:
+    # 声明 OIDC 或服务身份签发的 Bearer JWT。
+    BearerAuth:
+      # 固定使用 HTTP Authentication。
+      type: http
+      # 固定 Bearer Scheme。
+      scheme: bearer
+      # 声明 JWT Token 格式。
+      bearerFormat: JWT
+  # 注册公共参数。
+  parameters:
+    # 定义接单幂等键。
+    IdempotencyKey:
+      # 固定使用请求头。
+      in: header
+      # 固定请求头名称。
+      name: Idempotency-Key
+      # 幂等键不可省略。
+      required: true
+      # 声明安全字符和长度约束。
+      schema: { type: string, pattern: "^[A-Za-z0-9][A-Za-z0-9_.:-]{7,127}$" }
   # 注册公共 Schema 引用。
   schemas:
+    # 定义内部 Turn 接单请求。
+    InternalTurnRequest:
+      # 固定为封闭对象。
+      type: object
+      # 拒绝未声明字段。
+      additionalProperties: false
+      # 声明全部必需字段。
+      required: [organizationId, projectId, sessionId, input, inputHash, priority]
+      # 声明请求字段。
+      properties:
+        # 所属组织 UUIDv7。
+        organizationId: { type: string, format: uuid }
+        # 所属项目 UUIDv7。
+        projectId: { type: string, format: uuid }
+        # 已固定 Snapshot 的 Session UUIDv7。
+        sessionId: { type: string, format: uuid }
+        # 不含 Secret 的中立输入 JSON 文本。
+        input: { type: string, minLength: 1, maxLength: 262144 }
+        # 输入内容规范 SHA-256。
+        inputHash: { type: string, pattern: "^sha256:[0-9a-f]{64}$" }
+        # Runtime Work Item 优先级。
+        priority: { type: integer, minimum: -1000, maximum: 1000 }
+    # 定义内部 Turn 接单响应。
+    InternalTurnResponse:
+      # 固定为封闭对象。
+      type: object
+      # 拒绝未声明字段。
+      additionalProperties: false
+      # 声明全部响应字段必需。
+      required: [turnId, runId, status]
+      # 声明响应字段。
+      properties:
+        # 本次接单创建的 Turn UUIDv7。
+        turnId: { type: string, format: uuid }
+        # 初始 Run UUIDv7。
+        runId: { type: string, format: uuid }
+        # 接单响应固定为 ACCEPTED。
+        status: { type: string, const: ACCEPTED }
     # 暴露 AgentArk 公共 Problem Detail 错误结构。
     ProblemDetail:
       # 引用版本化的公共错误 JSON Schema。

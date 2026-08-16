@@ -1,0 +1,236 @@
+# 声明本文档遵循 OpenAPI 3.1.0。
+openapi: 3.1.0
+# 描述公开 Scheduler 管理与 Webhook API 的稳定身份信息。
+info:
+  # 标识面向运维调用方和外部 Webhook Provider 的 Scheduler API。
+  title: AgentArk Public Scheduler API
+  # 声明 Scheduler 公共契约的语义版本。
+  version: 1.0.0
+  # 说明管理端点只提供状态、取消和 Redrive，不执行推理循环。
+  description: Durable Job 状态、取消、Dead Letter Redrive 与 HMAC Webhook API。
+  # 声明契约文档采用的开源许可证。
+  license:
+    # 提供便于阅读的 SPDX 许可证名称。
+    name: Apache-2.0
+    # 提供机器可识别的 SPDX 许可证标识。
+    identifier: Apache-2.0
+# 固定所有内联 Schema 使用 JSON Schema Draft 2020-12 方言。
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+# 管理 API 默认要求 Bearer JWT；Webhook Operation 单独关闭该继承并使用 HMAC。
+security:
+  # 使用统一 Bearer JWT 安全方案。
+  - BearerAuth: []
+# 声明已实现的 Scheduler Public API。
+paths:
+  # 读取单个租户 Job 状态。
+  /api/v1/scheduler/jobs/{jobId}:
+    # 获取 Job 状态。
+    get:
+      # 固定查询操作标识。
+      operationId: getSchedulerJob
+      # 复用路径与租户参数。
+      parameters:
+        # Job UUIDv7 路径参数。
+        - { $ref: "#/components/parameters/JobId" }
+        # 组织 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/OrganizationId" }
+        # 项目 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/ProjectId" }
+      # 声明查询响应。
+      responses:
+        # 返回不含 Payload 的 Job 状态投影。
+        "200":
+          # 说明响应成功。
+          description: Scheduler Job 状态
+          # 声明 JSON 响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 复用 Job 状态结构。
+              schema: { $ref: "../schemas/scheduler-job/v1.json#/$defs/JobView" }
+        # 无租户读取权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Job 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # 幂等取消尚未终态的 Job。
+  /api/v1/scheduler/jobs/{jobId}:cancel:
+    # 发起取消命令。
+    post:
+      # 固定取消操作标识。
+      operationId: cancelSchedulerJob
+      # 复用路径与租户参数。
+      parameters:
+        # Job UUIDv7 路径参数。
+        - { $ref: "#/components/parameters/JobId" }
+        # 组织 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/OrganizationId" }
+        # 项目 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/ProjectId" }
+      # 声明取消原因正文。
+      requestBody:
+        # 取消原因不可省略。
+        required: true
+        # 声明 JSON 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 复用管理动作结构。
+            schema: { $ref: "#/components/schemas/ActionRequest" }
+      # 声明取消响应。
+      responses:
+        # 取消事实已接受。
+        "202": { description: Job 取消命令已接受 }
+        # 无管理权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Job 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # Job 已终态或并发状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 列出当前租户 OPEN Dead Letter。
+  /api/v1/scheduler/dead-letters:
+    # 查询 Dead Letter。
+    get:
+      # 固定列表操作标识。
+      operationId: listSchedulerDeadLetters
+      # 复用租户参数并声明有界数量。
+      parameters:
+        # 组织 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/OrganizationId" }
+        # 项目 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/ProjectId" }
+        # 返回数量上限。
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 200, default: 50 } }
+      # 声明列表响应。
+      responses:
+        # 返回 OPEN Dead Letter 数组。
+        "200":
+          # 说明响应成功。
+          description: OPEN Dead Letter 列表
+          # 声明 JSON 响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 定义只读列表结构。
+              schema: { type: object, required: [items], properties: { items: { type: array, items: { $ref: "../schemas/scheduler-job/v1.json#/$defs/DeadLetterView" } } } }
+        # 无租户读取权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # 经单独权限和审计 Redrive OPEN Dead Letter。
+  /api/v1/scheduler/jobs/{jobId}:redrive:
+    # 发起 Redrive 命令。
+    post:
+      # 固定 Redrive 操作标识。
+      operationId: redriveSchedulerJob
+      # 复用路径与租户参数。
+      parameters:
+        # Job UUIDv7 路径参数。
+        - { $ref: "#/components/parameters/JobId" }
+        # 组织 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/OrganizationId" }
+        # 项目 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/ProjectId" }
+      # 声明 Redrive 审计原因。
+      requestBody:
+        # Redrive 原因不可省略。
+        required: true
+        # 声明 JSON 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 复用管理动作结构。
+            schema: { $ref: "#/components/schemas/ActionRequest" }
+      # 声明 Redrive 响应。
+      responses:
+        # Job 已重新进入 READY。
+        "202": { description: Dead Letter Redrive 已接受 }
+        # 无单独 Redrive 权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Job 不存在或跨租户不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # Dead Letter 非 OPEN 或并发状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 接收使用 Trigger SecretRef 验签的外部 Webhook。
+  /api/v1/scheduler/webhooks/{triggerId}:
+    # 接收原始 Webhook 正文。
+    post:
+      # 固定 Webhook 操作标识。
+      operationId: acceptSchedulerWebhook
+      # 本 Operation 不使用 Bearer，Controller 内执行 HMAC、时间戳和 Nonce 防重放。
+      security: []
+      # 声明 Trigger 和签名请求头。
+      parameters:
+        # Trigger UUID 路径参数。
+        - { name: triggerId, in: path, required: true, schema: { type: string, format: uuid } }
+        # Unix 秒签名时间戳。
+        - { name: X-AgentArk-Timestamp, in: header, required: true, schema: { type: string, pattern: "^[0-9]{10,19}$" } }
+        # 16 至 128 位唯一 Nonce。
+        - { name: X-AgentArk-Nonce, in: header, required: true, schema: { type: string, pattern: "^[A-Za-z0-9][A-Za-z0-9_.:-]{15,127}$" } }
+        # v1 HMAC-SHA256 小写签名。
+        - { name: X-AgentArk-Signature, in: header, required: true, schema: { type: string, pattern: "^v1=[0-9a-f]{64}$" } }
+      # 声明最大一 MiB 原始正文。
+      requestBody:
+        # Webhook 正文不可省略。
+        required: true
+        # 声明任意二进制正文媒体类型。
+        content:
+          # 固定为原始字节流。
+          application/octet-stream:
+            # 限制正文最大字节数。
+            schema: { type: string, format: binary, maxLength: 1048576 }
+      # 声明 Webhook 接单响应。
+      responses:
+        # Nonce 和 Job 在同一事务持久化后返回。
+        "202":
+          # 说明 Webhook 已转为 Durable Job。
+          description: Webhook 已持久接收
+          # 声明 JSON 响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 复用接单响应结构。
+              schema: { $ref: "../schemas/scheduler-job/v1.json#/$defs/JobAccepted" }
+        # 请求头或正文非法。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 签名、时间戳或 Secret 无效。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # Trigger 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # Nonce 已使用。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+# 汇总可复用的参数、Schema、安全方案与响应。
+components:
+  # 注册 Public API 安全方案。
+  securitySchemes:
+    # 声明 OIDC Bearer JWT。
+    BearerAuth:
+      # 固定使用 HTTP Authentication。
+      type: http
+      # 固定 Bearer Scheme。
+      scheme: bearer
+      # 声明 JWT Token 格式。
+      bearerFormat: JWT
+  # 注册租户和资源参数。
+  parameters:
+    # 定义 Job 路径参数。
+    JobId: { name: jobId, in: path, required: true, schema: { type: string, format: uuid } }
+    # 定义组织查询参数。
+    OrganizationId: { name: organizationId, in: query, required: true, schema: { type: string, format: uuid } }
+    # 定义项目查询参数。
+    ProjectId: { name: projectId, in: query, required: true, schema: { type: string, format: uuid } }
+  # 注册公共 Schema 引用。
+  schemas:
+    # 定义管理动作审计原因。
+    ActionRequest: { type: object, additionalProperties: false, required: [reason], properties: { reason: { type: string, minLength: 1, maxLength: 255 } } }
+    # 暴露 AgentArk 公共 Problem Detail 错误结构。
+    ProblemDetail: { $ref: "../schemas/problem-detail/v1.json" }
+  # 注册公共 HTTP 响应模板。
+  responses:
+    # 定义采用 application/problem+json 的错误响应。
+    ProblemResponse:
+      # 说明该响应承载 AgentArk Problem Detail。
+      description: AgentArk problem detail
+      # 列出该错误响应支持的媒体类型。
+      content:
+        # 固定 RFC 9457 风格错误的媒体类型。
+        application/problem+json:
+          # 描述该媒体类型的响应体 Schema。
+          schema: { $ref: "../schemas/problem-detail/v1.json" }

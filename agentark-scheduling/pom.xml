@@ -27,6 +27,36 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- 提供 JobId、租户强类型标识、Checksum 与 ObjectRef 等中立契约。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-kernel</artifactId>
+        </dependency>
+
+        <!-- 复用 Phase 14 中立 Knowledge 摄取 Worker 与结果契约，不访问 Control 数据库。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-knowledge</artifactId>
+        </dependency>
+
+        <!-- 提供 Scheduler 管理 API、RFC 9457 错误与统一 JSON 配置。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-web</artifactId>
+        </dependency>
+
+        <!-- 提供 Scheduler 管理 API 使用的中立 Principal 与租户选择。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-security</artifactId>
+        </dependency>
+
+        <!-- 提供队列深度、最老任务年龄和执行结果等低基数指标能力。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-observability</artifactId>
+        </dependency>
+
         <!-- 提供 Scheduler 所属 MyBatis-Plus、Flyway、事务与受控类型处理能力。 -->
         <dependency>
             <groupId>${project.groupId}</groupId>
@@ -66,6 +96,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 验证 Scheduler 领域、应用、Adapter 与服务依赖边界不发生反向漂移。 -->
+        <dependency>
+            <groupId>com.tngtech.archunit</groupId>
+            <artifactId>archunit</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

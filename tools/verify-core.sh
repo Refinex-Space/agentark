@@ -144,7 +144,7 @@ verify_mysql_account \
     "${secret_dir}/mysql-runtime-password" 2 13
 verify_mysql_account \
     agentark_scheduler agentark_scheduler agentark_control agentark_runtime \
-    "${secret_dir}/mysql-scheduler-password" 1 0
+    "${secret_dir}/mysql-scheduler-password" 2 9
 
 if [ -n "$(docker compose -f "${compose_file}" --profile core ps --quiet qdrant)" ]; then
     printf '%s\n' "qdrant: unexpectedly enabled in Core profile" >&2

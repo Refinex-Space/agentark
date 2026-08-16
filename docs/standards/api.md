@@ -20,7 +20,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 Phase 03 已建立以下契约基线：
 
-- `contracts/openapi/`：Public Control、Public Runtime 和三个 Internal API 的 OpenAPI 3.1 文档；业务 Endpoint 只能由所属阶段在实现存在后补充，尚无实现的文档或区域必须保持空路径；
+- `contracts/openapi/`：Public Control、Public Runtime、Public Scheduler 和三个 Internal API 的 OpenAPI 3.1 文档；业务 Endpoint 只能由所属阶段在实现存在后补充，尚无实现的文档或区域必须保持空路径；
 - `contracts/asyncapi/runtime-events-v1.yaml`：Runtime Event 的 AsyncAPI 3.0 消息骨架；
 - `contracts/schemas/agent-revision-snapshot/v1.json`：不可变 Revision Snapshot 的 Draft 2020-12 Schema；
 - `contracts/schemas/runtime-event/v1.json`：稳定 Runtime Event Envelope；
@@ -98,5 +98,15 @@ Phase 14 增加以下 Knowledge 摄取与检索契约约束：
 - `knowledge-retrieval/v1.json` 固定结果正文、Document/DocumentRevision/Chunk Citation、`UNTRUSTED_EXTERNAL` 信任标记和不采集查询或文档正文的 Trace/Usage；
 - Runtime 只能按不可变 Snapshot 固定的 `READY` Knowledge Revision 检索。调用方先把 Document ACL 解析为文档白名单；客户端或模型不能提交原始 Qdrant Filter、替换租户、Revision、Profile 或上下文预算；
 - Qdrant/Embedding/Parser 不可用必须形成显式失败结果或 Provider 错误，不能伪装成空检索或 `READY`。原文、Chunk Artifact、Vector Payload 和 Control Metadata 必须通过固定 Revision、Document Revision 与摘要相互追踪。
+
+Phase 15 增加以下 Scheduler 契约约束：
+
+- `public-scheduler-v1.yaml` 只声明 Job 查询/取消、Dead Letter 查询/Redrive 和入站 Webhook；管理 API 使用 `scheduler:read`、`scheduler:cancel`、`scheduler:redrive` 分权，Webhook 由 HMAC、时间窗、Nonce 和持久防重放记录认证，不能把签名请求伪装成 JWT Principal；
+- `internal-scheduler-v1.yaml` 只声明 Trigger 登记和 Durable Job 接单。调用方必须是 Audience 含 `agentark-scheduler` 的 Service Identity；同 Type/Business Key 或 Trigger Contract 重放只允许完全一致的租户、配置和 Payload Hash，异参返回稳定冲突；
+- `internal-runtime-v1.yaml` 增加 Scheduler 实际调用的 `POST /internal/v1/runtime/turns`。Runtime 必须在本地事务提交 Turn、Run、Work Item、Event、Outbox 和幂等结果后返回稳定 `runId`；Scheduler 不能链接 Runtime 实现、共享 Mapper 或直接写 Runtime Schema；
+- `scheduler-job/v1.json` 固定 Job Type、状态、Retry Policy、副作用幂等能力和 Hash 形态。写操作未声明 `INHERENT` 或 `PROVIDER_KEY` 时默认不得自动重试；Retry Budget 耗尽必须形成可查询 Dead Letter；
+- 命令式取消和 Redrive 使用动作子资源并保留独立权限、人工原因、审计与 Outbox。Redrive 只能创建新的可执行周期，不能覆盖已有 Attempt、Delivery 或 Dead Letter 事实；
+- Cron 只推进持久 Cursor 并创建 Durable Job，不在扫描事务内执行 Handler。Webhook、Channel、Knowledge Ingestion 和 Agent Turn 均通过版本化 Port/Client 交付，Scheduler 不拥有 Agent 推理循环；
+- 入站 Webhook 正文最多 1 MiB；外发 Webhook 禁止重定向和非 HTTPS，并只保存有界响应摘要。契约、日志、Outbox、Dead Letter 和审计均不得保存 Secret、Credential、完整 Provider 正文或认证 Header。
 
 Golden File、明文 Secret 负例和文档结构 Lint 由 `agentark-kernel` 测试执行，必需文件与 Kernel/Server 边界由知识门禁检查。首次发布后的修改必须增加 Breaking Change 检测；在不存在已发布前一版本的 Phase 03 不伪造兼容比较结果。

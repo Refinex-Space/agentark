@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/scheduler-job/v1.json",
+  "title": "AgentArk Scheduler Job v1",
+  "description": "定义 Scheduler Durable Job 接单、状态和 Dead Letter 的语言中立契约。",
+  "$ref": "#/$defs/EnqueueJobRequest",
+  "$defs": {
+    "Uuid": {
+      "type": "string",
+      "format": "uuid"
+    },
+    "Checksum": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "JobType": {
+      "type": "string",
+      "enum": [
+        "KNOWLEDGE_INGESTION",
+        "RUNTIME_TURN",
+        "OUTBOUND_WEBHOOK",
+        "CHANNEL_MESSAGE"
+      ]
+    },
+    "JobStatus": {
+      "type": "string",
+      "enum": [
+        "READY",
+        "CLAIMED",
+        "RETRY_WAIT",
+        "SUCCEEDED",
+        "DEAD_LETTERED",
+        "CANCELLED",
+        "TIMED_OUT"
+      ]
+    },
+    "RetryPolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "maxAttempts",
+        "initialBackoffMillis",
+        "maxBackoffMillis",
+        "multiplier",
+        "jitterRatio",
+        "timeoutMillis"
+      ],
+      "properties": {
+        "maxAttempts": { "type": "integer", "minimum": 1, "maximum": 100 },
+        "initialBackoffMillis": { "type": "integer", "minimum": 1 },
+        "maxBackoffMillis": { "type": "integer", "minimum": 1, "maximum": 604800000 },
+        "multiplier": { "type": "number", "minimum": 1.0, "maximum": 10.0 },
+        "jitterRatio": { "type": "number", "minimum": 0.0, "maximum": 0.5 },
+        "timeoutMillis": { "type": "integer", "minimum": 1, "maximum": 86400000 }
+      }
+    },
+    "EnqueueJobRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "organizationId",
+        "projectId",
+        "type",
+        "businessKey",
+        "payload",
+        "payloadHash",
+        "priority",
+        "availableAt",
+        "retryPolicy",
+        "idempotencyCapability"
+      ],
+      "properties": {
+        "organizationId": { "$ref": "#/$defs/Uuid" },
+        "projectId": { "$ref": "#/$defs/Uuid" },
+        "type": { "$ref": "#/$defs/JobType" },
+        "businessKey": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9_.:-]{0,254}$"
+        },
+        "payload": { "type": "string", "minLength": 1, "maxLength": 1048576 },
+        "payloadHash": { "$ref": "#/$defs/Checksum" },
+        "priority": { "type": "integer", "minimum": -1000, "maximum": 1000 },
+        "availableAt": { "type": "string", "format": "date-time" },
+        "retryPolicy": { "$ref": "#/$defs/RetryPolicy" },
+        "idempotencyCapability": {
+          "type": "string",
+          "enum": ["INHERENT", "PROVIDER_KEY", "NONE"]
+        }
+      }
+    },
+    "JobAccepted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["jobId", "status"],
+      "properties": {
+        "jobId": { "$ref": "#/$defs/Uuid" },
+        "status": { "type": "string", "const": "READY" }
+      }
+    },
+    "JobView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "organizationId",
+        "projectId",
+        "type",
+        "businessKey",
+        "status",
+        "priority",
+        "availableAt",
+        "currentAttempt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/Uuid" },
+        "organizationId": { "$ref": "#/$defs/Uuid" },
+        "projectId": { "$ref": "#/$defs/Uuid" },
+        "type": { "$ref": "#/$defs/JobType" },
+        "businessKey": { "type": "string" },
+        "status": { "$ref": "#/$defs/JobStatus" },
+        "priority": { "type": "integer" },
+        "availableAt": { "type": "string", "format": "date-time" },
+        "currentAttempt": { "type": "integer", "minimum": 0 },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "DeadLetterView": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "jobId",
+        "finalAttemptId",
+        "reason",
+        "redriveCount",
+        "status",
+        "createdAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/Uuid" },
+        "jobId": { "$ref": "#/$defs/Uuid" },
+        "finalAttemptId": { "$ref": "#/$defs/Uuid" },
+        "reason": { "type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,63}$" },
+        "redriveCount": { "type": "integer", "minimum": 0 },
+        "status": { "type": "string", "enum": ["OPEN", "REDRIVEN", "RESOLVED"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}

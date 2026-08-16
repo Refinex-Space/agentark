@@ -9,7 +9,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2；Phase 08 已接入资产目录 V3、Skill Object Store 和开发 Local Secret Provider；Phase 09 已接入 Knowledge 元数据 V4、原文件 Object Store、不可变 Revision 与摄取意图描述；Phase 10 已接入 Draft、不可变 Snapshot、Deployment 和 Control Outbox V5；Phase 11 已接入 Runtime V2 权威表；Phase 13 已装配 Runtime API、持久 Worker、Redis/MySQL 双层 Lease、SSE 与 HITL；Phase 14 已接入 Control V6 摄取结果、Qdrant Adapter、安全异步摄取管线、固定 Revision 检索和 AgentScope Tool 防腐层。Scheduler 仍只有 Migration History，Phase 15 才装配 Knowledge Job Handler；Gateway 尚无业务路由。生产 Object Store、恶意文件扫描、Embedding/Reranker、云 Secret 和真实 AgentScope Model/Component Provider 仍必须由部署方提供受支持 Adapter。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07–10 已建立 Control IAM、版本化资产、Knowledge 元数据、不可变 Agent Revision/Snapshot 与 Deployment；Phase 11–13 已建立 Runtime 权威表、AgentScope 防腐层、托管 API、SSE、HITL 和恢复；Phase 14 已接入 Control V6 摄取结果、Qdrant Adapter、安全异步摄取管线、固定 Revision 检索和 AgentScope Tool 防腐层。Phase 15 已接入 Scheduler V2、Durable Job/Attempt/Lease、Cron/Webhook、Channel/Delivery、Retry/Dead Letter、Knowledge Handler 与 Runtime/Control 版本化 Client。Gateway 尚无业务路由。生产 Object Store、恶意文件扫描、Embedding/Reranker、云 Secret、Outbound Endpoint Resolver、Channel Bridge 和真实 AgentScope Model/Component Provider 仍必须由部署方提供受支持 Adapter。
 
 ## Server 与本地 Profile
 
@@ -56,6 +56,24 @@ MySQL Core 容器显式使用 `--log-bin-trust-function-creators=ON`，使最小
 三个 URL、Username、Password 均没有生产默认值。Compose 只在本地 Profile 提供非秘密 URL/Username，并通过 `configtree:/run/secrets/` 把密码文件映射到同名属性；值不进入 Compose 环境或渲染输出。连接池上限可分别由 `AGENTARK_*_DB_POOL_MAX_SIZE` 覆盖，最小空闲可由 `AGENTARK_*_DB_POOL_MIN_IDLE` 覆盖。
 
 每条新连接设置 UTC 与固定严格模式；Flyway 固定 `create-schemas=false`、`clean-disabled=true`、`validate-migration-naming=true`。只有部署初始化脚本能创建 Schema/账号，业务应用不能自动扩大权限。
+
+## Scheduler 调度配置
+
+Scheduler Worker 默认关闭；只启动管理/内部 API、Flyway 和脱敏指标，不会静默领取 Job。启用前必须为实际 Job Type 装配真实 Handler Provider，并确保每个实例使用唯一稳定 Owner Key。
+
+| 属性/环境变量 | 默认值 | 启用/必填条件 | 安全与所有权说明 |
+|---|---|---|---|
+| `agentark.scheduler.worker-enabled` / `AGENTARK_SCHEDULER_WORKER_ENABLED` | `false` | 常驻 Worker 与 Cron 扫描需显式开启 | 缺少生产 Provider 时必须保持关闭；Fake Provider 不能作为生产就绪依据 |
+| `agentark.scheduler.instance-key` / `AGENTARK_SCHEDULER_INSTANCE_KEY` | `agentark-scheduler-local` | 多副本必填且各实例唯一 | 作为 Job Lease Owner，不是 Credential |
+| `agentark.scheduler.lease-ttl` / `AGENTARK_SCHEDULER_LEASE_TTL` | `30s` | Worker 启用 | 允许 `5s`–`30m`；约每三分之一周期续租，终态写仍校验 Fencing Token |
+| `agentark.scheduler.worker-poll-delay` / `AGENTARK_SCHEDULER_WORKER_POLL_DELAY` | `1s` | Worker 启用 | 只轮询已装配 Handler 的 Job Type，避免领取无法执行的任务 |
+| `agentark.scheduler.cron-scan-delay` / `AGENTARK_SCHEDULER_CRON_SCAN_DELAY` | `30s` | Worker 启用 | 扫描只推进 Cursor 并创建 Job，不直接调用 Handler |
+| `agentark.scheduler.worker-pool-size` / `AGENTARK_SCHEDULER_WORKER_POOL_SIZE` | `2` | Worker 启用 | 每个 Job Type 独立固定池，范围 `1`–`64` |
+| `agentark.scheduler.control-base-url` / `AGENTARK_CONTROL_BASE_URL` | `http://localhost:8081` | Control Internal Client | 生产必须走受控网络与 TLS；禁止连接 Control DataSource |
+| `agentark.scheduler.runtime-base-url` / `AGENTARK_RUNTIME_BASE_URL` | `http://localhost:8082` | Runtime Turn Handler | 只调用 `/internal/v1/runtime/turns`；禁止依赖 Runtime 模块或数据库 |
+| `agentark.scheduler.internal-token` / `AGENTARK_SCHEDULER_INTERNAL_TOKEN` | 空 | 调用 Control/Runtime Internal API | 必须是短期 Audience 受限服务 Token；空值不会回退为共享 Secret |
+
+Trigger 通过 `/internal/v1/scheduler/triggers` 登记。Cron 必须提供 Spring 六段表达式和 IANA 时区且不能提供 SecretRef；Webhook 必须提供合法 `secret://<scope>/<name>`，不能提供 Cron 字段。`config` 最多 32 个字符串字段，单值最多 16 KiB，禁止使用疑似 Secret/Token/Password/Credential/API Key 的键名。
 
 ## Foundation Starter 配置
 
@@ -131,7 +149,7 @@ MySQL Core 容器显式使用 `--log-bin-trust-function-creators=ON`，使最小
 | `agentark.foundation.storage.enabled` | `false`；`local` 为 `true` | Document 原文件上传必须有 ObjectStore | 本地与 Skill 共用受 Authority 隔离的 Local ObjectStore；生产必须提供受支持 Bean，数据库只保存带 Hash、大小和媒体类型的 `ObjectRef` |
 | `AGENTARK_LOCAL_OBJECT_ROOT` | `.agentark/data/objects` | `local` Storage 启用 | 原文件路径由服务端生成且保持在专用根目录；客户端文件名不能选择授权路径 |
 
-Knowledge 摄取 Endpoint 返回 `202` 只表示幂等请求已经记录且 Revision 进入 `INGESTING`。Phase 14 已实现 Qdrant Adapter、受限 Parser、安全扫描 Port、批次 Embedding/重试、校验、删除和 Retrieval 管线，但 Phase 15 前没有 Scheduler Job Handler 自动消费该请求。不得通过启用 `rag` Compose Profile 推断摄取 Worker 已装配。
+Knowledge 摄取 Endpoint 返回 `202` 只表示幂等请求已经记录且 Revision 进入 `INGESTING`。Phase 14 已实现 Qdrant Adapter、受限 Parser、安全扫描 Port、批次 Embedding/重试、校验、删除和 Retrieval 管线；Phase 15 已提供 `KNOWLEDGE_INGESTION` Handler，但只有真实 `KnowledgeIngestionWorker` Bean 完整装配时才注册该 Handler。不得通过启用 `rag` Compose Profile 或仅创建 Job 推断摄取 Worker 已生产就绪。
 
 ## Knowledge RAG Adapter 配置边界
 

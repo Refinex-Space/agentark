@@ -187,7 +187,7 @@ Phase 01 只做只读取证；Phase 02 已在同一固定 SHA 的隔离可写完
 | Gateway Rate Limit | 未发现实现 | P16 |
 | 标准 SSE Resume | 无 `id`/`Last-Event-ID` 和客户端自动重连 | P13、P17 |
 | Lease Fencing | 未发现单调 fencing token | P11、P13 |
-| Durable Scheduler Job | Java Scheduler 无 Job/Attempt/Dead Letter 聚合 | P15 |
+| Durable Scheduler Job | Java Scheduler 无 Job/Attempt/Dead Letter 聚合 | P15 已以独立 V2、状态机、Fencing、Retry/Dead Letter 和测试补齐 |
 | Frontend Tests | AgentScope Service Frontend 无测试脚本/文件 | P17–18 |
 | Agent Override Recovery | Runtime Override 不持久化 | P10–13 |
 | Production Secret Defaults | Compose/Dev 脚本含默认密码与 Secret；仅声明开发用途 | P20、P22 |
@@ -330,4 +330,15 @@ Phase 13 保持 Control、Runtime 和 Provider 边界：Control 只经 Internal 
 | Knowledge Tool/Hook 把检索接入 Agent | `knowledge_retrieve` Tool 映射固定 AgentArk Retrieval Port | 模型只能给查询文本，不能切换 Revision、租户、ACL 或预算；不泄漏 AgentScope Event |
 | 上游 Reader/Store 测试覆盖基础成功/错误 | AgentArk 增加恶意文件/ZIP 边界、Qdrant 不可用失败结果、删除顺序、Citation/Trace 和跨租户 E2E | Provider 故障显式失败，不能伪装为无结果或 READY |
 
-Control Internal Command 的计划和结果使用显式 Wire DTO；Worker 无 Control DataSource，Scheduler Schema 账号隔离继续由 Phase 06 MySQL 权限测试证明。Phase 14 只交付可调度管线，Phase 15 才负责持久 Job/Attempt 和生产 Handler 装配。
+Control Internal Command 的计划和结果使用显式 Wire DTO；Worker 无 Control DataSource，Scheduler Schema 账号隔离继续由 Phase 06 MySQL 权限测试证明。Phase 14 交付可调度管线，Phase 15 已负责持久 Job/Attempt 和条件化 Handler 装配。
+
+## 11. Phase 15 Scheduler 行为落地
+
+| 上游基线 | Phase 15 实际覆盖 | AgentArk 增强与拒绝项 |
+|---|---|---|
+| `CronDeploymentScheduler` 每分钟扫描并使用短 Fire Lease | Trigger 与 Cursor 持久化；Cron 计算不执行 Handler；Cursor + Job + Outbox 同事务 | `(Trigger, scheduledAt)` 稳定业务键、乐观 Cursor、多实例/DST 测试；拒绝日志式失败和进程时间窗作为唯一去重 |
+| Channel Runtime 拉取配置并阻塞等待回复 | Channel 中立消息、Delivery、Provider 幂等键和独立 Bridge SPI | 回复和 Agent Turn 只走版本化 Runtime API；拒绝 Scheduler 内 `HarnessAgent`、推理循环与 Thread sleep 轮询 |
+| Outbound/Hands 行为缺少统一 Attempt 和 Dead Letter | Durable Job/Attempt/Lease、类型隔离 Pool、Timeout、指数退避/Jitter、Dead Letter/Redrive | Owner + 单调 Fencing Token 拒绝陈旧结果；无幂等声明的外部写不自动重试；Redrive 要求权限、原因、审计和 Outbox |
+| 上游 Scheduler 直接依赖共享 Service 实体与配置 | Scheduler V2 九张独占表、MyBatis Mapper、Control/Runtime Internal Client | 禁止跨 Schema、共享 Mapper/DataSource、JPA/Hibernate 和 Auto-DDL；账号越权测试证明无法访问 Control/Runtime Schema |
+
+入站 Webhook 使用 HMAC-SHA256、时间窗口、Nonce 和请求 Hash；Nonce + Job + Outbox 同事务。Knowledge Handler 复用 Phase 14 Worker，摄取成功或失败只经 Control Internal Command 提交结果。真实恶意文件扫描、Embedding、Object Store、Qdrant、Endpoint Resolver 和 Channel Provider 不在 Phase 15 伪造；缺少 Provider 时对应 Handler 不注册，默认 Worker 关闭。

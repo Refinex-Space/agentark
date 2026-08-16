@@ -449,7 +449,7 @@ flowchart LR
 | 12 | DONE | 2026-08-16 | `docs/implementation/phase-12-agentscope-adapter.md` | AgentScope 防腐层、Snapshot Compiler、Event/State 映射、执行引擎与兼容门禁已验收 |
 | 13 | DONE | 2026-08-16 | `docs/implementation/phase-13-runtime-api.md` | Runtime API、持久 Worker、SSE、HITL、Lease/Fencing、取消与恢复已验收 |
 | 14 | DONE | 2026-08-16 | `docs/implementation/phase-14-knowledge-rag.md` | 安全异步摄取、Qdrant、固定 Revision 检索、Citation/Trace、AgentScope 防腐层与完整验收已完成 |
-| 15 | NOT_STARTED | — | `docs/implementation/phase-15-scheduler.md` | |
+| 15 | DONE | 2026-08-16 | `docs/implementation/phase-15-scheduler.md` | 持久 Job、Cron、Webhook、Channel、重试、Fencing、Dead Letter 与跨平面契约已验收 |
 | 16 | NOT_STARTED | — | `docs/implementation/phase-16-gateway.md` | |
 | 17 | NOT_STARTED | — | `docs/implementation/phase-17-web-foundation.md` | |
 | 18 | NOT_STARTED | — | `docs/implementation/phase-18-web-features.md` | |
@@ -2552,30 +2552,30 @@ SchedulerOutbox
 
 ### 任务
 
-- [ ] Durable Job 状态机；
-- [ ] 至少一次派发；
-- [ ] Handler 幂等；
-- [ ] Job Claim；
-- [ ] Lease + Fencing；
-- [ ] Retry Budget；
-- [ ] Exponential Backoff + Jitter；
-- [ ] Timeout；
-- [ ] Dead Letter；
-- [ ] Replay/Redrive 授权和审计；
-- [ ] Cron 计算与执行分离；
-- [ ] Webhook 输入签名/Nonce/Replay Protection；
-- [ ] Outbound Webhook Delivery；
-- [ ] Channel 中立消息模型；
-- [ ] AgentScope Channel Adapter（指定 Adapter 包）；
-- [ ] Knowledge Ingestion Handler；
-- [ ] Knowledge 完成/失败只提交幂等 Ingestion Result，由 Control 转换 Revision 状态；
-- [ ] Runtime Internal Client；
-- [ ] Control Internal Client；
-- [ ] Scheduler MySQL Flyway；
-- [ ] Worker Pool 按 Job Type 隔离；
-- [ ] Queue Depth/Oldest Age 指标；
-- [ ] 管理 API 只用于状态/重试/取消；
-- [ ] 不依赖 `agentark-runtime` 或 `agentark-runtime-provider-agentscope`。
+- [x] Durable Job 状态机；
+- [x] 至少一次派发；
+- [x] Handler 幂等；
+- [x] Job Claim；
+- [x] Lease + Fencing；
+- [x] Retry Budget；
+- [x] Exponential Backoff + Jitter；
+- [x] Timeout；
+- [x] Dead Letter；
+- [x] Replay/Redrive 授权和审计；
+- [x] Cron 计算与执行分离；
+- [x] Webhook 输入签名/Nonce/Replay Protection；
+- [x] Outbound Webhook Delivery；
+- [x] Channel 中立消息模型；
+- [x] AgentScope Channel Adapter（指定 Adapter 包）；
+- [x] Knowledge Ingestion Handler；
+- [x] Knowledge 完成/失败只提交幂等 Ingestion Result，由 Control 转换 Revision 状态；
+- [x] Runtime Internal Client；
+- [x] Control Internal Client；
+- [x] Scheduler MySQL Flyway；
+- [x] Worker Pool 按 Job Type 隔离；
+- [x] Queue Depth/Oldest Age 指标；
+- [x] 管理 API 只用于状态/重试/取消；
+- [x] 不依赖 `agentark-runtime` 或 `agentark-runtime-provider-agentscope`。
 
 ### 产物
 
@@ -2591,18 +2591,18 @@ docs/implementation/phase-15-scheduler.md
 
 ### 验收条件
 
-- [ ] 同一 Trigger 重复不产生不可控重复副作用；
-- [ ] 两个 Scheduler 实例只允许一个有效 Job Owner；
-- [ ] 旧 Fencing Token 不能提交结果；
-- [ ] Handler 重试幂等；
-- [ ] 写操作无幂等声明时默认不自动重试；
-- [ ] 达到 Retry Budget 进入 Dead Letter；
-- [ ] Redrive 有权限与审计；
-- [ ] Knowledge Ingestion 可由 Scheduler 调度；
-- [ ] Agent Turn 只通过 Runtime Internal API 创建；
-- [ ] Scheduler 无 HarnessAgent/推理循环；
-- [ ] 多实例/时钟/Cron/DST/故障测试通过。
-- [ ] Scheduler 账号对 Control/Runtime Schema 的连接或写入测试被拒绝。
+- [x] 同一 Trigger 重复不产生不可控重复副作用；
+- [x] 两个 Scheduler 实例只允许一个有效 Job Owner；
+- [x] 旧 Fencing Token 不能提交结果；
+- [x] Handler 重试幂等；
+- [x] 写操作无幂等声明时默认不自动重试；
+- [x] 达到 Retry Budget 进入 Dead Letter；
+- [x] Redrive 有权限与审计；
+- [x] Knowledge Ingestion 可由 Scheduler 调度；
+- [x] Agent Turn 只通过 Runtime Internal API 创建；
+- [x] Scheduler 无 HarnessAgent/推理循环；
+- [x] 多实例/时钟/Cron/DST/故障测试通过。
+- [x] Scheduler 账号对 Control/Runtime Schema 的连接或写入测试被拒绝。
 
 ### 验收命令
 

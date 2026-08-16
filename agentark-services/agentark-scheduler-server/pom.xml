@@ -38,6 +38,31 @@
             <artifactId>agentark-scheduling</artifactId>
         </dependency>
 
+        <!-- 提供 Scheduler 管理 API 的 JWT Principal、租户选择与安全失败默认。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-security</artifactId>
+        </dependency>
+
+        <!-- 为 Scheduler Servlet API 提供 Bearer JWT Resource Server 过滤链。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!-- 在部署单元显式装配 Scheduler 所属 MyBatis-Plus、Flyway 与事务能力。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-persistence</artifactId>
+        </dependency>
+
+        <!-- 提供 Scheduler Server 连接 MySQL 8.4 的运行时 JDBC 驱动。 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- 提供健康、Liveness、Readiness 和 Build Info 管理端点。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

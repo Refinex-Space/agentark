@@ -14,12 +14,162 @@ info:
     identifier: Apache-2.0
 # 固定所有内联 Schema 使用 JSON Schema Draft 2020-12 方言。
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
-# Phase 03 不提前虚构业务端点，端点由其所有者阶段补充。
-paths: {}
+# Internal Scheduler API 只允许 Audience 受限服务身份调用。
+security:
+  # 使用统一 Bearer JWT 安全方案。
+  - BearerAuth: []
+# 声明已实现的 Scheduler v1 Internal Endpoint。
+paths:
+  # 幂等登记持久 Cron 或 Webhook Trigger。
+  /internal/v1/scheduler/triggers:
+    # 创建 Trigger，并为 Cron 同事务创建首个 Cursor。
+    post:
+      # 固定生成客户端使用的操作标识。
+      operationId: createInternalSchedulerTrigger
+      # 声明 Trigger 定义正文。
+      requestBody:
+        # Trigger 定义不可省略。
+        required: true
+        # 声明 JSON 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 引用内部 Trigger 定义。
+            schema: { $ref: "#/components/schemas/InternalTriggerRequest" }
+      # 声明 Trigger 创建结果。
+      responses:
+        # Trigger 已创建，或语义相同定义已幂等复用。
+        "201":
+          # 说明持久 Trigger 已登记。
+          description: Trigger 已登记
+          # 声明 JSON 响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 引用 Trigger 接单响应。
+              schema: { $ref: "#/components/schemas/InternalTriggerAccepted" }
+        # 类型专属字段、Cron、时区、SecretRef 或配置非法。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 服务身份缺失或无正确 Audience。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 同租户 Trigger Key 已绑定不同定义。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 幂等创建 Durable Job。
+  /internal/v1/scheduler/jobs:
+    # 接收内部 Job 命令。
+    post:
+      # 固定生成客户端使用的操作标识。
+      operationId: enqueueInternalSchedulerJob
+      # 声明内部 Job 请求正文。
+      requestBody:
+        # Job 命令正文不可省略。
+        required: true
+        # 声明 JSON 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 复用版本化 Scheduler Job Schema。
+            schema: { $ref: "../schemas/scheduler-job/v1.json#/$defs/EnqueueJobRequest" }
+      # 声明接单结果与稳定错误。
+      responses:
+        # Scheduler 权威 Job 已创建或幂等复用。
+        "202":
+          # 说明 Job 已持久接收。
+          description: Durable Job 已接收
+          # 声明 JSON 响应媒体类型。
+          content:
+            # 固定 JSON 响应。
+            application/json:
+              # 复用 Job 接单响应结构。
+              schema: { $ref: "../schemas/scheduler-job/v1.json#/$defs/JobAccepted" }
+        # 请求字段、Hash 或策略非法。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 服务身份缺失或无正确 Audience。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 同业务键绑定了不同内容。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
 # 汇总可复用的 Schema 与响应组件。
 components:
+  # 注册 Internal API 安全方案。
+  securitySchemes:
+    # 声明 OIDC 或服务身份签发的 Bearer JWT。
+    BearerAuth:
+      # 固定使用 HTTP Authentication。
+      type: http
+      # 固定 Bearer Scheme。
+      scheme: bearer
+      # 声明 JWT Token 格式。
+      bearerFormat: JWT
   # 注册公共 Schema 引用。
   schemas:
+    # 定义持久 Trigger 创建命令。
+    InternalTriggerRequest:
+      # Trigger 命令是封闭对象。
+      type: object
+      # 列出不可省略字段。
+      required:
+        # 所属组织不可省略。
+        - organizationId
+        # 所属项目不可省略。
+        - projectId
+        # 稳定 Key 不可省略。
+        - key
+        # Trigger 类型不可省略。
+        - type
+        # 非敏感配置不可省略。
+        - config
+        # 目标契约不可省略。
+        - targetContract
+        # 目标 Job 类型不可省略。
+        - targetJobType
+      # 禁止未声明字段穿透到持久配置。
+      additionalProperties: false
+      # 声明 Trigger 字段。
+      properties:
+        # 所属组织 UUIDv7。
+        organizationId: { type: string, format: uuid }
+        # 所属项目 UUIDv7。
+        projectId: { type: string, format: uuid }
+        # 项目内稳定 Trigger Key。
+        key: { type: string, minLength: 1, maxLength: 255, pattern: "^[A-Za-z0-9][A-Za-z0-9_.:/-]*$" }
+        # Trigger 类型完整枚举。
+        type: { type: string, enum: [CRON, WEBHOOK] }
+        # CRON 的 Spring 六段表达式；WEBHOOK 必须省略。
+        cronExpression: { type: string, minLength: 1, maxLength: 255 }
+        # CRON 的 IANA 时区；WEBHOOK 必须省略。
+        zoneId: { type: string, minLength: 1, maxLength: 64 }
+        # 作为目标 Job Payload 基础的非敏感字符串字段。
+        config:
+          # 配置采用键值对象。
+          type: object
+          # 限制配置项数量。
+          maxProperties: 32
+          # 限制每个配置值为有界字符串。
+          additionalProperties: { type: string, maxLength: 16384 }
+        # WEBHOOK 验签 SecretRef；CRON 必须省略。
+        secretRef: { type: string, minLength: 1, maxLength: 1024, pattern: "^secret://" }
+        # 目标 Job Payload Contract 稳定版本。
+        targetContract: { type: string, minLength: 1, maxLength: 255 }
+        # 目标 Job 类型完整枚举。
+        targetJobType:
+          # Job 类型是稳定字符串枚举。
+          type: string
+          # 列出当前全部可调度类型。
+          enum: [KNOWLEDGE_INGESTION, RUNTIME_TURN, OUTBOUND_WEBHOOK, CHANNEL_MESSAGE]
+    # 定义 Trigger 创建响应。
+    InternalTriggerAccepted:
+      # 响应是封闭对象。
+      type: object
+      # 列出不可省略字段。
+      required: [triggerId, status]
+      # 禁止额外字段。
+      additionalProperties: false
+      # 声明响应字段。
+      properties:
+        # 已登记的 Trigger UUIDv7 标识。
+        triggerId: { type: string, format: uuid }
+        # 当前 Trigger 状态，创建时固定为 ENABLED。
+        status: { type: string, enum: [ENABLED] }
     # 暴露 AgentArk 公共 Problem Detail 错误结构。
     ProblemDetail:
       # 引用版本化的公共错误 JSON Schema。

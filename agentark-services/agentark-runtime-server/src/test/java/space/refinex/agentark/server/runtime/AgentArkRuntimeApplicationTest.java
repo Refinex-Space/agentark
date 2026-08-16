@@ -19,9 +19,12 @@ package space.refinex.agentark.server.runtime;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.core.env.Environment;
+import org.springframework.core.annotation.AnnotatedElementUtils;
+import space.refinex.agentark.runtime.adapter.out.persistence.RuntimeMapper;
 
 /**
  * 验证 Runtime WebFlux 进程能在隔离测试 Profile 下独立启动基础容器。
@@ -60,5 +63,15 @@ class AgentArkRuntimeApplicationTest {
         assertThat(environment.getProperty("local.server.port", Integer.class)).isPositive();
         assertThat(environment.getProperty("spring.application.name"))
             .isEqualTo("agentark-runtime-server");
+    }
+
+    /** 证明生产组合配置显式扫描 Runtime Mapper，而不依赖启动包推断。 */
+    @Test
+    void declaresRuntimeMapperScan() {
+        var mapperScan = AnnotatedElementUtils.findMergedAnnotation(
+            RuntimeServerConfiguration.class, MapperScan.class);
+
+        assertThat(mapperScan).isNotNull();
+        assertThat(mapperScan.basePackageClasses()).containsExactly(RuntimeMapper.class);
     }
 }

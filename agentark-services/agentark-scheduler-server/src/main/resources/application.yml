@@ -1,4 +1,4 @@
-# Scheduler 最小管理 HTTP 服务器配置，当前只公开 Actuator 端点。
+# Scheduler 管理、Internal、Webhook 与 Actuator HTTP 服务器配置。
 server:
   # 固定本地 Scheduler 端口，容器部署可通过 SERVER_PORT 覆盖。
   port: 8083
@@ -124,6 +124,10 @@ mybatis-plus:
 agentark:
   # Foundation Starter 配置。
   foundation:
+    # Scheduler 安全失败默认配置。
+    security:
+      # 默认关闭管理与 Internal API；Webhook 仍必须通过 HMAC 验签。
+      enabled: ${AGENTARK_SECURITY_ENABLED:false}
     # 持久化增强配置。
     persistence:
       # 存在 Scheduler TenantLineHandler 时启用租户 SQL 防御。
@@ -132,3 +136,23 @@ agentark:
       sql-telemetry-enabled: true
       # 超过 500 毫秒输出不含 SQL/参数的慢查询告警。
       slow-query-threshold: 500ms
+  # Scheduler Plane 的版本化 Client、Lease 与 Worker 配置。
+  scheduler:
+    # Control v1 Internal API 基础地址；生产部署应覆盖为集群内受控地址。
+    control-base-url: ${AGENTARK_CONTROL_BASE_URL:http://localhost:8081}
+    # Runtime v1 Internal API 基础地址；生产部署应覆盖为集群内受控地址。
+    runtime-base-url: ${AGENTARK_RUNTIME_BASE_URL:http://localhost:8082}
+    # Audience 受限短期服务身份 Token；空值不会启用任何弱认证回退。
+    internal-service-token: ${AGENTARK_SCHEDULER_INTERNAL_TOKEN:}
+    # Worker 稳定实例 Key；容器环境应覆盖为 Pod 或实例稳定标识。
+    instance-key: ${AGENTARK_SCHEDULER_INSTANCE_KEY:agentark-scheduler-local}
+    # 单次 Job Lease 有效期，Worker 每三分之一周期续租。
+    lease-ttl: ${AGENTARK_SCHEDULER_LEASE_TTL:30s}
+    # 默认不启动 Worker，避免未配置 Provider 或内部服务身份时领取任务。
+    worker-enabled: ${AGENTARK_SCHEDULER_WORKER_ENABLED:false}
+    # 没有可 Claim Job 时的轮询间隔。
+    worker-poll-delay: ${AGENTARK_SCHEDULER_WORKER_POLL_DELAY:1s}
+    # Cron Cursor 扫描间隔。
+    cron-scan-delay: ${AGENTARK_SCHEDULER_CRON_SCAN_DELAY:30s}
+    # 每个 Job Type 的隔离 Worker 数。
+    worker-pool-size: ${AGENTARK_SCHEDULER_WORKER_POOL_SIZE:2}

@@ -117,6 +117,7 @@ public class RuntimeSecurityConfiguration {
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers("/actuator/health/**", "/actuator/info").permitAll()
                 .pathMatchers("/api/v1/runtime/**").authenticated()
+                .pathMatchers("/internal/v1/runtime/**").authenticated()
                 .anyExchange().denyAll())
             .oauth2ResourceServer(resourceServer -> resourceServer
                 .jwt(jwt -> jwt.jwtDecoder(decoder)

@@ -7,11 +7,13 @@ spring:
       # 仅当 `local` 被激活时加载。
       on-profile: local
 
-# Scheduler 只通过 URL 与 Control/Runtime 协作，不引入两者 Server 实现。
+# Scheduler 本地 Profile 仍只通过版本化 URL 与 Control/Runtime 协作。
 agentark:
-  # 声明 Scheduler 可见的内部服务端点。
-  services:
+  # Scheduler 本地运行配置。
+  scheduler:
     # Control Plane 基础地址；Compose 使用服务 DNS 覆盖。
     control-base-url: ${AGENTARK_CONTROL_BASE_URL:http://localhost:8081}
     # Runtime Plane 基础地址；Compose 使用服务 DNS 覆盖。
     runtime-base-url: ${AGENTARK_RUNTIME_BASE_URL:http://localhost:8082}
+    # 本地默认仍不开启 Worker，必须显式配置服务身份后再启用。
+    worker-enabled: ${AGENTARK_SCHEDULER_WORKER_ENABLED:false}

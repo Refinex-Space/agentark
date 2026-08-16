@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-16
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -9,7 +9,9 @@ referenced_by: AGENTS.md#knowledge-map
 
 Schema：`agentark_scheduler`。唯一写入者是 Scheduler Server。它不保存 Control Catalog、Knowledge Metadata 或 Runtime Session/Run 事实。
 
-Phase 15 创建下列表、Flyway、Repository 和多实例/幂等测试；Phase 14 的 Ingestion Handler 只定义中立处理与结果契约，不提前拥有 Scheduler 数据。
+Phase 15 已通过 `V2__phase_15_scheduler.sql` 创建下列表、Repository 和多实例/幂等测试；Phase 14 的 Ingestion Worker 继续只定义中立处理与结果契约，不拥有 Scheduler 数据。
+
+Trigger 只允许通过 Audience 受限的 `/internal/v1/scheduler/triggers` 登记。Cron 登记在同一事务中创建首个 Cursor 和 `trigger.created` Outbox；同租户同 Key 的完全相同定义幂等复用，不同定义返回冲突。`config_json` 是目标 Job Payload 的非敏感字符串字段，点火时补充平台保留的 `_triggerId`、`_triggerScheduledAt`、`_triggerContract`；疑似 Secret、Token、Password、Credential 或 API Key 的配置键被应用层拒绝，Webhook 密钥只保存合法 `SecretRef`。
 
 ## Flyway 归属
 
@@ -41,6 +43,8 @@ Phase 15 创建下列表、Flyway、Repository 和多实例/幂等测试；Phase
 - Claim、续租、完成、失败和 Redrive 都校验 Fencing Token。
 - Retry Budget 耗尽后进入 Dead Letter；Redrive 生成新 Attempt 并记录操作者和审计关联。
 - Cron 计算只推进 `trigger_cursor` 并创建幂等 Job，不直接运行 Agent。
+- `job_attempt` 每次 Claim 追加一行，只允许 `RUNNING` 转换到一个终态；重试和 Lease 接管均创建新 Attempt。
+- Trigger、Cursor、Job 与对应接单 Outbox 使用 Scheduler 本地事务，不把内存扫描结果当作事实。
 
 ## 跨平面命令
 

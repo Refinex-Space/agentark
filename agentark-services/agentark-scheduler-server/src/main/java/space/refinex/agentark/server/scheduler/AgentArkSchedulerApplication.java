@@ -26,11 +26,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * @author refinex
  */
 @EnableScheduling
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = "space.refinex.agentark.server.scheduler")
 public class AgentArkSchedulerApplication {
 
     /**
-     * 启动 Scheduler Spring Boot 应用；Phase 05 不注册 Job、Trigger 或 Harness 执行逻辑。
+     * 启动 Scheduler Spring Boot 应用；只扫描 Scheduler Server 组合层，避免加载其他平面配置。
      *
      * @param args 传递给 Spring Boot 的命令行参数
      */

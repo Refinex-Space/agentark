@@ -48,6 +48,7 @@ class ContractDocumentLintTest {
       List.of(
           "public-control-v1.yaml",
           "public-runtime-v1.yaml",
+          "public-scheduler-v1.yaml",
           "internal-control-v1.yaml",
           "internal-runtime-v1.yaml",
           "internal-scheduler-v1.yaml");
@@ -133,8 +134,29 @@ class ContractDocumentLintTest {
                 "/api/v1/runtime/runs/{runId}/events:stream",
                 "/api/v1/runtime/approvals",
                 "/api/v1/runtime/approvals/{approvalId}:decide");
-      } else {
-        assertThat(document.get("paths")).isEqualTo(Map.of());
+      } else if (fileName.equals("public-scheduler-v1.yaml")) {
+        Set<String> paths =
+            ((Map<?, ?>) document.get("paths"))
+                .keySet().stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
+        assertThat(paths)
+            .containsExactlyInAnyOrder(
+                "/api/v1/scheduler/jobs/{jobId}",
+                "/api/v1/scheduler/jobs/{jobId}:cancel",
+                "/api/v1/scheduler/dead-letters",
+                "/api/v1/scheduler/jobs/{jobId}:redrive",
+                "/api/v1/scheduler/webhooks/{triggerId}");
+      } else if (fileName.equals("internal-runtime-v1.yaml")) {
+        Set<String> paths =
+            ((Map<?, ?>) document.get("paths"))
+                .keySet().stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
+        assertThat(paths).containsExactly("/internal/v1/runtime/turns");
+      } else if (fileName.equals("internal-scheduler-v1.yaml")) {
+        Set<String> paths =
+            ((Map<?, ?>) document.get("paths"))
+                .keySet().stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
+        assertThat(paths).containsExactlyInAnyOrder(
+            "/internal/v1/scheduler/jobs",
+            "/internal/v1/scheduler/triggers");
       }
       assertThat(nested(document, "info", "version")).isEqualTo("1.0.0");
       assertThat(nested(document, "components", "schemas", "ProblemDetail", "$ref"))

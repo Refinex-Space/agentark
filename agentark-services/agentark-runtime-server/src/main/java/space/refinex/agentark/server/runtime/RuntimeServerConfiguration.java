@@ -16,6 +16,7 @@
 
 package space.refinex.agentark.server.runtime;
 
+import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.*;
@@ -23,6 +24,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 import space.refinex.agentark.foundation.redis.DistributedLeaseManager;
 import space.refinex.agentark.foundation.storage.ObjectStore;
 import space.refinex.agentark.runtime.adapter.in.web.RuntimeController;
+import space.refinex.agentark.runtime.adapter.in.web.RuntimeInternalController;
 import space.refinex.agentark.runtime.adapter.in.web.RuntimeProblemDetailAdvice;
 import space.refinex.agentark.runtime.adapter.out.control.ControlPlaneRuntimeClient;
 import space.refinex.agentark.runtime.adapter.out.coordination.RedisRuntimeLeaseCoordinator;
@@ -48,6 +50,7 @@ import java.time.Clock;
 @EnableScheduling
 @EnableConfigurationProperties(RuntimeServerProperties.class)
 @Import(AgentScopeRuntimeProviderConfiguration.class)
+@MapperScan(basePackageClasses = RuntimeMapper.class)
 public class RuntimeServerConfiguration {
 
     /**
@@ -269,6 +272,22 @@ public class RuntimeServerConfiguration {
         return new RuntimeController(
             admissionService, queryService, controlService, coordinator,
             authorizationService, eventStreamService, objectMapper, providerCatalog);
+    }
+
+    /**
+     * 创建只接受 Audience 受限服务身份的 Runtime Internal API Controller。
+     *
+     * @param admissionService Runtime 接单服务
+     * @param queryService     Runtime 查询服务
+     * @param providerCatalog  Runtime Provider 目录
+     * @return Runtime Internal Controller
+     */
+    @Bean
+    public RuntimeInternalController runtimeInternalController(
+        RuntimeAdmissionService admissionService,
+        RuntimeQueryService queryService,
+        RuntimeProviderCatalog providerCatalog) {
+        return new RuntimeInternalController(admissionService, queryService, providerCatalog);
     }
 
     /**

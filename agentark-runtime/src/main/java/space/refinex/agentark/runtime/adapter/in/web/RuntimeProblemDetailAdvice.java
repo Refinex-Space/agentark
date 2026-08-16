@@ -34,7 +34,7 @@ import java.net.URI;
  *
  * @author refinex
  */
-@RestControllerAdvice(assignableTypes = RuntimeController.class)
+@RestControllerAdvice(assignableTypes = {RuntimeController.class, RuntimeInternalController.class})
 public final class RuntimeProblemDetailAdvice {
 
     /**
