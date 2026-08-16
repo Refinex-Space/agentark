@@ -184,7 +184,7 @@ Phase 01 只做只读取证；Phase 02 已在同一固定 SHA 的隔离可写完
 
 | 缺口 | 事实 | 后续 Owner |
 |---|---|---|
-| Gateway Rate Limit | 未发现实现 | P16 |
+| Gateway Rate Limit | 上游未发现实现；Phase 16 已以 Redis 固定窗口、主体/来源键、健康绕过和失败关闭补齐 | P16 已完成；跨区域配额一致性和压力演练归 P22 |
 | 标准 SSE Resume | 无 `id`/`Last-Event-ID` 和客户端自动重连 | P13、P17 |
 | Lease Fencing | 未发现单调 fencing token | P11、P13 |
 | Durable Scheduler Job | Java Scheduler 无 Job/Attempt/Dead Letter 聚合 | P15 已以独立 V2、状态机、Fencing、Retry/Dead Letter 和测试补齐 |
@@ -342,3 +342,13 @@ Control Internal Command 的计划和结果使用显式 Wire DTO；Worker 无 Co
 | 上游 Scheduler 直接依赖共享 Service 实体与配置 | Scheduler V2 九张独占表、MyBatis Mapper、Control/Runtime Internal Client | 禁止跨 Schema、共享 Mapper/DataSource、JPA/Hibernate 和 Auto-DDL；账号越权测试证明无法访问 Control/Runtime Schema |
 
 入站 Webhook 使用 HMAC-SHA256、时间窗口、Nonce 和请求 Hash；Nonce + Job + Outbox 同事务。Knowledge Handler 复用 Phase 14 Worker，摄取成功或失败只经 Control Internal Command 提交结果。真实恶意文件扫描、Embedding、Object Store、Qdrant、Endpoint Resolver 和 Channel Provider 不在 Phase 15 伪造；缺少 Provider 时对应 Handler 不注册，默认 Worker 关闭。
+
+## 12. Phase 16 Gateway 行为落地
+
+| 上游基线 | Phase 16 实际覆盖 | AgentArk 增强与拒绝项 |
+|---|---|---|
+| GW-01 静态路由、Internal 404 和 Header 清洗 | 固定路由优先级覆盖 Control、Runtime、Scheduler Public/Callback；`/internal/**` 在边缘返回 404；派生身份 Header 被删除 | 下游 URL 受配置约束；保留原始签名凭据供目标服务重新验证；拒绝共享内部 Token 和业务模块依赖 |
+| GW-02 全局一小时响应超时 | SSE Route 单独设置无普通响应超时、`Cache-Control: no-store`、`X-Accel-Buffering: no`，保留 `Last-Event-ID` | 普通路由保持受控连接/响应超时和请求体上限；连接关闭不改变 Runtime Run 事实 |
+| GW-03 缺少认证、CORS 和限流 | OIDC/JWK Resource Server 校验 Issuer/Audience/算法；Control API Key 自省和短正缓存；精确 Origin CORS；Redis 固定窗口限流 | Security 未配置时 Public API 失败关闭；CORS 拒绝通配；Redis 判定失败不静默放行；Webhook 仍由 Scheduler 独立验签 |
+
+Gateway 不拥有业务表、Mapper、Entity 或 DataSource；Redis 只保存可丢失配额。API Key 正缓存键为 SHA-256 且 TTL 最大 30 秒，原始 API Key 继续转发给 Control 再次摘要验证。JWT 同样保留原始 Bearer，由目标服务按自身 Audience 与授权边界重新验证。

@@ -1,4 +1,4 @@
-# Gateway HTTP 服务器配置，当前只公开 Actuator 端点。
+# Gateway HTTP 服务器配置，公开受认证公共入口和最小 Actuator 探针。
 server:
   # 固定本地 Gateway 端口，容器部署可通过 SERVER_PORT 覆盖。
   port: 8080
@@ -19,16 +19,113 @@ spring:
   main:
     # 不输出 Spring Boot Banner。
     banner-mode: "off"
+  # Gateway 转发与代理 Header 配置。
+  cloud:
+    # Spring Cloud Gateway WebFlux Server 配置。
+    gateway:
+      # 选择响应式 Gateway Server 实现。
+      server:
+        # WebFlux Gateway 配置根。
+        webflux:
+          # 禁止接收并传播客户端伪造的 RFC 7239 Forwarded Header。
+          forwarded:
+            # 不生成 Forwarded Header，统一使用受控 X-Forwarded-*。
+            enabled: false
+          # 生成下游可读取的 X-Forwarded-*，并覆盖而非追加客户端值。
+          x-forwarded:
+            # 启用 Gateway 生成的 X-Forwarded-* Header。
+            enabled: true
+            # 覆盖客户端 X-Forwarded-For，避免来源链伪造。
+            for-append: false
+            # 覆盖客户端 X-Forwarded-Host。
+            host-append: false
+            # 覆盖客户端 X-Forwarded-Port。
+            port-append: false
+            # 覆盖客户端 X-Forwarded-Prefix。
+            prefix-append: false
+            # 覆盖客户端 X-Forwarded-Proto。
+            proto-append: false
+  # Redis 只作为可丢失限流状态，不承载 Gateway 业务事实。
+  data:
+    # Spring Data Redis 连接配置。
+    redis:
+      # Redis 主机；生产通过 Secret 管理系统注入真实地址。
+      host: ${AGENTARK_REDIS_HOST:localhost}
+      # Redis TCP 端口。
+      port: ${AGENTARK_REDIS_PORT:6379}
+      # 建立 Redis 连接的最长时间。
+      connect-timeout: ${AGENTARK_REDIS_CONNECT_TIMEOUT:2s}
+      # 单次 Redis 命令的最长时间。
+      timeout: ${AGENTARK_REDIS_TIMEOUT:2s}
+      # Gateway 不声明 Redis Repository，关闭无意义的仓储扫描。
+      repositories:
+        # 限流直接使用 Foundation 原子端口，不需要 Spring Data Repository。
+        enabled: false
+
+# AgentArk Gateway 自有路由、安全缓存和限流配置。
+agentark:
+  # Gateway 只保存平面 URL 和边缘保护参数，不连接业务数据库。
+  gateway:
+    # Control Plane 基础地址。
+    control-base-url: ${AGENTARK_CONTROL_BASE_URL:http://localhost:8081}
+    # Runtime Plane 基础地址。
+    runtime-base-url: ${AGENTARK_RUNTIME_BASE_URL:http://localhost:8082}
+    # Scheduler Plane 基础地址。
+    scheduler-base-url: ${AGENTARK_SCHEDULER_BASE_URL:http://localhost:8083}
+    # 普通公共请求体上限。
+    max-request-size: ${AGENTARK_GATEWAY_MAX_REQUEST_SIZE:2MB}
+    # Webhook 请求体上限，默认比普通请求更严格。
+    webhook-max-request-size: ${AGENTARK_GATEWAY_WEBHOOK_MAX_REQUEST_SIZE:1MB}
+    # 下游 TCP 连接超时。
+    connect-timeout: ${AGENTARK_GATEWAY_CONNECT_TIMEOUT:5s}
+    # 普通请求下游响应超时；SSE 路由单独禁用响应超时。
+    response-timeout: ${AGENTARK_GATEWAY_RESPONSE_TIMEOUT:30s}
+    # API Key 成功验证正缓存 TTL，最大允许三十秒。
+    api-key-cache-ttl: ${AGENTARK_GATEWAY_API_KEY_CACHE_TTL:10s}
+    # API Key 正缓存容量上限。
+    api-key-cache-max-entries: ${AGENTARK_GATEWAY_API_KEY_CACHE_MAX_ENTRIES:10000}
+    # 是否启用 Redis 固定窗口限流；生产应显式开启。
+    rate-limit-enabled: ${AGENTARK_GATEWAY_RATE_LIMIT_ENABLED:false}
+    # 普通公共请求每主体单窗口额度。
+    default-rate-limit: ${AGENTARK_GATEWAY_DEFAULT_RATE_LIMIT:600}
+    # Webhook 每来源单窗口额度。
+    webhook-rate-limit: ${AGENTARK_GATEWAY_WEBHOOK_RATE_LIMIT:120}
+    # Redis 固定限流窗口。
+    rate-limit-window: ${AGENTARK_GATEWAY_RATE_LIMIT_WINDOW:1m}
+  # Foundation 安全基线；启用时还必须注入 Issuer/JWK 配置。
+  foundation:
+    # JWT Resource Server 配置。
+    security:
+      # 默认失败关闭；生产必须设置为 true 并提供可信 Issuer 或 JWK Set URI。
+      enabled: ${AGENTARK_GATEWAY_SECURITY_ENABLED:false}
+      # Gateway 只接受面向自身 Audience 的 JWT。
+      audiences:
+        - ${AGENTARK_GATEWAY_JWT_AUDIENCE:agentark-gateway}
+      # 明确限制非对称 JWS 算法，拒绝 none 与 HMAC 降级。
+      allowed-jws-algorithms:
+        - ${AGENTARK_GATEWAY_JWS_ALGORITHM:RS256}
+    # Redis Foundation 仅随限流开关启用。
+    redis:
+      # 与 Gateway 限流开关保持一致，启用后缺少 Redis 将失败关闭请求。
+      enabled: ${AGENTARK_GATEWAY_RATE_LIMIT_ENABLED:false}
+      # Redis Key 应用级命名空间。
+      application-name: gateway
 
 # Actuator 对外暴露与健康信息脱敏策略。
 management:
+  # 只有限流启用时才把 Redis 纳入整体健康状态，避免可选能力导致失败启动探针。
+  health:
+    # Redis 健康贡献者配置。
+    redis:
+      # 与限流开关一致；启用限流后 Redis 故障必须使 Readiness 失败。
+      enabled: ${AGENTARK_GATEWAY_RATE_LIMIT_ENABLED:false}
   # 管理 HTTP 端点的暴露范围。
   endpoints:
     # 只管理 Web 端点暴露行为。
     web:
       # 显式限制可访问端点，禁止环境与 Bean 信息泄露。
       exposure:
-        # Phase 05 仅允许健康与构建信息。
+        # 只允许健康与构建信息，其他管理端点不注册 HTTP 暴露。
         include: health,info
   # 单个管理端点的安全行为。
   endpoint:

@@ -29,6 +29,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 13 执行证据 | [Runtime API 与托管执行](implementation/phase-13-runtime-api.md) | 复核接单事务、Worker、Lease/Fencing、SSE、HITL、取消、恢复与服务装配 |
 | Phase 14 执行证据 | [Knowledge Ingestion 与 RAG](implementation/phase-14-knowledge-rag.md) | 复核安全异步摄取、Qdrant、固定 Revision 检索、Citation/Trace 与 AgentScope Tool 防腐层 |
 | Phase 15 执行证据 | [Scheduler 与持久 Job](implementation/phase-15-scheduler.md) | 复核 Trigger、Job/Attempt/Lease、Cron/Webhook、Channel、Retry/Dead Letter 与 Internal Client |
+| Phase 16 执行证据 | [Gateway 公共入口](implementation/phase-16-gateway.md) | 复核路由、OIDC/JWT、API Key、CORS、限流、SSE 代理与安全边界 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |

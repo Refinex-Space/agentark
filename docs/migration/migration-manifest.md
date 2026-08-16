@@ -245,6 +245,19 @@ Phase 14 未复制上游源码或第三方资产。新增 `agentscope-core` 依�
 
 Phase 15 新增源码、SQL 和 Contract 均为 AgentArk 独立实现，没有复制上游文件或第三方资产。Scheduler 只依赖 AgentArk 中立 Knowledge 契约；AgentScope Channel 适配包当前是版本 Bridge SPI，不把框架类型引入 Scheduler 制品。
 
-## 16. 变更协议
+## 16. Phase 16 实际处置
+
+| 候选能力 | 分类 | AgentArk 落点 | 明确边界 |
+|---|---|---|---|
+| Gateway 静态 Route 与 Internal 拒绝 | `ADAPT` | `GatewayRouteConfiguration` 固定优先级路由和 `/internal/**` 404 | 不复制上游 YAML；目标 URL 来自受控配置，不代理内部 API |
+| 上游 Header 清洗 | `ADAPT` | `GatewayHeaderSanitizationFilter` 删除派生身份与客户端证书 Header | 保留原始签名凭据供下游独立验证；租户 Header 只表示选择意图 |
+| 上游全局一小时响应超时 | `REFERENCE/REJECT` | 仅 SSE Route 禁用普通响应超时并关闭代理缓冲 | 普通 API 保持 30 秒默认超时，禁止为流式请求放宽所有路由 |
+| 上游缺失 OIDC/CORS/限流 | `ADAPT` | Foundation JWT/JWK、精确 CORS、Redis 固定窗口限流 | 拒绝共享 HMAC Secret、固定内部 Token、生产通配 CORS 和限流失败静默放行 |
+| API Key 前置认证 | `ADAPT` | Control 内部摘要自省、Gateway SHA-256 键短 TTL 正缓存 | 明文只在当前请求；无效结果与错误不缓存；Runtime/Scheduler 不接受 API Key |
+| Gateway 业务 DTO/Repository | `REJECT` | 无落点 | Gateway 不连接业务数据库，不依赖 Control/Runtime/Scheduler 实现模块 |
+
+Phase 16 没有复制上游源码或资产。Gateway 只新增边缘 Adapter、配置与测试；Control 仅新增版本化 API Key 自省响应，不改变 API Key 表、摘要算法或 IAM Owner。
+
+## 17. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

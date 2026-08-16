@@ -450,7 +450,7 @@ flowchart LR
 | 13 | DONE | 2026-08-16 | `docs/implementation/phase-13-runtime-api.md` | Runtime API、持久 Worker、SSE、HITL、Lease/Fencing、取消与恢复已验收 |
 | 14 | DONE | 2026-08-16 | `docs/implementation/phase-14-knowledge-rag.md` | 安全异步摄取、Qdrant、固定 Revision 检索、Citation/Trace、AgentScope 防腐层与完整验收已完成 |
 | 15 | DONE | 2026-08-16 | `docs/implementation/phase-15-scheduler.md` | 持久 Job、Cron、Webhook、Channel、重试、Fencing、Dead Letter 与跨平面契约已验收 |
-| 16 | NOT_STARTED | — | `docs/implementation/phase-16-gateway.md` | |
+| 16 | DONE | 2026-08-16 | `docs/implementation/phase-16-gateway.md` | 无业务状态 Gateway、公共认证、精确 CORS、限流、SSE 代理与安全门禁已验收 |
 | 17 | NOT_STARTED | — | `docs/implementation/phase-17-web-foundation.md` | |
 | 18 | NOT_STARTED | — | `docs/implementation/phase-18-web-features.md` | |
 | 19 | NOT_STARTED | — | `docs/implementation/phase-19-observability-governance.md` | |
@@ -2647,28 +2647,28 @@ $AGENTSCOPE_ROOT/agentscope-service/frontend/
 
 ### 任务
 
-- [ ] Control 路由；
-- [ ] Runtime 路由；
-- [ ] Scheduler Public/Callback 路由按架构限制；
-- [ ] OIDC/JWT Resource Server；
-- [ ] Issuer/Audience/Algorithm/JWK；
-- [ ] API Key 提取与 Control 验证/缓存；
-- [ ] Service Identity 向下游传播；
-- [ ] 下游仍需独立验证；
-- [ ] Request ID/Trace Context；
-- [ ] Tenant Selection Header 仅作为意图；
-- [ ] CORS 精确配置；
-- [ ] Security Headers；
-- [ ] Redis Rate Limit；
-- [ ] 路由级请求大小/Timeout；
-- [ ] SSE 禁用缓冲；
-- [ ] SSE 长连接 Timeout/Drain；
-- [ ] `Last-Event-ID` 透传；
-- [ ] 错误统一为 ProblemDetail；
-- [ ] Webhook Route 保护；
-- [ ] Actuator 网络/认证隔离；
-- [ ] Gateway 不连接业务数据库；
-- [ ] Gateway 不依赖业务模块。
+- [x] Control 路由；
+- [x] Runtime 路由；
+- [x] Scheduler Public/Callback 路由按架构限制；
+- [x] OIDC/JWT Resource Server；
+- [x] Issuer/Audience/Algorithm/JWK；
+- [x] API Key 提取与 Control 验证/缓存；
+- [x] Service Identity 向下游传播；
+- [x] 下游仍需独立验证；
+- [x] Request ID/Trace Context；
+- [x] Tenant Selection Header 仅作为意图；
+- [x] CORS 精确配置；
+- [x] Security Headers；
+- [x] Redis Rate Limit；
+- [x] 路由级请求大小/Timeout；
+- [x] SSE 禁用缓冲；
+- [x] SSE 长连接 Timeout/Drain；
+- [x] `Last-Event-ID` 透传；
+- [x] 错误统一为 ProblemDetail；
+- [x] Webhook Route 保护；
+- [x] Actuator 网络/认证隔离；
+- [x] Gateway 不连接业务数据库；
+- [x] Gateway 不依赖业务模块。
 
 ### 产物
 
@@ -2682,17 +2682,17 @@ docs/implementation/phase-16-gateway.md
 
 ### 验收条件
 
-- [ ] 未认证请求被拒绝；
-- [ ] JWT Issuer/Audience/Algorithm 校验；
-- [ ] API Key 吊销后缓存可在受控时间失效；
-- [ ] 伪造 Tenant Header 不能越权；
-- [ ] 下游不盲信未签名 Header；
-- [ ] CORS 不使用生产通配；
-- [ ] SSE 可长连接、重连和透传事件 ID；
-- [ ] Gateway 重启后客户端可恢复；
-- [ ] 限流不影响健康检查/内部必要通信；
-- [ ] Gateway 无 Mapper/业务 Entity/Control/Runtime 实现依赖；
-- [ ] 路由与安全集成测试通过。
+- [x] 未认证请求被拒绝；
+- [x] JWT Issuer/Audience/Algorithm 校验；
+- [x] API Key 吊销后缓存可在受控时间失效；
+- [x] 伪造 Tenant Header 不能越权；
+- [x] 下游不盲信未签名 Header；
+- [x] CORS 不使用生产通配；
+- [x] SSE 可长连接、重连和透传事件 ID；
+- [x] Gateway 重启后客户端可恢复；
+- [x] 限流不影响健康检查/内部必要通信；
+- [x] Gateway 无 Mapper/业务 Entity/Control/Runtime 实现依赖；
+- [x] 路由与安全集成测试通过。
 
 ### 验收命令
 

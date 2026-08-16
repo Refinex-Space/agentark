@@ -16,23 +16,23 @@
 
 package space.refinex.agentark.server.gateway;
 
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
+import reactor.core.publisher.Mono;
+import space.refinex.agentark.foundation.security.AgentArkPrincipal;
+
+import java.util.Optional;
 
 /**
- * AgentArk Gateway Plane 启动入口，装配公共认证、路由、限流和 SSE 代理能力。
+ * 定义不带缓存的 Control API Key 内部客户端，便于独立验证边缘缓存行为。
  *
  * @author refinex
  */
-@SpringBootApplication
-public class AgentArkGatewayApplication {
+public interface ControlApiKeyClient {
 
     /**
-     * 启动 Gateway Spring Boot 应用；Gateway 只代理公共契约且不拥有业务状态。
+     * 请求 Control 独立校验原始 API Key。
      *
-     * @param args 传递给 Spring Boot 的命令行参数
+     * @param credential 完整 API Key，仅用于当前下游请求
+     * @return 成功主体或无效凭据空结果
      */
-    public static void main(String[] args) {
-        SpringApplication.run(AgentArkGatewayApplication.class, args);
-    }
+    Mono<Optional<AgentArkPrincipal>> verifyRemotely(String credential);
 }

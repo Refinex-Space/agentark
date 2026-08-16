@@ -59,7 +59,7 @@ Phase 10 增加以下 Release 契约约束：
 - `contracts/schemas/release-public/v1.json` 定义 Agent、Draft、Validation Report、Revision、Deployment 和对应写请求；Public Control 只声明实际实现的 Agent/Draft/Publish/Revision 与 Deployment 路径；
 - Publish 请求的 `idempotencyKey` 在 Project + Agent Scope 内永久绑定 `expectedDraftVersion`。相同键同版本重放返回首次 Revision；相同键不同版本返回稳定冲突，不能再次解析资产或追加 Outbox；
 - `contracts/schemas/agent-revision-snapshot/v1.json` 是 Runtime 消费的完整语言中立 Snapshot。Canonical Hash 使用排除顶层 `contentHash` 的规范 JSON 计算，Snapshot 只允许 `SecretRef`，不得包含 Credential 值；
-- `internal-control-v1.yaml` 只声明 Snapshot 与 Deployment Descriptor 两条已实现路径。调用方必须是含 `agentark-control` Audience 的 Service Identity，并声明 Runtime Provider、支持的 Snapshot Schema Versions 和 Capabilities；
+- Phase 10 首次建立 `internal-control-v1.yaml` 时只声明 Snapshot 与 Deployment Descriptor；调用方必须是含 `agentark-control` Audience 的 Service Identity，并声明 Runtime Provider、支持的 Snapshot Schema Versions 和 Capabilities；后续阶段只在真实实现存在后增量追加路径；
 - Snapshot 响应的 `ETag` 基于 `contentHash`，`If-None-Match` 精确命中返回 `304`。Deployment Descriptor 不暴露 Control Entity、DO、Mapper、Draft 或 Catalog Payload；
 - Publish Outbox 的 Diff Summary 只允许上一 Revision ID 与变化的顶层区段名，禁止包含 Prompt、文档、Tool 参数、Secret 或资产旧值/新值。
 
@@ -108,5 +108,14 @@ Phase 15 增加以下 Scheduler 契约约束：
 - 命令式取消和 Redrive 使用动作子资源并保留独立权限、人工原因、审计与 Outbox。Redrive 只能创建新的可执行周期，不能覆盖已有 Attempt、Delivery 或 Dead Letter 事实；
 - Cron 只推进持久 Cursor 并创建 Durable Job，不在扫描事务内执行 Handler。Webhook、Channel、Knowledge Ingestion 和 Agent Turn 均通过版本化 Port/Client 交付，Scheduler 不拥有 Agent 推理循环；
 - 入站 Webhook 正文最多 1 MiB；外发 Webhook 禁止重定向和非 HTTPS，并只保存有界响应摘要。契约、日志、Outbox、Dead Letter 和审计均不得保存 Secret、Credential、完整 Provider 正文或认证 Header。
+
+Phase 16 增加以下 Gateway 契约约束：
+
+- Gateway 固定按优先级路由 Runtime SSE、Runtime Public、Scheduler Webhook/Public 和 Control Public；`/internal/**` 必须在边缘返回 `404`，不能代理到任何下游；
+- Bearer JWT 必须由 Foundation Decoder 校验时间、Issuer、Audience、JWK 签名和非对称 JWS 算法白名单。Gateway 只做认证前置，原始签名凭据继续传给目标服务独立验证，禁止把派生身份 Header 当作信任边界；
+- `POST /internal/v1/auth/api-keys:verify` 只接受当前 API Key 自身，由 Control 本地摘要事实源验证并返回最小非秘密主体。Gateway 只缓存成功结果，缓存键为 SHA-256，TTL 不超过 30 秒；无效结果和依赖错误不得缓存；
+- API Key 当前只用于 Control Public 路由；Runtime 和 Scheduler Public 继续要求 Bearer JWT。客户端租户 Header 只表达选择意图，不能替代下游资源归属与权限检查；
+- SSE 路由单独禁用普通响应超时和代理缓冲，保留 `Last-Event-ID`，设置 `Cache-Control: no-store` 与 `X-Accel-Buffering: no`。连接中断不取消 Run，恢复仍以 Runtime 持久 Event Sequence 为事实；
+- Gateway 认证、授权、API Key 依赖故障和限流拒绝统一返回 `application/problem+json`；错误体不得回显 Authorization、API Key、JWT、租户资源详情或下游异常。
 
 Golden File、明文 Secret 负例和文档结构 Lint 由 `agentark-kernel` 测试执行，必需文件与 Kernel/Server 边界由知识门禁检查。首次发布后的修改必须增加 Breaking Change 检测；在不存在已发布前一版本的 Phase 03 不伪造兼容比较结果。

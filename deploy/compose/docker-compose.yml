@@ -203,7 +203,7 @@ services:
     image: agentark/agentark-gateway-server:0.1.0-local
     # Core 与 RAG 都启动 Gateway。
     profiles: ["core", "rag"]
-    # 开启 local Profile 并用 Compose DNS 覆盖两个后端 URL。
+    # 开启 local Profile 并用 Compose DNS 覆盖三个后端 URL。
     environment:
       # 启用已提交且不含 Secret 的 local 配置模板。
       SPRING_PROFILES_ACTIVE: local
@@ -211,6 +211,8 @@ services:
       AGENTARK_CONTROL_BASE_URL: http://control:8081
       # Gateway 只持有 Runtime 服务 URL，不共享实现。
       AGENTARK_RUNTIME_BASE_URL: http://runtime:8082
+      # Gateway 只持有 Scheduler 服务 URL，不共享实现。
+      AGENTARK_SCHEDULER_BASE_URL: http://scheduler:8083
     # Gateway 宿主端口只绑定回环地址。
     ports:
       # 固定对应 PLAN 的 8080 端口。

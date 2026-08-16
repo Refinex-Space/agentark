@@ -51,6 +51,11 @@ public class AgentArkSecurityProperties {
     private Set<String> audiences = new LinkedHashSet<>();
 
     /**
+     * JWT 允许的非对称 JWS 算法白名单；默认只接受 RS256。
+     */
+    private Set<String> allowedJwsAlgorithms = new LinkedHashSet<>(Set.of("RS256"));
+
+    /**
      * JWT 内组织标识的 Claim 名称。
      */
     private String organizationClaim = "org_id";
@@ -152,6 +157,31 @@ public class AgentArkSecurityProperties {
         this.audiences =
             new LinkedHashSet<>(
                 java.util.Objects.requireNonNull(audiences, "audiences must not be null"));
+    }
+
+    /**
+     * 返回允许的 JWS 算法白名单。
+     *
+     * @return 非空非对称算法集合
+     */
+    public Set<String> getAllowedJwsAlgorithms() {
+        return Set.copyOf(allowedJwsAlgorithms);
+    }
+
+    /**
+     * 设置允许的 JWS 算法白名单；拒绝对称算法和未注册算法。
+     *
+     * @param allowedJwsAlgorithms 非空算法集合
+     */
+    public void setAllowedJwsAlgorithms(Set<String> allowedJwsAlgorithms) {
+        var checked = new LinkedHashSet<>(java.util.Objects.requireNonNull(
+            allowedJwsAlgorithms, "allowedJwsAlgorithms must not be null"));
+        if (checked.isEmpty()
+            || checked.stream().anyMatch(value -> !value.matches("(RS|PS|ES)(256|384|512)"))) {
+            throw new IllegalArgumentException(
+                "allowedJwsAlgorithms must contain supported asymmetric algorithms");
+        }
+        this.allowedJwsAlgorithms = checked;
     }
 
     /**

@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import space.refinex.agentark.control.iam.adapter.in.security.*;
 import space.refinex.agentark.control.iam.adapter.in.web.IamController;
+import space.refinex.agentark.control.iam.adapter.in.web.IamInternalApiKeyController;
 import space.refinex.agentark.control.iam.adapter.in.web.IamProblemDetailAdvice;
 import space.refinex.agentark.control.iam.adapter.out.audit.StructuredLogIamAuditAdapter;
 import space.refinex.agentark.control.iam.adapter.out.cache.ShortTtlAuthorizationCache;
@@ -332,6 +333,16 @@ public class IamControlConfiguration {
     public IamController iamController(
         IamApplicationService iamApplicationService, IamApiKeyService iamApiKeyService) {
         return new IamController(iamApplicationService, iamApiKeyService);
+    }
+
+    /**
+     * 创建 API Key 内部自省 Controller；认证仍由 Control 本地摘要校验完成。
+     *
+     * @return API Key 内部自省 Controller
+     */
+    @Bean
+    public IamInternalApiKeyController iamInternalApiKeyController() {
+        return new IamInternalApiKeyController();
     }
 
     /**

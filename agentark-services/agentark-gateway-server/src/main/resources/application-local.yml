@@ -7,11 +7,16 @@ spring:
       # 仅当 `local` 被激活时加载。
       on-profile: local
 
-# Gateway 只通过 URL 与后端平面关联，此阶段不创建业务路由。
+# Gateway 本地开发参数，不包含凭据或生产宽松策略。
 agentark:
-  # 声明 Gateway 可见的内部服务端点。
-  services:
+  # 声明 Gateway 可见的内部服务端点和浏览器 Origin。
+  gateway:
     # Control Plane 基础地址；Compose 使用服务 DNS 覆盖。
     control-base-url: ${AGENTARK_CONTROL_BASE_URL:http://localhost:8081}
     # Runtime Plane 基础地址；Compose 使用服务 DNS 覆盖。
     runtime-base-url: ${AGENTARK_RUNTIME_BASE_URL:http://localhost:8082}
+    # Scheduler Plane 基础地址；Compose 使用服务 DNS 覆盖。
+    scheduler-base-url: ${AGENTARK_SCHEDULER_BASE_URL:http://localhost:8083}
+    # 本地 Web 开发服务器精确 Origin；不允许生产通配。
+    allowed-origins:
+      - http://localhost:5173

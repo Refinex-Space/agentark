@@ -32,6 +32,24 @@
             <artifactId>agentark-starter-observability</artifactId>
         </dependency>
 
+        <!-- 提供严格 Issuer、Audience、JWS 算法和 Principal 转换安全基线。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-security</artifactId>
+        </dependency>
+
+        <!-- 提供 Redis 固定窗口限流，不承载 Gateway 业务状态。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-redis</artifactId>
+        </dependency>
+
+        <!-- 提供 WebFlux Bearer JWT Resource Server 过滤链。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
         <!-- 提供健康、Liveness、Readiness 和 Build Info 管理端点。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -42,6 +60,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 使用真实 Redis 容器验证 Gateway 限流自动装配与原子窗口行为。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-junit-jupiter</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

@@ -117,6 +117,7 @@ class ContractDocumentLintTest {
             .containsExactlyInAnyOrder(
                 "/internal/v1/agent-revisions/{revisionId}/snapshot",
                 "/internal/v1/deployments/{deploymentId}",
+                "/internal/v1/auth/api-keys:verify",
                 "/internal/v1/knowledge/ingestions/{requestId}/plan",
                 "/internal/v1/knowledge/ingestions/{requestId}:complete");
       } else if (fileName.equals("public-runtime-v1.yaml")) {

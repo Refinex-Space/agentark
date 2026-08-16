@@ -75,6 +75,18 @@ class AgentArkSecurityAutoConfigurationTest {
         .run(context -> assertThat(context).hasFailed());
   }
 
+  /** 验证对称或未知签名算法无法进入 Resource Server 白名单。 */
+  @Test
+  void rejectsUnsafeSignatureAlgorithm() {
+    contextRunner
+        .withPropertyValues(
+            "agentark.foundation.security.enabled=true",
+            "agentark.foundation.security.jwk-set-uri=https://id.example.test/.well-known/jwks.json",
+            "agentark.foundation.security.audiences[0]=agentark-gateway",
+            "agentark.foundation.security.allowed-jws-algorithms[0]=HS256")
+        .run(context -> assertThat(context).hasFailed());
+  }
+
   /** 验证 Audience Validator 接受白名单交集并拒绝跨服务 Audience。 */
   @Test
   void validatesAudienceWhitelist() {

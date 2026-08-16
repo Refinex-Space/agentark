@@ -92,6 +92,36 @@ paths:
         "403": { $ref: "#/components/responses/ProblemResponse" }
         # Deployment 不存在。
         "404": { $ref: "#/components/responses/ProblemResponse" }
+  # 由 Control 独立校验当前 API Key，并只返回非秘密主体视图。
+  /internal/v1/auth/api-keys:verify:
+    # 校验 Authorization 中的 API Key 摘要、状态、到期与 Scope。
+    post:
+      # 固定操作标识。
+      operationId: verifyApiKey
+      # Internal IAM 功能分组。
+      tags: [InternalIam]
+      # 该端点只接受 API Key 本身，不接受普通用户或服务 Bearer 替代验证。
+      security:
+        # Authorization Header 必须使用 ApiKey Scheme。
+        - ControlApiKeyAuth: []
+      # 声明验证响应。
+      responses:
+        # 返回已验证 API Key 的非秘密主体信息。
+        "200":
+          # 说明凭据已经由 Control 本地事实源验证。
+          description: 已验证 API Key 主体
+          # 声明响应内容。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 引用 API Key 验证响应。
+              schema: { $ref: "#/components/schemas/ApiKeyVerificationResponse" }
+        # 凭据格式错误、无效、过期或已吊销。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 已认证主体不是 API Key 或缺少必需租户范围。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Control 暂时无法访问 API Key 事实源。
+        "503": { $ref: "#/components/responses/ProblemResponse" }
   # 按摄取请求加载已固定 Revision、Document 和 Profile 的不可变计划。
   /internal/v1/knowledge/ingestions/{requestId}/plan:
     # 注册摄取请求路径参数。
@@ -218,6 +248,34 @@ components:
           uniqueItems: true
       # 禁止返回未声明的 Control 字段。
       additionalProperties: false
+    # 暴露 API Key 边缘认证所需的最小非秘密主体视图。
+    ApiKeyVerificationResponse:
+      # 固定对象结构。
+      type: object
+      # 所有认证与租户字段均不可省略。
+      required: [issuer, subject, principalType, authorities, organizationId, projectId]
+      # 定义非秘密主体字段。
+      properties:
+        # API Key 凭据签发方。
+        issuer: { type: string, minLength: 1, maxLength: 255 }
+        # 服务账号稳定主体。
+        subject: { type: string, minLength: 1, maxLength: 255 }
+        # 主体类型固定为 API_KEY。
+        principalType: { type: string, const: API_KEY }
+        # API Key Scope 收窄后的候选权限集合。
+        authorities:
+          # 权限使用去重数组。
+          type: array
+          # 单项为稳定权限名称。
+          items: { type: string, minLength: 1, maxLength: 128 }
+          # 禁止重复权限。
+          uniqueItems: true
+        # API Key 所属组织 UUIDv7。
+        organizationId: { $ref: "#/components/schemas/UuidV7" }
+        # API Key 所属项目 UUIDv7。
+        projectId: { $ref: "#/components/schemas/UuidV7" }
+      # 禁止返回明文、摘要、名称、到期或数据库字段。
+      additionalProperties: false
     # 暴露 Scheduler Worker 读取的语言中立摄取计划。
     KnowledgeIngestionPlan:
       # 引用版本化 Internal Schema 中的计划定义。
@@ -326,6 +384,14 @@ components:
       scheme: bearer
       # JWT 载荷格式提示。
       bearerFormat: JWT
+    # 只供 API Key 自省端点使用的 Authorization Header 认证方案。
+    ControlApiKeyAuth:
+      # 使用 OpenAPI Header API Key 类型表达自定义 ApiKey Scheme。
+      type: apiKey
+      # 凭据位于请求 Header。
+      in: header
+      # Header 名称固定为 Authorization，值格式为 ApiKey 加空格和凭据。
+      name: Authorization
 # 所有 Internal 路径默认要求受众为 agentark-control 的服务身份。
 security:
   # 服务间 Bearer JWT 认证。

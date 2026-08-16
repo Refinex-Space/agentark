@@ -9,18 +9,18 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07–10 已建立 Control IAM、版本化资产、Knowledge 元数据、不可变 Agent Revision/Snapshot 与 Deployment；Phase 11–13 已建立 Runtime 权威表、AgentScope 防腐层、托管 API、SSE、HITL 和恢复；Phase 14 已接入 Control V6 摄取结果、Qdrant Adapter、安全异步摄取管线、固定 Revision 检索和 AgentScope Tool 防腐层。Phase 15 已接入 Scheduler V2、Durable Job/Attempt/Lease、Cron/Webhook、Channel/Delivery、Retry/Dead Letter、Knowledge Handler 与 Runtime/Control 版本化 Client。Gateway 尚无业务路由。生产 Object Store、恶意文件扫描、Embedding/Reranker、云 Secret、Outbound Endpoint Resolver、Channel Bridge 和真实 AgentScope Model/Component Provider 仍必须由部署方提供受支持 Adapter。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07–10 已建立 Control IAM、版本化资产、Knowledge 元数据、不可变 Agent Revision/Snapshot 与 Deployment；Phase 11–13 已建立 Runtime 权威表、AgentScope 防腐层、托管 API、SSE、HITL 和恢复；Phase 14 已接入 Control V6 摄取结果、Qdrant Adapter、安全异步摄取管线、固定 Revision 检索和 AgentScope Tool 防腐层。Phase 15 已接入 Scheduler V2、Durable Job/Attempt/Lease、Cron/Webhook、Channel/Delivery、Retry/Dead Letter、Knowledge Handler 与 Runtime/Control 版本化 Client。Phase 16 已建立 Gateway 固定公共路由、OIDC/JWT、API Key 前置认证、精确 CORS、Redis 限流和 SSE 代理。生产 Object Store、恶意文件扫描、Embedding/Reranker、云 Secret、Outbound Endpoint Resolver、Channel Bridge 和真实 AgentScope Model/Component Provider 仍必须由部署方提供受支持 Adapter。
 
 ## Server 与本地 Profile
 
 | 进程 | 默认端口 | Web 栈 | `spring.application.name` | `local` 内部 URL |
 |---|---:|---|---|---|
-| Gateway | `8080` | Spring Cloud Gateway WebFlux | `agentark-gateway-server` | `AGENTARK_CONTROL_BASE_URL`、`AGENTARK_RUNTIME_BASE_URL` |
+| Gateway | `8080` | Spring Cloud Gateway WebFlux | `agentark-gateway-server` | `AGENTARK_CONTROL_BASE_URL`、`AGENTARK_RUNTIME_BASE_URL`、`AGENTARK_SCHEDULER_BASE_URL` |
 | Control | `8081` | Spring MVC | `agentark-control-server` | `AGENTARK_RUNTIME_BASE_URL`、`AGENTARK_SCHEDULER_BASE_URL` |
 | Runtime | `8082` | Spring WebFlux/Reactor | `agentark-runtime-server` | `AGENTARK_CONTROL_BASE_URL` |
 | Scheduler | `8083` | Worker + 最小 Spring MVC 管理端点 | `agentark-scheduler-server` | `AGENTARK_CONTROL_BASE_URL`、`AGENTARK_RUNTIME_BASE_URL` |
 
-四个 Server 的 `application.yml` 共同执行以下安全默认：优雅停机；每个关闭阶段最多 `20s`；只暴露 `health,info`；开启 Liveness/Readiness；`health.show-details=never`；Info 只允许 Maven Build Info，禁止环境与 Java 运行时细节。Gateway 配置中不存在业务 Route。
+四个 Server 的 `application.yml` 共同执行以下安全默认：优雅停机；每个关闭阶段最多 `20s`；只暴露 `health,info`；开启 Liveness/Readiness；`health.show-details=never`；Info 只允许 Maven Build Info，禁止环境与 Java 运行时细节。Gateway 的 Health 匿名可用，Info 仅在 Security 启用后对已认证主体开放；Security 未配置时所有普通 Public API 失败关闭。
 
 ## Compose Profile
 
@@ -57,6 +57,35 @@ MySQL Core 容器显式使用 `--log-bin-trust-function-creators=ON`，使最小
 
 每条新连接设置 UTC 与固定严格模式；Flyway 固定 `create-schemas=false`、`clean-disabled=true`、`validate-migration-naming=true`。只有部署初始化脚本能创建 Schema/账号，业务应用不能自动扩大权限。
 
+## Gateway 公共入口配置
+
+Gateway 不配置 DataSource、Mapper 或业务模块依赖。固定路由按 `Runtime SSE → Runtime Public → Scheduler Webhook/Public → Control Public` 匹配；`/internal/**` 在边缘返回 `404`。生产必须显式启用 Security 和 Redis Rate Limit；默认关闭只用于没有 IdP/Redis 的构建与本地探针，普通 Public API 不会匿名放行。
+
+| 属性/环境变量 | 默认值 | 启用/必填条件 | 安全与所有权说明 |
+|---|---|---|---|
+| `agentark.gateway.control-base-url` / `AGENTARK_CONTROL_BASE_URL` | `http://localhost:8081` | Gateway 启动 | API Key 自省和 Control Public 路由；生产必须使用受控网络与 TLS |
+| `agentark.gateway.runtime-base-url` / `AGENTARK_RUNTIME_BASE_URL` | `http://localhost:8082` | Gateway 启动 | Runtime Public 与 SSE 路由；Gateway 不读 Runtime 数据库 |
+| `agentark.gateway.scheduler-base-url` / `AGENTARK_SCHEDULER_BASE_URL` | `http://localhost:8083` | Gateway 启动 | Scheduler Public 与 Webhook 回调路由 |
+| `agentark.gateway.allowed-origins` | 空；`local` 为 `http://localhost:5173` | 浏览器跨域访问 | 只允许精确 HTTPS；本地只允许 loopback HTTP；拒绝通配和公网明文 HTTP |
+| `agentark.gateway.max-request-size` / `AGENTARK_GATEWAY_MAX_REQUEST_SIZE` | `2MB` | 普通 Public 路由 | 允许 1 byte–16 MiB；目标服务仍需执行自身业务上限 |
+| `agentark.gateway.webhook-max-request-size` / `AGENTARK_GATEWAY_WEBHOOK_MAX_REQUEST_SIZE` | `1MB` | Scheduler Webhook | 与 Scheduler 流式读取上限一致，禁止用普通路由绕过 |
+| `agentark.gateway.connect-timeout` / `AGENTARK_GATEWAY_CONNECT_TIMEOUT` | `5s` | 所有下游路由 | 最大 30 秒；SSE 只放宽响应生命周期，不放宽连接超时 |
+| `agentark.gateway.response-timeout` / `AGENTARK_GATEWAY_RESPONSE_TIMEOUT` | `30s` | 非 SSE 路由 | 最大 5 分钟；SSE 路由使用独立无响应超时元数据 |
+| `agentark.gateway.api-key-cache-ttl` / `AGENTARK_GATEWAY_API_KEY_CACHE_TTL` | `10s` | API Key 前置认证 | 只缓存成功非秘密主体，键为 SHA-256；最大 30 秒决定吊销最坏边缘窗口 |
+| `agentark.gateway.api-key-cache-max-entries` / `AGENTARK_GATEWAY_API_KEY_CACHE_MAX_ENTRIES` | `10000` | API Key 前置认证 | 本地容量上限 1–100000；不使用 Redis 保存 API Key Principal |
+| `agentark.gateway.rate-limit-enabled` / `AGENTARK_GATEWAY_RATE_LIMIT_ENABLED` | `false` | 生产必须开启 | 同时启用 Redis Starter；缺少 `RateLimiter` 时启动失败，Redis 判定错误时请求失败关闭 |
+| `agentark.gateway.default-rate-limit` / `AGENTARK_GATEWAY_DEFAULT_RATE_LIMIT` | `600` | 限流启用 | 已认证主体每固定窗口额度 |
+| `agentark.gateway.webhook-rate-limit` / `AGENTARK_GATEWAY_WEBHOOK_RATE_LIMIT` | `120` | 限流启用 | Webhook 按网络来源每固定窗口额度，签名验证仍由 Scheduler 负责 |
+| `agentark.gateway.rate-limit-window` / `AGENTARK_GATEWAY_RATE_LIMIT_WINDOW` | `1m` | 限流启用 | 最大一小时；健康和内部拒绝路径不消耗公共额度 |
+| `AGENTARK_GATEWAY_SECURITY_ENABLED` | `false` | 生产必须为 `true` | 关闭时 Health 可用、Webhook 可到达独立签名验证，其余 Public API 失败关闭 |
+| `AGENTARK_GATEWAY_JWT_AUDIENCE` | `agentark-gateway` | Security 启用 | 防止其他服务 Audience Token 在 Gateway 重放 |
+| `AGENTARK_GATEWAY_JWS_ALGORITHM` | `RS256` | Security 启用 | 只允许 Foundation 支持的 RSA/PSS/ECDSA 非对称算法，不接受 HMAC 或 `none` |
+| `agentark.foundation.security.issuer-uri` / `AGENTARK_FOUNDATION_SECURITY_ISSUER_URI` | 无 | Security 启用时与 JWK Set 至少一个必填 | 必须通过部署属性注入绝对 HTTPS Issuer |
+| `agentark.foundation.security.jwk-set-uri` / `AGENTARK_FOUNDATION_SECURITY_JWK_SET_URI` | 无 | Security 启用时与 Issuer 至少一个必填 | 支持 JWK 轮换；不能使用共享固定内部 Token 替代 |
+| `spring.data.redis.host` / `AGENTARK_REDIS_HOST` | `localhost` | 限流启用 | Redis 只保存可丢失固定窗口计数，不承载认证或业务事实 |
+
+Gateway 转发原始受签名 `Authorization` 给目标服务，使下游继续独立验证；它会删除 Principal、Service ID、Authorities、认证后租户和 Client Certificate 等客户端派生 Header。`X-AgentArk-Organization-Id`、Project、Environment 只作为选择意图保留，下游资源授权不能信任这些值。SSE 保留 `Last-Event-ID`，禁用普通响应超时和代理缓冲，并通过优雅停机进入排空；客户端仍须按 Runtime 持久 Event ID 重连。
+
 ## Scheduler 调度配置
 
 Scheduler Worker 默认关闭；只启动管理/内部 API、Flyway 和脱敏指标，不会静默领取 Job。启用前必须为实际 Job Type 装配真实 Handler Provider，并确保每个实例使用唯一稳定 Owner Key。
@@ -86,6 +115,7 @@ Trigger 通过 `/internal/v1/scheduler/triggers` 登记。Cron 必须提供 Spri
 | `agentark.foundation.security.issuer-uri` | 无 | Security 启用时与 `jwk-set-uri` 至少配置一个 | 只允许绝对 HTTPS URI；配置后参与 `iss` 校验 |
 | `agentark.foundation.security.jwk-set-uri` | 无 | Security 启用时与 `issuer-uri` 至少配置一个 | 只允许绝对 HTTPS URI；优先于 OIDC Discovery |
 | `agentark.foundation.security.audiences` | 空 | Security 启用时必填且非空 | 至少命中一个服务端 Audience，防止跨服务 Token 重放 |
+| `agentark.foundation.security.allowed-jws-algorithms` | `RS256` | Security 启用 | 只允许 `RS*`、`PS*`、`ES*` 的 256/384/512 白名单；拒绝对称算法、未知算法和空集合 |
 | `agentark.foundation.security.organization-claim` | `org_id` | Security 启用 | 受信 JWT 内 Organization UUIDv7 Claim 名称 |
 | `agentark.foundation.security.project-claim` | `project_id` | Security 启用 | 受信 JWT 内 Project UUIDv7 Claim 名称 |
 | `agentark.foundation.security.environment-claim` | `environment_id` | Security 启用 | 受信 JWT 内 Environment UUIDv7 Claim 名称 |

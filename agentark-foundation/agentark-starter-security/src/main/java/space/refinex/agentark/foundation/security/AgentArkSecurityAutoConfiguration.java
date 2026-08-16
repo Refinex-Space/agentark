@@ -25,6 +25,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
+import org.springframework.security.oauth2.jose.jws.SignatureAlgorithm;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtValidators;
@@ -67,14 +68,21 @@ public class AgentArkSecurityAutoConfiguration {
         if (properties.getAudiences().isEmpty()) {
             throw new IllegalStateException("security audiences must be configured");
         }
-        NimbusJwtDecoder decoder;
+        NimbusJwtDecoder.JwkSetUriJwtDecoderBuilder builder;
         if (properties.getJwkSetUri() != null) {
-            decoder = NimbusJwtDecoder.withJwkSetUri(properties.getJwkSetUri().toString()).build();
+            builder = NimbusJwtDecoder.withJwkSetUri(properties.getJwkSetUri().toString());
         } else if (properties.getIssuerUri() != null) {
-            decoder = NimbusJwtDecoder.withIssuerLocation(properties.getIssuerUri().toString()).build();
+            builder = NimbusJwtDecoder.withIssuerLocation(properties.getIssuerUri().toString());
         } else {
             throw new IllegalStateException("issuerUri or jwkSetUri must be configured");
         }
+        builder.jwsAlgorithms(algorithms -> {
+            algorithms.clear();
+            properties.getAllowedJwsAlgorithms().stream()
+                .map(SignatureAlgorithm::valueOf)
+                .forEach(algorithms::add);
+        });
+        NimbusJwtDecoder decoder = builder.build();
 
         List<OAuth2TokenValidator<Jwt>> validators = new ArrayList<>();
         validators.add(

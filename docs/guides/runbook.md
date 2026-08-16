@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-16
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -40,7 +40,26 @@ Phase 05 已建立四个可执行 Spring Boot JAR。根 Reactor 仍可全量验�
 
 `verify` 执行 Enforcer、Java License Header、Surefire/Failsafe、JaCoCo Report、第三方许可汇总和 CycloneDX Aggregate SBOM。仓库不在 Maven 生命周期执行自动 Java 格式化；格式变更由评审者依据相邻源码风格检查。
 
-仓库仍无 `agentark-web/package.json` 或 Helm，因此前端和 Kubernetes 不可运行。Control 已实现 IAM、资产、Knowledge 和发布能力；Runtime 已实现中立领域、AgentScope 防腐层与 Phase 13 API/Worker 装配，但真实 Worker 默认关闭且仓库未提供生产 Model/MCP/Sandbox Bean；Scheduler 与 Gateway 仍是后续阶段边界。健康与 Migration 成功不等于真实模型、跨服务认证或产品工作流已验收。
+仓库仍无 `agentark-web/package.json` 或 Helm，因此前端和 Kubernetes 不可运行。Control 已实现 IAM、资产、Knowledge 和发布能力；Runtime 已实现中立领域、AgentScope 防腐层与 Phase 13 API/Worker 装配，但真实 Worker 默认关闭且仓库未提供生产 Model/MCP/Sandbox Bean；Scheduler 已实现持久 Job/Trigger/Webhook，Gateway 已实现公共认证、固定路由、限流和 SSE 代理。仓库没有配置真实生产 IdP，健康与 Migration 成功不等于真实模型、跨服务认证或产品工作流已验收。
+
+## Gateway 认证、限流与 SSE
+
+Gateway 默认只允许匿名健康探针和 Scheduler HMAC Webhook 到达目标服务；Security 未启用时普通 Public API 失败关闭。生产部署必须同时提供可信 HTTPS Issuer 或 JWK Set、`agentark-gateway` Audience，并显式启用 Gateway Security。共享 HMAC Secret、固定内部 Token 和匿名 Public API 都不是可用降级方案。
+
+Redis 限流启用后，Readiness 会包含 Redis，配额判定故障使受保护请求返回 `503`，不会静默放行。Redis 未启用时不进入健康状态，Gateway 仍保持 Public API 认证失败默认。API Key 吊销的边缘最坏可见窗口由 `agentark.gateway.api-key-cache-ttl` 决定，配置上限为 30 秒；紧急吊销时不得通过延长缓存缓解 Control 故障。
+
+公共入口不得转发 `/internal/**`。生产 Ingress/Load Balancer 只公开 `/api/v1/**` 和必要 Webhook；`/actuator/info` 需要认证，除健康探针外的 Actuator 路径不得建立公网路由。Compose 已把宿主 Gateway 端口绑定到 `127.0.0.1`，生产网络隔离必须由部署清单和 NetworkPolicy/Firewall 继续落实。
+
+Gateway 使用优雅停机和 20 秒排空窗口。滚动重启前先停止接收新连接，等待存量普通请求；SSE 客户端断开后必须携最后持久 `Last-Event-ID` 重连，连接关闭不取消 Runtime Run。检查 SSE 代理头：
+
+```bash
+curl -i -N \
+  -H 'Authorization: Bearer <redacted>' \
+  -H 'Last-Event-ID: <persisted-session-sequence>' \
+  http://127.0.0.1:8080/api/v1/runtime/runs/<run-id>/events:stream
+```
+
+预期响应包含 `Content-Type: text/event-stream`、`Cache-Control: no-store` 和 `X-Accel-Buffering: no`。命令中的占位值不得替换为会进入 Shell History 的生产 Token；实际生产验证应使用受控临时终端或 Secret 注入工具。
 
 ## 本地 Core/RAG
 
