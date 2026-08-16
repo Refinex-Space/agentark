@@ -135,6 +135,21 @@ public final class PermissionRegistry {
      */
     public static final String KNOWLEDGE_INGEST = "knowledge:ingest";
 
+    /** 允许读取 Agent、Draft、Revision 和校验报告。 */
+    public static final String AGENT_READ = "agent:read";
+
+    /** 允许创建 Agent 并更新 Draft。 */
+    public static final String AGENT_MANAGE = "agent:manage";
+
+    /** 允许把已校验 Draft 发布为不可变 Revision。 */
+    public static final String AGENT_PUBLISH = "agent:publish";
+
+    /** 允许读取 Environment Deployment 与历史。 */
+    public static final String DEPLOYMENT_READ = "deployment:read";
+
+    /** 允许创建、Promote、Rollback、Enable 和 Disable Deployment。 */
+    public static final String DEPLOYMENT_MANAGE = "deployment:manage";
+
     /**
      * 按固定顺序保存所有注册权限，便于 Flyway 和 OpenAPI 对齐校验。
      */
@@ -167,7 +182,12 @@ public final class PermissionRegistry {
         SECRET_MANAGE,
         KNOWLEDGE_READ,
         KNOWLEDGE_MANAGE,
-        KNOWLEDGE_INGEST);
+        KNOWLEDGE_INGEST,
+        AGENT_READ,
+        AGENT_MANAGE,
+        AGENT_PUBLISH,
+        DEPLOYMENT_READ,
+        DEPLOYMENT_MANAGE);
 
     /**
      * 项目开发者拥有的非授权管理权限。
@@ -182,7 +202,12 @@ public final class PermissionRegistry {
         CATALOG_MANAGE,
         KNOWLEDGE_READ,
         KNOWLEDGE_MANAGE,
-        KNOWLEDGE_INGEST);
+        KNOWLEDGE_INGEST,
+        AGENT_READ,
+        AGENT_MANAGE,
+        AGENT_PUBLISH,
+        DEPLOYMENT_READ,
+        DEPLOYMENT_MANAGE);
 
     /**
      * 项目只读角色拥有的最低读取权限。
@@ -196,7 +221,9 @@ public final class PermissionRegistry {
         SERVICE_ACCOUNT_READ,
         API_KEY_READ,
         CATALOG_READ,
-        KNOWLEDGE_READ);
+        KNOWLEDGE_READ,
+        AGENT_READ,
+        DEPLOYMENT_READ);
 
     /**
      * 禁止实例化静态权限注册表。
@@ -293,6 +320,11 @@ public final class PermissionRegistry {
         values.put(KNOWLEDGE_READ, new Definition("读取 Knowledge 元数据", PermissionRiskLevel.LOW));
         values.put(KNOWLEDGE_MANAGE, new Definition("管理 Knowledge 元数据", PermissionRiskLevel.HIGH));
         values.put(KNOWLEDGE_INGEST, new Definition("描述 Knowledge 摄取请求", PermissionRiskLevel.HIGH));
+        values.put(AGENT_READ, new Definition("读取 Agent 发布资源", PermissionRiskLevel.LOW));
+        values.put(AGENT_MANAGE, new Definition("管理 Agent Draft", PermissionRiskLevel.HIGH));
+        values.put(AGENT_PUBLISH, new Definition("发布 Agent Revision", PermissionRiskLevel.HIGH));
+        values.put(DEPLOYMENT_READ, new Definition("读取 Environment Deployment", PermissionRiskLevel.LOW));
+        values.put(DEPLOYMENT_MANAGE, new Definition("管理 Environment Deployment", PermissionRiskLevel.HIGH));
         return Collections.unmodifiableMap(new LinkedHashMap<>(values));
     }
 

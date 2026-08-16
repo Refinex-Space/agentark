@@ -20,7 +20,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 Phase 03 已建立以下契约基线：
 
-- `contracts/openapi/`：Public Control、Public Runtime 和三个 Internal API 的 OpenAPI 3.1 文档；除已经实现的 Public Control IAM 路径外，其他文档的 `paths` 仍必须为空，业务 Endpoint 由所属阶段按真实实现补充；
+- `contracts/openapi/`：Public Control、Public Runtime 和三个 Internal API 的 OpenAPI 3.1 文档；业务 Endpoint 只能由所属阶段在实现存在后补充，尚无实现的文档或区域必须保持空路径；
 - `contracts/asyncapi/runtime-events-v1.yaml`：Runtime Event 的 AsyncAPI 3.0 消息骨架；
 - `contracts/schemas/agent-revision-snapshot/v1.json`：不可变 Revision Snapshot 的 Draft 2020-12 Schema；
 - `contracts/schemas/runtime-event/v1.json`：稳定 Runtime Event Envelope；
@@ -53,5 +53,14 @@ Phase 09 增加以下 Knowledge 契约约束：
 - 原文件上传使用服务端生成对象路径并返回无授权参数的 `ObjectRef`；客户端可提供 SHA-256 做完整性校验，但不能指定授权路径；
 - 摄取接口只持久化 `DESCRIBED` 意图并返回 `202`，不声称已经创建 Scheduler Job 或完成 Embedding。重复幂等键只能指向同一 Knowledge Revision；
 - Knowledge Revision 只有 `READY` 可供 Agent Revision Resolver 引用；状态转换、不可变内容绑定、失败代码和清理状态必须由领域状态机约束。
+
+Phase 10 增加以下 Release 契约约束：
+
+- `contracts/schemas/release-public/v1.json` 定义 Agent、Draft、Validation Report、Revision、Deployment 和对应写请求；Public Control 只声明实际实现的 Agent/Draft/Publish/Revision 与 Deployment 路径；
+- Publish 请求的 `idempotencyKey` 在 Project + Agent Scope 内永久绑定 `expectedDraftVersion`。相同键同版本重放返回首次 Revision；相同键不同版本返回稳定冲突，不能再次解析资产或追加 Outbox；
+- `contracts/schemas/agent-revision-snapshot/v1.json` 是 Runtime 消费的完整语言中立 Snapshot。Canonical Hash 使用排除顶层 `contentHash` 的规范 JSON 计算，Snapshot 只允许 `SecretRef`，不得包含 Credential 值；
+- `internal-control-v1.yaml` 只声明 Snapshot 与 Deployment Descriptor 两条已实现路径。调用方必须是含 `agentark-control` Audience 的 Service Identity，并声明 Runtime Provider、支持的 Snapshot Schema Versions 和 Capabilities；
+- Snapshot 响应的 `ETag` 基于 `contentHash`，`If-None-Match` 精确命中返回 `304`。Deployment Descriptor 不暴露 Control Entity、DO、Mapper、Draft 或 Catalog Payload；
+- Publish Outbox 的 Diff Summary 只允许上一 Revision ID 与变化的顶层区段名，禁止包含 Prompt、文档、Tool 参数、Secret 或资产旧值/新值。
 
 Golden File、明文 Secret 负例和文档结构 Lint 由 `agentark-kernel` 测试执行，必需文件与 Kernel/Server 边界由知识门禁检查。首次发布后的修改必须增加 Breaking Change 检测；在不存在已发布前一版本的 Phase 03 不伪造兼容比较结果。

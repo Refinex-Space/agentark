@@ -20,7 +20,7 @@ import java.util.Set;
 import space.refinex.agentark.foundation.persistence.testing.AbstractMySqlMigrationIT;
 
 /**
- * 验证 Control V1 到 V4 可从空库和 V3 升级，并持久化全部中文表字段注释。
+ * 验证组合类路径中的 Control V1 到 V5 可从空库和 V3 升级，并持久化全部中文表字段注释。
  *
  * @author refinex
  */
@@ -31,7 +31,7 @@ class KnowledgeMySqlMigrationIT extends AbstractMySqlMigrationIT {
         // JUnit Jupiter 为每个测试生命周期创建实例。
     }
 
-    /** 返回 Knowledge 迁移测试使用的固定配置。 */
+    /** 返回组合类路径中的 Control 最新 Flyway 版本。 */
     @Override
     protected String schemaName() {
         return "agentark_control";
@@ -52,7 +52,7 @@ class KnowledgeMySqlMigrationIT extends AbstractMySqlMigrationIT {
     /** 返回 Knowledge 迁移测试使用的固定配置。 */
     @Override
     protected String expectedVersion() {
-        return "4";
+        return "5";
     }
 
     /** 返回 Knowledge 迁移测试使用的固定配置。 */
@@ -62,9 +62,9 @@ class KnowledgeMySqlMigrationIT extends AbstractMySqlMigrationIT {
     }
 
     /**
-     * 声明 Phase 07 到 Phase 09 允许存在的全部 Control 业务表。
+     * 声明 Phase 07 到 Phase 10 组合类路径允许存在的全部 Control 业务表。
      *
-     * @return IAM、Catalog、Secret 与 Knowledge 表集合
+     * @return IAM、Catalog、Secret、Knowledge 与 Release 表集合
      */
     @Override
     protected Set<String> expectedBusinessTables() {
@@ -78,6 +78,9 @@ class KnowledgeMySqlMigrationIT extends AbstractMySqlMigrationIT {
             "permission_policy", "permission_policy_version", "secret_metadata", "secret_binding",
             "knowledge_base", "data_source", "document", "document_acl", "document_revision",
             "parser_profile", "chunk_profile", "embedding_profile", "retrieval_profile",
-            "knowledge_revision", "knowledge_revision_document", "knowledge_ingestion_request");
+            "knowledge_revision", "knowledge_revision_document", "knowledge_ingestion_request",
+            "agent_draft", "agent_draft_component", "validation_report", "agent_revision",
+            "agent_revision_snapshot", "publish_operation", "deployment", "deployment_revision",
+            "control_outbox");
     }
 }

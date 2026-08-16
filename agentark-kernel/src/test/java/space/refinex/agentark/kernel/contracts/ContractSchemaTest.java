@@ -74,6 +74,14 @@ class ContractSchemaTest {
         "schemas/knowledge-public/examples/valid-knowledge-revision.json");
   }
 
+  /** 验证 Agent Revision Golden File 符合 Phase 10 Release 公共 Schema。 */
+  @Test
+  void releaseRevisionGoldenFileConformsToPublicSchema() throws IOException {
+    assertValid(
+        "schemas/release-public/v1.json",
+        "schemas/release-public/examples/valid-agent-revision.json");
+  }
+
   /** 验证 Snapshot Schema 拒绝明文凭证字段、值和带用户信息的端点。 */
   @Test
   void snapshotSchemaRejectsPlaintextCredentials() throws IOException {

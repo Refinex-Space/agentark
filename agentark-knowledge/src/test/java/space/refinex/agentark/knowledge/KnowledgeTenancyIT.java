@@ -111,7 +111,8 @@ class KnowledgeTenancyIT {
         new MySQLContainer(DockerImageName.parse("mysql:8.4.11"))
             .withDatabaseName("agentark_control")
             .withUsername("agentark_control")
-            .withPassword(DATABASE_PASSWORD);
+            .withPassword(DATABASE_PASSWORD)
+            .withCommand("--log-bin-trust-function-creators=ON");
 
     /** 测试对象存储使用系统临时目录，不写入仓库。 */
     private static final Path OBJECT_ROOT = Path.of(

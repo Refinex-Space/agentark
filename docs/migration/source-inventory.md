@@ -335,3 +335,18 @@ packages/client/connection
 | DeepSeek Web | `pnpm run build`，再 `DSH_SNAPSHOT=replay pnpm run test:web:built` | 未执行；会产生构建输出 |
 
 命令是否通过不能由源码审计推断。Phase 02 的隔离机械基线必须在可写临时 Worktree 中实际运行相应构建与测试。
+
+## 13. Phase 10 发布与 Runtime 配置获取复核
+
+Phase 10 继续使用 AgentScope 固定 Commit `0c61e7494197ded54eefdeaf9bdeb51807beb752`，只读复核 Aistio、Dataplane、Frontend 与 Harness 的发布链路，没有迁入上游实现文件。
+
+| 上游证据 | 实际行为 | AgentArk 结论 |
+|---|---|---|
+| Aistio `AgentVersionService`、Agent Handler/Store | Agent 发生变化时追加版本记录，但仍保留从可变 Agent 回退组装配置的兼容路径 | `ADAPT` 只追加版本意图；`REJECT` 可变回退和 Runtime 直接读目录 |
+| Dataplane `ControlPlaneClient` | 注释明确 Dataplane 通过 Control resolve API 获取配置而不是查询 Control 表；认证依赖共享 `X-Builder-Internal-Token` | `ADAPT` 服务间 API 边界；`REJECT` 长期共享 Token，改用受 Audience 约束的 Service Identity |
+| Dataplane `HarnessAgentBuildService` | 从 Control resolve payload 组装名称、System Prompt、Model、Tools/MCP、Skills、Workspace、Memory、Sandbox 和 Harness Builder | `REFERENCE/DEPENDENCY`；Phase 12 Provider 只消费完整 `AgentRevisionSnapshot`，不接触 Draft/Control Entity |
+| Aistio Deployment、Environment 与 Runtime Command | Deployment 更接近 Cron/Webhook/Channel 运行触发配置，没有 Environment 内 `desiredRevisionId`、Promote/Rollback 指针模型 | `REFERENCE` 触发语义；AgentArk Deployment/Revision Pointer 为独立新设计 |
+| Frontend Build/Operate Agent、Environment、Session 页面 | 创建流程直接选择可变 Agent、默认 Environment/Workspace，Session 再选择 Agent 与 Environment | `REFERENCE` 功能流程；AgentArk UI 必须展示 Draft → Validate → Publish → Deployment → Session 的明确边界 |
+| Harness `HarnessAgent` Builder | Builder 需要模型、Prompt、Tool/MCP、Skill、Workspace、Memory、Sandbox、Permission 等运行时能力 | `DEPENDENCY/REFERENCE`；Snapshot v1 使用语言中立字段，Phase 12 防腐层转换，禁止复制 Framework 类型 |
+
+固定上游没有提供 AgentArk 所需的 Canonical Snapshot Schema、SHA-256 内容哈希、跨资产发布事务、Outbox、Environment Revision 指针或 ETag Internal Contract。上述能力属于 AgentArk 新设计，不能描述为上游已有实现。

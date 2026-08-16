@@ -1,0 +1,13 @@
+{
+  "id": "0198a4b0-1001-7101-8101-000000000001",
+  "organizationId": "0198a4b0-1002-7102-8102-000000000002",
+  "projectId": "0198a4b0-1003-7103-8103-000000000003",
+  "agentId": "0198a4b0-1004-7104-8104-000000000004",
+  "snapshotId": "0198a4b0-1005-7105-8105-000000000005",
+  "revisionNumber": 3,
+  "schemaVersion": 1,
+  "runtimeProvider": "agentscope-java-2",
+  "contentHash": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "requiredCapabilities": ["tool-calling", "streaming"],
+  "createdAt": "2026-08-16T00:00:00Z"
+}

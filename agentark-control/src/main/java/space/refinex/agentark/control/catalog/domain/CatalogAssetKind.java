@@ -30,7 +30,7 @@ import java.util.function.Supplier;
 public enum CatalogAssetKind {
 
     /**
-     * Agent 稳定身份；Draft、Revision 和 Snapshot 由 Phase 09 创建。
+     * Agent 稳定身份；Draft、Revision 和 Snapshot 由 Phase 10 Release 边界拥有。
      */
     AGENT("agent", null, AgentId::generate, AgentId::parse, null, null),
 
@@ -216,4 +216,3 @@ public enum CatalogAssetKind {
         return name().toLowerCase(Locale.ROOT).replace('_', '-');
     }
 }
-

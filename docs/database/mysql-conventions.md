@@ -80,6 +80,7 @@ referenced_by: AGENTS.md#knowledge-map
 - 禁止 Hibernate、MyBatis-Plus、AgentScope Adapter 或应用启动逻辑自动建表。
 - 每次变更必须验证空库迁移、上一版本升级、重复启动、N/N-1 滚动期和 Forward Fix。测试可以对临时 Schema 启用 `clean`，生产配置永远不得启用。
 - DDL 进入代码前，必须与所属逻辑模型中的表、约束、Owner 和查询一致。
+- 不可变资源可以使用数据库触发器作为 Application/Repository 之外的纵深防御。启用二进制日志的 MySQL 8.4 创建此类触发器时，基础设施必须显式设置 `log_bin_trust_function_creators=ON`；禁止为规避 `ERROR 1419` 向应用或 Flyway 账号授予 `SUPER`。Compose 与 Testcontainers 必须复现同一参数，生产变更则由数据库管理员按变更流程配置并验证。
 
 ## 测试与门禁
 

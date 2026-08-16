@@ -21,6 +21,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 import space.refinex.agentark.control.catalog.CatalogControlConfiguration;
 import space.refinex.agentark.control.iam.IamControlConfiguration;
+import space.refinex.agentark.control.release.ReleaseControlConfiguration;
 
 /**
  * AgentArk Control Plane 启动入口，装配 Spring MVC、IAM、资产目录和 Knowledge 管理端点。
@@ -31,12 +32,13 @@ import space.refinex.agentark.control.iam.IamControlConfiguration;
 @Import({
     IamControlConfiguration.class,
     CatalogControlConfiguration.class,
-    KnowledgeControlBridgeConfiguration.class
+    KnowledgeControlBridgeConfiguration.class,
+    ReleaseControlConfiguration.class
 })
 public class AgentArkControlApplication {
 
     /**
-     * 启动 Control Spring Boot 应用并装配 Phase 09 前已完成的 Control 能力。
+     * 启动 Control Spring Boot 应用并装配 Phase 10 前已完成的 Control 能力。
      *
      * @param args 传递给 Spring Boot 的命令行参数
      */

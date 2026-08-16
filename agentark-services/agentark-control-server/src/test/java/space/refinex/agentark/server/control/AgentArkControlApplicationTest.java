@@ -25,6 +25,7 @@ import org.springframework.core.env.Environment;
 import org.springframework.context.annotation.Import;
 import space.refinex.agentark.control.catalog.CatalogControlConfiguration;
 import space.refinex.agentark.control.iam.IamControlConfiguration;
+import space.refinex.agentark.control.release.ReleaseControlConfiguration;
 
 /**
  * 验证 Control 空业务应用能以 Spring MVC 容器独立启动。
@@ -69,7 +70,7 @@ class AgentArkControlApplicationTest {
     }
 
     /**
-     * 证明生产组合根显式导入 IAM、Catalog 和 Knowledge，防止模块仅在集成测试中生效。
+     * 证明生产组合根显式导入 IAM、Catalog、Knowledge 和 Release，防止模块仅在集成测试中生效。
      */
     @Test
     void importsAllControlCapabilitiesAtCompositionRoot() {
@@ -77,6 +78,7 @@ class AgentArkControlApplicationTest {
         assertThat(imports.value()).containsExactlyInAnyOrder(
             IamControlConfiguration.class,
             CatalogControlConfiguration.class,
-            KnowledgeControlBridgeConfiguration.class);
+            KnowledgeControlBridgeConfiguration.class,
+            ReleaseControlConfiguration.class);
     }
 }

@@ -153,6 +153,25 @@ Phase 01 只做只读取证；Phase 02 已在同一固定 SHA 的隔离可写完
 |---|---|---|
 | `agentscope-extensions-rag-simple/.../SimpleKnowledge.java`、`VDBStoreBase.java`、Reader/Embedding/Store 测试 | Simple Knowledge 在单个对象中直接组合 Reader/Chunk、Embedding 和 Vector Store；Core 旧 Knowledge/Document 自 2.0.0 起 deprecated；未提供租户、ACL、不可变 Revision 或摄取状态机 | Phase 09 先建立中立 Knowledge/Document/Profile/Revision、READY 引用门禁和 Provider Ports；真实 Parser/Embedding/Qdrant 只能在 P14 Adapter 实现；任何向量操作必须携带可信 Project 与 Revision，Collection 名不是授权事实 |
 
+## REL-01 Agent Version、Control Resolve 与 Harness 组装
+
+| 证据 | 上游行为 | AgentArk 门禁 |
+|---|---|---|
+| Aistio `AgentVersionService`、Agent Handler/Store | Agent 变更通常追加版本，但兼容路径仍可从当前可变 Agent 组装运行配置 | 发布只解析固定资产版本并生成完整不可变 Snapshot；禁止 Runtime 或恢复流程回退读取 Draft/可变 Catalog |
+| Dataplane `ControlPlaneClient`、Internal Resolve API | Dataplane 通过 Control API 获取配置而非直接查询 Control 表，但使用共享 Internal Token | 保留 API 隔离；Internal API 只接受 Service Identity 与 `agentark-control` Audience，Runtime 不拥有 Control DataSource/Mapper |
+| `HarnessAgentBuildService`、缓存键测试 | Control Resolve Payload 被转换为 Harness 名称、Prompt、Model、Tools/MCP、Skills、Workspace、Memory 与 Sandbox | Phase 12 仅在 Provider 防腐层转换 AgentScope 类型；缓存键必须包含 Revision/Content Hash；Phase 10 Snapshot 契约不得引用 `io.agentscope` |
+| Aistio Deployment/Environment/Frontend Session 流程 | Deployment 主要表达 Cron/Webhook/Channel 触发，Session 创建直接选择 Agent/Environment | AgentArk Deployment 固定 Environment + Agent + desiredRevisionId；Promote/Rollback 只移动指针并追加历史，Draft 不能启动生产 Session |
+
+## REL-02 发布一致性与可恢复性
+
+| 场景 | AgentArk 门禁 |
+|---|---|
+| 同一发布请求重放 | `(project_id, agent_id, idempotency_key)` 唯一，并绑定同一个 Draft Version；重放返回首次 Revision，不再次解析资产或写 Outbox |
+| 发布中途失败 | Revision、Snapshot、Publish Operation、成功 Validation Report 和 Outbox 必须同一本地事务；任何异常整体回滚 |
+| Draft 或资产后续变化 | 旧 Snapshot 内容与 Hash 不变；Session/Deployment 只引用 Revision，不解析当前资产版本 |
+| Rollback | 只更新 `deployment.desired_revision_id` 和乐观锁版本，并追加历史/Outbox；不复制、不更新、不删除 Revision/Snapshot |
+| Runtime 获取 Snapshot | 必须通过 Internal Contract 校验 Service Audience、Runtime Provider、Schema Version、Capabilities 与 ETag；Control 不可用时不得跨库降级 |
+
 ## DSH-01 Web 视觉与交互参考
 
 | 证据 | 上游行为 | AgentArk 门禁 |

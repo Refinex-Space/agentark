@@ -9,7 +9,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2；Phase 08 已接入资产目录 V3、Skill Object Store 和开发 Local Secret Provider；Phase 09 已接入 Knowledge 元数据 V4、原文件 Object Store、不可变 Revision 与摄取意图描述。Runtime 和 Scheduler 仍只有各自的 Migration History，Gateway 不连接业务数据库。生产 Object Store 和云 Secret Provider 仍必须由部署方提供受支持 Adapter。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2；Phase 08 已接入资产目录 V3、Skill Object Store 和开发 Local Secret Provider；Phase 09 已接入 Knowledge 元数据 V4、原文件 Object Store、不可变 Revision 与摄取意图描述；Phase 10 已接入 Draft、不可变 Snapshot、Deployment 和 Control Outbox V5。Runtime 和 Scheduler 仍只有各自的 Migration History，Gateway 不连接业务数据库。生产 Object Store 和云 Secret Provider 仍必须由部署方提供受支持 Adapter。
 
 ## Server 与本地 Profile
 
@@ -30,6 +30,8 @@ Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSo
 | `rag` | Core 全部服务 + Qdrant | 额外 `qdrant/qdrant:v1.18.3` | 显式开启的向量存储预留，默认不启动 |
 
 Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334` 和四个 Server 端口均只绑定 `127.0.0.1`。宿主基础设施端口可在本地 `.env` 中使用 `deploy/compose/.env.example` 列出的非敏感变量覆盖；四个 Server 端口为 Phase 05 固定值。
+
+MySQL Core 容器显式使用 `--log-bin-trust-function-creators=ON`，使最小权限 Flyway 账号可以创建 V5 的 Revision/Snapshot 不可变触发器。该参数不授予应用账号 `SUPER`，也不扩大三个 Schema 的权限。生产 MySQL 若启用 Binary Log，数据库管理员必须在执行 V5 前配置并核验同一变量；缺失时 Flyway 会以 `ERROR 1419` 失败，禁止通过扩大应用账号权限或关闭 Flyway 绕过。
 
 ## 本地 Secret 和数据库账号
 
@@ -130,6 +132,14 @@ Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334`
 | `AGENTARK_LOCAL_OBJECT_ROOT` | `.agentark/data/objects` | `local` Storage 启用 | 原文件路径由服务端生成且保持在专用根目录；客户端文件名不能选择授权路径 |
 
 Knowledge 摄取 Endpoint 返回 `202` 只表示幂等请求已经记录且 Revision 进入 `INGESTING`，当前没有 Qdrant、Embedding Provider 或 Scheduler Worker 配置项。不得通过启用 `rag` Compose Profile 推断摄取已实现；真实 Provider、超时、重试、索引和清理配置必须在 Phase 14 Adapter 落地时另行登记。
+
+## Control Release 配置
+
+| 属性/环境变量 | 默认值 | 启用/必填条件 | 安全与所有权说明 |
+|---|---|---|---|
+| `agentark.control.release.enabled` | `true` | Control 正常运行且存在 `KnowledgeSnapshotLookup` | 装配 Agent Draft、Publisher、Deployment、V5 Repository 与 Public/Internal API；关闭后不提供 Release API，不能作为绕过 V5 校验或权限的生产降级方式 |
+
+Runtime 调用 Snapshot Internal API 时必须携带受信 Service Identity，以及 `X-AgentArk-Runtime-Provider`、`X-AgentArk-Snapshot-Schema-Versions` 和可选 `X-AgentArk-Runtime-Capabilities`。这些 Header 是单次能力协商，不是环境 Secret 或租户选择。Internal Service JWT 的 Issuer、JWK 和 Audience 继续使用 Security Starter 配置，禁止配置共享静态 Token。
 
 连接、池化、TLS、事务和 Migration 使用 Spring Boot 所属标准属性，例如 `spring.datasource.*`、`spring.flyway.*` 和 `spring.data.redis.*`。Phase 06 已固定 MySQL/Flyway 基线；生产 TLS 信任材料与强制模式仍必须由实际部署环境显式提供，不能依赖本地 Compose 的明文内部网络设置。
 

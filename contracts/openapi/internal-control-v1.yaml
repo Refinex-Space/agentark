@@ -4,7 +4,7 @@ openapi: 3.1.0
 info:
   # 标识仅供服务间调用的 Control API。
   title: AgentArk Internal Control API
-  # 声明该契约骨架的语义版本。
+  # 声明该契约的语义版本。
   version: 1.0.0
   # 声明契约文档采用的开源许可证。
   license:
@@ -14,9 +14,85 @@ info:
     identifier: Apache-2.0
 # 固定所有内联 Schema 使用 JSON Schema Draft 2020-12 方言。
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
-# Phase 03 不提前虚构业务端点，端点由其所有者阶段补充。
-paths: {}
-# 汇总可复用的 Schema 与响应组件。
+# 声明 Runtime 只通过受保护的 Internal Contract 读取已发布状态。
+paths:
+  # 按 Revision 获取不可变 Canonical Snapshot。
+  /internal/v1/agent-revisions/{revisionId}/snapshot:
+    # 注册 Revision 路径参数和 Runtime 能力声明。
+    parameters:
+      # Agent Revision 标识 UUIDv7。
+      - { $ref: "#/components/parameters/RevisionId" }
+      # Runtime Provider 稳定名称。
+      - { $ref: "#/components/parameters/RuntimeProvider" }
+      # Runtime 支持的 Snapshot Schema 版本集合。
+      - { $ref: "#/components/parameters/SnapshotSchemaVersions" }
+      # Runtime 支持的能力集合。
+      - { $ref: "#/components/parameters/RuntimeCapabilities" }
+      # 可选的缓存校验 ETag。
+      - { $ref: "#/components/parameters/IfNoneMatch" }
+    # 获取不可变 Snapshot。
+    get:
+      # 固定操作标识。
+      operationId: getAgentRevisionSnapshot
+      # Internal Release 功能分组。
+      tags: [InternalRelease]
+      # 声明 Internal Snapshot 响应。
+      responses:
+        # 返回完整 Canonical Snapshot。
+        "200":
+          # 说明响应为不可变 Snapshot。
+          description: Agent Revision Canonical Snapshot
+          # 返回基于内容哈希的缓存标识。
+          headers:
+            # ETag 等于带引号的 Snapshot SHA-256。
+            ETag:
+              # ETag Header 结构。
+              schema: { type: string, minLength: 1 }
+          # 声明响应内容映射。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 引用语言中立 Snapshot v1。
+              schema: { $ref: "#/components/schemas/AgentRevisionSnapshot" }
+        # If-None-Match 命中时不返回响应体。
+        "304":
+          # 说明客户端缓存仍然有效。
+          description: Snapshot 未变化
+        # 服务身份无权访问。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Revision 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # Runtime Provider 或能力不兼容。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 按 Deployment 获取不暴露 Control Entity 的只读描述。
+  /internal/v1/deployments/{deploymentId}:
+    # 注册 Deployment 路径参数。
+    parameters:
+      # Deployment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/DeploymentId" }
+    # 获取 Deployment 描述。
+    get:
+      # 固定操作标识。
+      operationId: getDeploymentDescriptor
+      # Internal Release 功能分组。
+      tags: [InternalRelease]
+      # 声明 Deployment 描述响应。
+      responses:
+        # 返回语言中立 Deployment 描述。
+        "200":
+          # 说明响应不暴露 Control Entity。
+          description: Runtime Deployment Descriptor
+          # 声明响应内容映射。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 引用 Deployment Descriptor。
+              schema: { $ref: "#/components/schemas/DeploymentDescriptor" }
+        # 服务身份无权访问。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Deployment 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+# 汇总可复用的 Schema、参数、响应与认证组件。
 components:
   # 注册公共 Schema 引用。
   schemas:
@@ -24,6 +100,118 @@ components:
     ProblemDetail:
       # 引用版本化的公共错误 JSON Schema。
       $ref: ../schemas/problem-detail/v1.json
+    # 暴露语言中立的完整 Agent Revision Snapshot。
+    AgentRevisionSnapshot:
+      # 引用 Snapshot v1 JSON Schema。
+      $ref: ../schemas/agent-revision-snapshot/v1.json
+    # 暴露 Runtime 所需且不含 Control Entity 的 Deployment 描述。
+    DeploymentDescriptor:
+      # 固定对象结构。
+      type: object
+      # 所有 Runtime 决策字段均不可省略。
+      required: [deploymentId, organizationId, projectId, environmentId, agentId, desiredRevisionId, desiredStatus, trafficPolicy, canaryPercent, version, schemaVersion, runtimeProvider, requiredCapabilities]
+      # 定义 Deployment 描述字段。
+      properties:
+        # Deployment 标识 UUIDv7。
+        deploymentId: { $ref: "#/components/schemas/UuidV7" }
+        # 组织 UUIDv7。
+        organizationId: { $ref: "#/components/schemas/UuidV7" }
+        # 项目 UUIDv7。
+        projectId: { $ref: "#/components/schemas/UuidV7" }
+        # 环境 UUIDv7。
+        environmentId: { $ref: "#/components/schemas/UuidV7" }
+        # Agent 标识 UUIDv7。
+        agentId: { $ref: "#/components/schemas/UuidV7" }
+        # 期望 Revision UUIDv7。
+        desiredRevisionId: { $ref: "#/components/schemas/UuidV7" }
+        # 新 Session 的期望状态。
+        desiredStatus: { type: string, enum: [ENABLED, DISABLED] }
+        # 流量策略类型；Phase 10 执行仅支持 FULL。
+        trafficPolicy: { type: string, enum: [FULL, CANARY] }
+        # Canary 百分比；FULL 时为零。
+        canaryPercent: { type: integer, minimum: 0, maximum: 99 }
+        # Deployment 乐观锁版本。
+        version: { type: integer, minimum: 0 }
+        # Snapshot Schema 主版本。
+        schemaVersion: { type: integer, minimum: 1 }
+        # Runtime Provider 稳定名称。
+        runtimeProvider: { type: string, minLength: 1, maxLength: 64 }
+        # Runtime 必须支持的能力集合。
+        requiredCapabilities:
+          # 能力名称数组不可重复。
+          type: array
+          # 单项为稳定能力名称。
+          items: { type: string, minLength: 1, maxLength: 64 }
+          # 禁止重复能力。
+          uniqueItems: true
+      # 禁止返回未声明的 Control 字段。
+      additionalProperties: false
+    # UUIDv7 文本标识。
+    UuidV7:
+      # 引用 Release 公共契约中的 UUIDv7 定义。
+      $ref: ../schemas/release-public/v1.json#/$defs/UuidV7
+  # 注册 Internal API 参数模板。
+  parameters:
+    # Agent Revision 标识路径参数。
+    RevisionId:
+      # 参数名称。
+      name: revisionId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # Deployment 标识路径参数。
+    DeploymentId:
+      # 参数名称。
+      name: deploymentId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # Runtime Provider 请求头。
+    RuntimeProvider:
+      # 固定 Header 名称。
+      name: X-AgentArk-Runtime-Provider
+      # 参数位置。
+      in: header
+      # Provider 声明不可省略。
+      required: true
+      # 稳定 Provider 名称结构。
+      schema: { type: string, pattern: "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$", maxLength: 64 }
+    # Snapshot Schema 版本 Header。
+    SnapshotSchemaVersions:
+      # 固定 Header 名称。
+      name: X-AgentArk-Snapshot-Schema-Versions
+      # 参数位置。
+      in: header
+      # Schema 版本声明不可省略。
+      required: true
+      # 逗号分隔的正整数集合。
+      schema: { type: string, pattern: "^[1-9][0-9]*(,[1-9][0-9]*)*$" }
+    # Runtime 能力 Header。
+    RuntimeCapabilities:
+      # 固定 Header 名称。
+      name: X-AgentArk-Runtime-Capabilities
+      # 参数位置。
+      in: header
+      # 无额外能力时可省略。
+      required: false
+      # 逗号分隔的稳定能力名称。
+      schema: { type: string, maxLength: 2048 }
+    # HTTP ETag 条件请求 Header。
+    IfNoneMatch:
+      # 标准 Header 名称。
+      name: If-None-Match
+      # 参数位置。
+      in: header
+      # 首次读取时可省略。
+      required: false
+      # 一个或多个逗号分隔 ETag。
+      schema: { type: string, maxLength: 1024 }
   # 注册公共 HTTP 响应模板。
   responses:
     # 定义采用 application/problem+json 的错误响应。
@@ -38,3 +226,17 @@ components:
           schema:
             # 复用版本化的公共错误 JSON Schema。
             $ref: ../schemas/problem-detail/v1.json
+  # 注册服务间 JWT 认证方案。
+  securitySchemes:
+    # 校验 Service Identity 与 agentark-control Audience 的 Bearer JWT。
+    ServiceBearerAuth:
+      # HTTP 认证类型。
+      type: http
+      # Bearer 方案。
+      scheme: bearer
+      # JWT 载荷格式提示。
+      bearerFormat: JWT
+# 所有 Internal 路径默认要求受众为 agentark-control 的服务身份。
+security:
+  # 服务间 Bearer JWT 认证。
+  - ServiceBearerAuth: []

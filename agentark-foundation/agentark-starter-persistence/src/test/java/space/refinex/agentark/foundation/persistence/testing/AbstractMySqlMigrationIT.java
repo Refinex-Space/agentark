@@ -68,7 +68,8 @@ public abstract class AbstractMySqlMigrationIT {
         new MySQLContainer(DockerImageName.parse("mysql:8.4.11"))
             .withDatabaseName("agentark_bootstrap")
             .withUsername("agentark_bootstrap")
-            .withPassword(BOOTSTRAP_PASSWORD);
+            .withPassword(BOOTSTRAP_PASSWORD)
+            .withCommand("--log-bin-trust-function-creators=ON");
 
     /**
      * 以容器内临时 root 身份创建三套 Schema、同名最小权限账号和越权哨兵表。
@@ -358,9 +359,16 @@ public abstract class AbstractMySqlMigrationIT {
      * @return 最小权限测试连接
      * @throws SQLException 连接失败时抛出
      */
-    private Connection ownerConnection() throws SQLException {
+    protected final Connection ownerConnection() throws SQLException {
         return java.sql.DriverManager.getConnection(
             ownerJdbcUrl(), schemaName(), OWNER_PASSWORD);
+    }
+
+    /**
+     * 供具体 Owner 的附加数据库行为测试迁移到当前最新版本。
+     */
+    protected final void migrateCurrentSchema() {
+        currentFlyway().migrate();
     }
 
     /**

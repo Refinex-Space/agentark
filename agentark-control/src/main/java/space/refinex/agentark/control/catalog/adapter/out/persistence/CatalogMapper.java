@@ -164,5 +164,24 @@ public interface CatalogMapper {
              #{permissionMetadataJson}, #{contentHash,jdbcType=BINARY}, #{createdAt}, #{createdBy})
         """)
     void insertTool(ToolRow row);
-}
 
+    /**
+     * 读取同项目指定 MCP Server Version 的 Tool Descriptor 快照。
+     *
+     * @param projectId       项目 UUIDv7
+     * @param serverVersionId MCP Server Version UUIDv7
+     * @return 按 Tool 名称排序的描述行
+     */
+    @Select("""
+        SELECT id, organization_id, project_id, mcp_server_version_id, tool_name, description,
+               argument_schema, access_mode, risk_level, idempotency, permission_metadata,
+               content_hash, created_at, created_by
+        FROM mcp_tool_descriptor
+        WHERE project_id = #{projectId,jdbcType=BINARY}
+          AND mcp_server_version_id = #{serverVersionId,jdbcType=BINARY}
+        ORDER BY tool_name, id
+        """)
+    List<ToolRow> listTools(
+        @Param("projectId") UUID projectId,
+        @Param("serverVersionId") UUID serverVersionId);
+}

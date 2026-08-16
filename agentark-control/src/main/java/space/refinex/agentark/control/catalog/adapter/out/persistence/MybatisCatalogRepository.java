@@ -20,6 +20,8 @@ import space.refinex.agentark.control.catalog.application.port.CatalogRepository
 import space.refinex.agentark.control.catalog.domain.*;
 import space.refinex.agentark.kernel.id.OrganizationId;
 import space.refinex.agentark.kernel.id.ProjectId;
+import space.refinex.agentark.kernel.id.McpServerVersionId;
+import space.refinex.agentark.kernel.id.McpToolDescriptorId;
 import space.refinex.agentark.kernel.id.StrongId;
 import space.refinex.agentark.kernel.ref.Checksum;
 
@@ -180,6 +182,27 @@ public final class MybatisCatalogRepository implements CatalogRepository {
         return mapper.listVersions(
                 kind, projectId.value(), ownerId.value(), afterVersionNumber, limit)
             .stream().map(row -> version(kind, row)).toList();
+    }
+
+    /**
+     * @param projectId       项目标识
+     * @param serverVersionId MCP Server 版本标识
+     * @return Tool Descriptor 不可变快照
+     */
+    @Override
+    public List<McpToolDescriptorSnapshot> listToolDescriptors(
+        ProjectId projectId, McpServerVersionId serverVersionId) {
+        return mapper.listTools(projectId.value(), serverVersionId.value()).stream()
+            .map(row -> new McpToolDescriptorSnapshot(
+                new McpToolDescriptorId(row.id()),
+                new OrganizationId(row.organizationId()),
+                new ProjectId(row.projectId()),
+                new McpServerVersionId(row.serverVersionId()),
+                row.toolName(), row.description(), row.argumentSchemaJson(), row.accessMode(),
+                row.riskLevel(), row.idempotency(), row.permissionMetadataJson(),
+                new Checksum("sha256:" + HexFormat.of().formatHex(row.contentHash())),
+                row.createdAt()))
+            .toList();
     }
 
     /**

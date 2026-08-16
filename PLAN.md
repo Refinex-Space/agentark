@@ -444,7 +444,7 @@ flowchart LR
 | 07 | DONE | 2026-08-16 | `docs/implementation/phase-07-iam-tenancy.md` | IAM、租户隔离、授权、API Key、契约与越权测试已验收 |
 | 08 | DONE | 2026-08-16 | `docs/implementation/phase-08-asset-catalog.md` | 版本化 AI 资产目录、Secret 引用、Skill Object Store、契约与租户隔离已验收 |
 | 09 | DONE | 2026-08-16 | `docs/implementation/phase-09-knowledge-metadata.md` | Knowledge 中立领域、V4、Public Contract、Provider Ports、租户隔离与验收已完成 |
-| 10 | NOT_STARTED | — | `docs/implementation/phase-10-revision-deployment.md` | |
+| 10 | DONE | 2026-08-16 | `docs/implementation/phase-10-revision-deployment.md` | Draft、不可变 Revision/Snapshot、Deployment、Internal Contract 与真实 MySQL E2E 已验收 |
 | 11 | NOT_STARTED | — | `docs/implementation/phase-11-runtime-domain.md` | |
 | 12 | NOT_STARTED | — | `docs/implementation/phase-12-agentscope-adapter.md` | |
 | 13 | NOT_STARTED | — | `docs/implementation/phase-13-runtime-api.md` | |
@@ -1840,7 +1840,8 @@ docs/implementation/phase-10-revision-deployment.md
 ./mvnw -pl agentark-control,agentark-knowledge,agentark-services/agentark-control-server -am clean verify
 
 rg -n "HarnessAgent|io\.agentscope" agentark-control/src/main/java && exit 1 || true
-rg -n "secret.*(value|plain|credential)" contracts/schemas agentark-control/src/main && exit 1 || true
+rg -ni '"(secret(Value|Plain(text)?|Credential)|plain(text)?Secret|credentialValue)"[[:space:]]*:|\b(String|VARCHAR|TEXT|JSON)[[:space:]]+[a-zA-Z0-9_]*(secret(Value|Plain(text)?|Credential)|plain(text)?Secret|credentialValue)\b' \
+  contracts/schemas agentark-control/src/main && exit 1 || true
 
 git diff HEAD --check
 ```

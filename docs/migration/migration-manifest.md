@@ -166,6 +166,19 @@ Phase 08 新增代码均为 AgentArk 独立实现，没有迁入固定上游源�
 
 Phase 09 实现源码均为 AgentArk 独立实现。`agentark-knowledge` 的 Domain/Application 无 `io.agentscope`、Qdrant、Elasticsearch、Milvus 或 PgVector 类型；未来 AgentScope 适配只允许进入 `adapter.out.vector.agentscope`，且归 Phase 14 单独审计。
 
-## 10. 变更协议
+## 10. Phase 10 实际处置
+
+| 来源范围 | 分类 | 实际结果 | 明确延后或拒绝 |
+|---|---|---|---|
+| Aistio Agent Version/Managed Agent | `ADAPT/REFERENCE` | 独立建立 Agent Draft、Validation、不可变 Revision 和 Canonical Snapshot | 不复制 Go DTO/Store/PostgreSQL DDL，不保留可变 Agent 回退 |
+| Dataplane Control Resolve Client | `ADAPT` | 建立 Snapshot/Deployment Internal OpenAPI、ETag、Provider/Schema/Capability 校验 | 拒绝 Runtime 读 Control DB、Catalog 或 Draft；拒绝共享 Internal Token |
+| `HarnessAgentBuildService` 与 Harness Builder | `DEPENDENCY/REFERENCE` | Snapshot v1 固定 Phase 12 组装所需 Model/Prompt/MCP/Skill/Knowledge/Profile/Policy/Limit | Phase 10 不引入 `io.agentscope`，实际 Builder 转换延后 Phase 12 |
+| Aistio Deployment/Environment | `REFERENCE/ADAPT` | 独立建立 Environment 内稳定 Deployment、Revision 指针、Promote/Rollback/Enable/Disable | 上游 Cron/Webhook Deployment 不是发布指针模型，不迁入其 Handler/Store |
+| AgentScope Frontend Agent/Environment/Session 流程 | `REFERENCE` | 固定 Draft → Publish → Deployment → Runtime 的产品语义 | 不复制 React 页面、API Client、状态管理或视觉实现 |
+| AgentScope/Aistio Snapshot 类型 | `REJECT` | 使用 AgentArk Kernel 与 JSON Schema v1，Canonical Hash 排除顶层 `contentHash` | 不允许上游 Message/Event/DTO/Entity 进入 Contract 或持久化模型 |
+
+Phase 10 新增源码、SQL、Schema 与 OpenAPI 均为 AgentArk 独立实现。发布 Outbox 的 Diff Summary 只列上一 Revision 和变化区段，不包含资产正文；Canary 仅保留模型并由应用拒绝执行，真实分流属于后续 Runtime/Routing 阶段。
+
+## 11. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

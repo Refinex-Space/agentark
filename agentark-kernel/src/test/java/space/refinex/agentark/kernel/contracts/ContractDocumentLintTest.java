@@ -55,7 +55,7 @@ class ContractDocumentLintTest {
   /** 匹配 YAML 注释中至少一个汉字。 */
   private static final Pattern CHINESE_TEXT = Pattern.compile("\\p{IsHan}");
 
-  /** 验证 OpenAPI 已版本化，只有 Public Control 声明 Phase 08 已实现端点。 */
+  /** 验证 OpenAPI 已版本化，且 Public/Internal Control 只声明已经实现的端点。 */
   @Test
   void openApiContractsAreVersionedAndOnlyExposeImplementedEndpoints() throws IOException {
     for (String fileName : OPEN_API_DOCUMENTS) {
@@ -94,7 +94,28 @@ class ContractDocumentLintTest {
                     "/api/v1/projects/{projectId}/knowledge-bases/{knowledgeBaseId}/revisions",
                     "/api/v1/projects/{projectId}/knowledge-revisions/{revisionId}/ingestion-requests",
                     "/api/v1/projects/{projectId}/knowledge-revisions/{revisionId}/deprecate",
-                    "/api/v1/projects/{projectId}/knowledge-revisions/{revisionId}/deletion"));
+                    "/api/v1/projects/{projectId}/knowledge-revisions/{revisionId}/deletion",
+                    "/api/v1/projects/{projectId}/agents",
+                    "/api/v1/projects/{projectId}/agents/{agentId}",
+                    "/api/v1/projects/{projectId}/agents/{agentId}/draft",
+                    "/api/v1/projects/{projectId}/agents/{agentId}/draft/validate",
+                    "/api/v1/projects/{projectId}/agents/{agentId}/publish",
+                    "/api/v1/projects/{projectId}/agents/{agentId}/revisions",
+                    "/api/v1/projects/{projectId}/agents/{agentId}/revisions/{revisionId}",
+                    "/api/v1/projects/{projectId}/environments/{environmentId}/deployments",
+                    "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}",
+                    "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/promote",
+                    "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/rollback",
+                    "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/enable",
+                    "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/disable"));
+      } else if (fileName.equals("internal-control-v1.yaml")) {
+        Set<String> paths =
+            ((Map<?, ?>) document.get("paths"))
+                .keySet().stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
+        assertThat(paths)
+            .containsExactlyInAnyOrder(
+                "/internal/v1/agent-revisions/{revisionId}/snapshot",
+                "/internal/v1/deployments/{deploymentId}");
       } else {
         assertThat(document.get("paths")).isEqualTo(Map.of());
       }
@@ -154,6 +175,23 @@ class ContractDocumentLintTest {
         .doesNotContain("AgentScope")
         .doesNotContain("collectionName")
         .doesNotContain("apiKey");
+  }
+
+  /** 验证 Release 公共 Schema 已版本化且不暴露明文 Secret 或 Control 持久化实体。 */
+  @Test
+  void releasePublicSchemaIsVersionedAndSecretSafe() throws IOException {
+    Path schema = CONTRACTS.resolve("schemas/release-public/v1.json");
+    String content = Files.readString(schema);
+
+    assertThat(schema).exists();
+    assertThat(content)
+        .contains("https://agentark.refinex.space/contracts/release-public/v1.json")
+        .contains("\"AgentDraft\"")
+        .contains("\"AgentRevision\"")
+        .contains("\"Deployment\"")
+        .doesNotContain("secretValue")
+        .doesNotContain("plaintext")
+        .doesNotContain("credentialValue");
   }
 
   /** 验证 AsyncAPI 骨架已版本化且引用统一的运行时事件 Schema。 */

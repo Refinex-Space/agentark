@@ -16,7 +16,12 @@
 
 package space.refinex.agentark.control.adapter.out.persistence;
 
+import java.sql.SQLException;
 import java.util.Set;
+
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import org.junit.jupiter.api.Test;
 import space.refinex.agentark.foundation.persistence.testing.AbstractMySqlMigrationIT;
 
 /**
@@ -62,29 +67,29 @@ class ControlMySqlMigrationIT extends AbstractMySqlMigrationIT {
     }
 
     /**
-     * 声明 Control 当前最新迁移为 Phase 08 的 V3。
+     * 声明 Control 当前最新迁移为 Phase 10 的 V5；V4 由 Knowledge 制品提供。
+     *
+     * @return Flyway 版本 5
+     */
+    @Override
+    protected String expectedVersion() {
+        return "5";
+    }
+
+    /**
+     * 声明 Phase 08 的 V3 是 Control 独立制品升级测试起点。
      *
      * @return Flyway 版本 3
      */
     @Override
-    protected String expectedVersion() {
+    protected String previousVersion() {
         return "3";
     }
 
     /**
-     * 声明 Phase 07 的 V2 是当前升级测试起点。
+     * 声明 Phase 07 IAM、Phase 08 Catalog 与 Phase 10 Release 允许创建的业务表。
      *
-     * @return Flyway 版本 2
-     */
-    @Override
-    protected String previousVersion() {
-        return "2";
-    }
-
-    /**
-     * 声明 Phase 07 IAM 与 Phase 08 资产目录允许创建的业务表。
-     *
-     * @return 十二张 IAM 表和二十张资产、Secret 表
+     * @return IAM、资产、Secret 与 Release 表集合；Knowledge V4 由组合根测试覆盖
      */
     @Override
     protected Set<String> expectedBusinessTables() {
@@ -120,6 +125,85 @@ class ControlMySqlMigrationIT extends AbstractMySqlMigrationIT {
             "permission_policy",
             "permission_policy_version",
             "secret_metadata",
-            "secret_binding");
+            "secret_binding",
+            "agent_draft",
+            "agent_draft_component",
+            "validation_report",
+            "agent_revision",
+            "agent_revision_snapshot",
+            "publish_operation",
+            "deployment",
+            "deployment_revision",
+            "control_outbox");
+    }
+
+    /**
+     * 证明数据库 Trigger 拒绝对 Published Revision 和 Snapshot 执行 UPDATE/DELETE。
+     *
+     * @throws SQLException 构造测试租户或执行 SQL 失败时抛出
+     */
+    @Test
+    void rejectsMutationOfPublishedRevisionAndSnapshot() throws SQLException {
+        migrateCurrentSchema();
+        try (var connection = ownerConnection(); var statement = connection.createStatement()) {
+            statement.execute("""
+                INSERT INTO organization
+                    (id, slug, name, status, version, created_at, created_by, updated_at, updated_by)
+                VALUES (UNHEX(REPLACE('019d0000-0000-7000-8000-000000000001','-','')),
+                    'immutable-org', '不可变组织', 'ACTIVE', 0, UTC_TIMESTAMP(6), 'test', UTC_TIMESTAMP(6), 'test')
+                """);
+            statement.execute("""
+                INSERT INTO project
+                    (id, organization_id, slug, name, status, version,
+                     created_at, created_by, updated_at, updated_by)
+                VALUES (UNHEX(REPLACE('019d0000-0000-7000-8000-000000000002','-','')),
+                    UNHEX(REPLACE('019d0000-0000-7000-8000-000000000001','-','')),
+                    'immutable-project', '不可变项目', 'ACTIVE', 0,
+                    UTC_TIMESTAMP(6), 'test', UTC_TIMESTAMP(6), 'test')
+                """);
+            statement.execute("""
+                INSERT INTO agent
+                    (id, organization_id, project_id, asset_key, name, description, status,
+                     version, created_at, created_by, updated_at, updated_by)
+                VALUES (UNHEX(REPLACE('019d0000-0000-7000-8000-000000000003','-','')),
+                    UNHEX(REPLACE('019d0000-0000-7000-8000-000000000001','-','')),
+                    UNHEX(REPLACE('019d0000-0000-7000-8000-000000000002','-','')),
+                    'immutable-agent', '不可变 Agent', NULL, 'ACTIVE', 0,
+                    UTC_TIMESTAMP(6), 'test', UTC_TIMESTAMP(6), 'test')
+                """);
+            statement.execute("""
+                INSERT INTO agent_revision
+                    (id, organization_id, project_id, agent_id, snapshot_id, revision_number,
+                     schema_version, runtime_provider, content_hash, required_capabilities_json,
+                     status, created_at, created_by)
+                VALUES (UNHEX(REPLACE('019d0000-0000-7000-8000-000000000004','-','')),
+                    UNHEX(REPLACE('019d0000-0000-7000-8000-000000000001','-','')),
+                    UNHEX(REPLACE('019d0000-0000-7000-8000-000000000002','-','')),
+                    UNHEX(REPLACE('019d0000-0000-7000-8000-000000000003','-','')),
+                    UNHEX(REPLACE('019d0000-0000-7000-8000-000000000005','-','')),
+                    1, 1, 'agentscope-java-2', UNHEX(REPEAT('ab', 32)), JSON_ARRAY(),
+                    'PUBLISHED', UTC_TIMESTAMP(6), 'test')
+                """);
+            statement.execute("""
+                INSERT INTO agent_revision_snapshot
+                    (id, organization_id, project_id, revision_id, schema_version,
+                     runtime_provider, content_hash, snapshot_json, created_at, created_by)
+                VALUES (UNHEX(REPLACE('019d0000-0000-7000-8000-000000000005','-','')),
+                    UNHEX(REPLACE('019d0000-0000-7000-8000-000000000001','-','')),
+                    UNHEX(REPLACE('019d0000-0000-7000-8000-000000000002','-','')),
+                    UNHEX(REPLACE('019d0000-0000-7000-8000-000000000004','-','')),
+                    1, 'agentscope-java-2', UNHEX(REPEAT('ab', 32)), JSON_OBJECT('schemaVersion', 1),
+                    UTC_TIMESTAMP(6), 'test')
+                """);
+
+            assertThatThrownBy(() -> statement.execute(
+                "UPDATE agent_revision SET runtime_provider = 'other' WHERE revision_number = 1"))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("published agent revision is immutable");
+            assertThatThrownBy(() -> statement.execute(
+                "DELETE FROM agent_revision_snapshot WHERE schema_version = 1"))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("agent revision snapshot cannot be deleted");
+        }
     }
 }

@@ -21,6 +21,7 @@ import space.refinex.agentark.control.catalog.domain.CatalogAssetKind;
 import space.refinex.agentark.control.catalog.domain.CatalogVersion;
 import space.refinex.agentark.control.catalog.domain.McpToolDescriptorSnapshot;
 import space.refinex.agentark.kernel.id.ProjectId;
+import space.refinex.agentark.kernel.id.McpServerVersionId;
 import space.refinex.agentark.kernel.id.StrongId;
 
 import java.time.Instant;
@@ -118,4 +119,14 @@ public interface CatalogRepository {
         StrongId ownerId,
         long afterVersionNumber,
         int limit);
+
+    /**
+     * 读取指定 MCP Server Version 在创建时固化的 Tool Descriptor。
+     *
+     * @param projectId       项目标识
+     * @param serverVersionId MCP Server 版本标识
+     * @return 按 Tool 名称排序的不可变描述快照
+     */
+    List<McpToolDescriptorSnapshot> listToolDescriptors(
+        ProjectId projectId, McpServerVersionId serverVersionId);
 }

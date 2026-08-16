@@ -1,0 +1,344 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/release-public/v1.json",
+  "title": "AgentArk Release 公共契约 v1",
+  "description": "定义 Agent、可编辑 Draft、不可变 Revision、Deployment 及对应写请求的公共语言中立结构。",
+  "$ref": "#/$defs/AgentRevision",
+  "$defs": {
+    "UuidV7": {
+      "description": "符合 RFC 9562 的小写规范 UUIDv7 文本。",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "Checksum": {
+      "description": "带 sha256 前缀的小写 SHA-256 校验和。",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "AssetVersionBinding": {
+      "description": "稳定资产身份和不可变版本的成对绑定。",
+      "type": "object",
+      "required": ["ownerId", "versionId"],
+      "properties": {
+        "ownerId": { "description": "资产稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "versionId": { "description": "资产不可变版本 UUIDv7。", "$ref": "#/$defs/UuidV7" }
+      },
+      "additionalProperties": false
+    },
+    "AgentDraftSpec": {
+      "description": "Agent 当前可编辑的版本引用集合；Runtime 不得直接消费。",
+      "type": "object",
+      "required": [
+        "runtimeProvider", "requiredCapabilities", "model", "prompts", "mcpServers",
+        "skills", "knowledge", "profiles", "permissionPolicy", "limits"
+      ],
+      "properties": {
+        "runtimeProvider": {
+          "description": "发布后负责执行 Snapshot 的 Runtime Provider 稳定名称。",
+          "type": "string",
+          "pattern": "^[a-z][a-z0-9]*(?:[._-][a-z0-9]+)*$",
+          "maxLength": 64
+        },
+        "requiredCapabilities": {
+          "description": "Runtime 必须满足的去重能力名称集合。",
+          "type": "array",
+          "items": { "description": "单项 Runtime 能力稳定名称。", "type": "string", "minLength": 1, "maxLength": 64 },
+          "uniqueItems": true
+        },
+        "model": {
+          "description": "唯一 Model Provider 与 Model Profile 版本绑定。",
+          "type": "object",
+          "required": ["providerId", "profileId"],
+          "properties": {
+            "providerId": { "description": "Model Provider 稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+            "profileId": { "description": "Model Profile 不可变版本 UUIDv7。", "$ref": "#/$defs/UuidV7" }
+          },
+          "additionalProperties": false
+        },
+        "prompts": {
+          "description": "按 Snapshot 消费顺序排列的 Prompt 版本绑定。",
+          "type": "array",
+          "items": {
+            "description": "单个 Prompt 版本及消息角色绑定。",
+            "type": "object",
+            "required": ["promptId", "versionId", "role"],
+            "properties": {
+              "promptId": { "description": "Prompt 稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+              "versionId": { "description": "Prompt 不可变版本 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+              "role": { "description": "Prompt 消息角色：SYSTEM=系统，USER=用户，ASSISTANT=助手。", "enum": ["SYSTEM", "USER", "ASSISTANT"] }
+            },
+            "additionalProperties": false
+          }
+        },
+        "mcpServers": {
+          "description": "MCP Server 版本与显式 Tool 白名单绑定。",
+          "type": "array",
+          "items": {
+            "description": "单个 MCP Server 不可变版本绑定。",
+            "type": "object",
+            "required": ["serverId", "versionId", "allowedTools"],
+            "properties": {
+              "serverId": { "description": "MCP Server 稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+              "versionId": { "description": "MCP Server 不可变版本 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+              "allowedTools": {
+                "description": "允许进入 Snapshot 的去重 Tool 名称白名单。",
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "description": "MCP Tool 稳定名称。", "type": "string", "minLength": 1, "maxLength": 128 }
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "skills": {
+          "description": "Skill 稳定身份与不可变 Artifact 版本绑定。",
+          "type": "array",
+          "items": {
+            "description": "单个 Skill 不可变版本绑定。",
+            "type": "object",
+            "required": ["skillId", "versionId"],
+            "properties": {
+              "skillId": { "description": "Skill 稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+              "versionId": { "description": "Skill 不可变版本 UUIDv7。", "$ref": "#/$defs/UuidV7" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "knowledge": {
+          "description": "Knowledge Base 与 READY Knowledge Revision 绑定。",
+          "type": "array",
+          "items": {
+            "description": "单个 READY Knowledge Revision 绑定。",
+            "type": "object",
+            "required": ["knowledgeBaseId", "revisionId"],
+            "properties": {
+              "knowledgeBaseId": { "description": "Knowledge Base 稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+              "revisionId": { "description": "READY Knowledge Revision UUIDv7。", "$ref": "#/$defs/UuidV7" }
+            },
+            "additionalProperties": false
+          }
+        },
+        "profiles": {
+          "description": "Memory、Workspace 与 Sandbox 稳定身份和版本绑定。",
+          "type": "object",
+          "required": [
+            "memoryId", "memoryVersionId", "workspaceId", "workspaceVersionId",
+            "sandboxId", "sandboxVersionId"
+          ],
+          "properties": {
+            "memoryId": { "description": "Memory Profile 稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+            "memoryVersionId": { "description": "Memory Profile 不可变版本 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+            "workspaceId": { "description": "Workspace Profile 稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+            "workspaceVersionId": { "description": "Workspace Profile 不可变版本 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+            "sandboxId": { "description": "Sandbox Profile 稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+            "sandboxVersionId": { "description": "Sandbox Profile 不可变版本 UUIDv7。", "$ref": "#/$defs/UuidV7" }
+          },
+          "additionalProperties": false
+        },
+        "permissionPolicy": {
+          "description": "Permission Policy 稳定身份与不可变版本绑定。",
+          "type": "object",
+          "required": ["policyId", "versionId"],
+          "properties": {
+            "policyId": { "description": "Permission Policy 稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+            "versionId": { "description": "Permission Policy 不可变版本 UUIDv7。", "$ref": "#/$defs/UuidV7" }
+          },
+          "additionalProperties": false
+        },
+        "limits": {
+          "description": "单次运行的超时、Tool 调用和 Sub-Agent 上限。",
+          "type": "object",
+          "required": ["turnTimeoutSeconds", "maxToolCalls", "maxSubAgents"],
+          "properties": {
+            "turnTimeoutSeconds": { "description": "单 Turn 超时秒数，范围 1–86400。", "type": "integer", "minimum": 1, "maximum": 86400 },
+            "maxToolCalls": { "description": "单 Turn 最大 Tool 调用数，范围 0–100000。", "type": "integer", "minimum": 0, "maximum": 100000 },
+            "maxSubAgents": { "description": "单 Turn 最大 Sub-Agent 数，范围 0–1000。", "type": "integer", "minimum": 0, "maximum": 1000 }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "Agent": {
+      "description": "项目内稳定 Agent 身份；不包含可编辑 Draft。",
+      "type": "object",
+      "required": ["id", "organizationId", "projectId", "key", "name", "description", "version", "createdAt"],
+      "properties": {
+        "id": { "description": "Agent 稳定身份 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "description": "所属组织 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "projectId": { "description": "所属项目 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "key": { "description": "项目内稳定小写 Key。", "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}$" },
+        "name": { "description": "Agent 展示名称。", "type": "string", "minLength": 1, "maxLength": 128 },
+        "description": { "description": "Agent 非敏感用途说明。", "type": "string", "maxLength": 512 },
+        "version": { "description": "Agent 稳定身份乐观锁版本。", "type": "integer", "minimum": 0 },
+        "createdAt": { "description": "Agent 创建时间。", "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "AgentDraft": {
+      "description": "Agent 当前唯一可编辑 Draft。",
+      "type": "object",
+      "required": ["agentId", "organizationId", "projectId", "spec", "version", "updatedAt"],
+      "properties": {
+        "agentId": { "description": "所属 Agent UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "description": "所属组织 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "projectId": { "description": "所属项目 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "spec": { "description": "当前强类型资产版本引用集合。", "$ref": "#/$defs/AgentDraftSpec" },
+        "version": { "description": "Draft 乐观锁版本。", "type": "integer", "minimum": 0 },
+        "updatedAt": { "description": "Draft 最近更新时间。", "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "ValidationReport": {
+      "description": "不包含资产正文的 Draft 发布校验报告。",
+      "type": "object",
+      "required": ["id", "agentId", "draftVersion", "valid", "findings", "createdAt"],
+      "properties": {
+        "id": { "description": "校验报告 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "agentId": { "description": "被校验 Agent UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "draftVersion": { "description": "被校验 Draft 版本。", "type": "integer", "minimum": 0 },
+        "valid": { "description": "是否满足发布前置条件。", "type": "boolean" },
+        "findings": {
+          "description": "只包含路径、代码、严重程度和说明的问题列表。",
+          "type": "array",
+          "items": {
+            "description": "单项非敏感校验发现。",
+            "type": "object",
+            "required": ["path", "code", "severity", "message"],
+            "properties": {
+              "path": { "description": "Draft 中的问题路径。", "type": "string", "minLength": 1 },
+              "code": { "description": "稳定问题代码。", "type": "string", "minLength": 1 },
+              "severity": { "description": "严重程度：ERROR=阻止发布，WARNING=仅提示。", "enum": ["ERROR", "WARNING"] },
+              "message": { "description": "不包含资产内容的中文问题说明。", "type": "string", "minLength": 1 }
+            },
+            "additionalProperties": false
+          }
+        },
+        "createdAt": { "description": "校验报告创建时间。", "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "AgentRevision": {
+      "description": "已发布且不可变的 Agent Revision 元数据。",
+      "type": "object",
+      "required": [
+        "id", "organizationId", "projectId", "agentId", "snapshotId", "revisionNumber",
+        "schemaVersion", "runtimeProvider", "contentHash", "requiredCapabilities", "createdAt"
+      ],
+      "properties": {
+        "id": { "description": "Agent Revision UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "description": "所属组织 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "projectId": { "description": "所属项目 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "agentId": { "description": "所属 Agent UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "snapshotId": { "description": "一对一不可变 Snapshot UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "revisionNumber": { "description": "Agent 内从 1 开始的修订序号。", "type": "integer", "minimum": 1 },
+        "schemaVersion": { "description": "Snapshot Schema 正整数版本。", "type": "integer", "minimum": 1 },
+        "runtimeProvider": { "description": "发布时固定的 Runtime Provider 名称。", "type": "string", "minLength": 1, "maxLength": 64 },
+        "contentHash": { "description": "Canonical Snapshot SHA-256。", "$ref": "#/$defs/Checksum" },
+        "requiredCapabilities": {
+          "description": "Runtime 必须满足的去重能力名称。",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "description": "单项 Runtime 能力名称。", "type": "string", "minLength": 1, "maxLength": 64 }
+        },
+        "createdAt": { "description": "Revision 发布时间。", "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "Deployment": {
+      "description": "Environment 内稳定 Agent Deployment 与期望 Revision 指针。",
+      "type": "object",
+      "required": [
+        "id", "organizationId", "projectId", "environmentId", "agentId",
+        "desiredRevisionId", "status", "trafficPolicy", "version", "createdAt", "updatedAt"
+      ],
+      "properties": {
+        "id": { "description": "Deployment UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "description": "所属组织 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "projectId": { "description": "所属项目 UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "environmentId": { "description": "所属 Environment UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "agentId": { "description": "部署的 Agent UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "desiredRevisionId": { "description": "Runtime 新 Session 应使用的 Revision UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "status": { "description": "期望状态：ENABLED=接纳新 Session，DISABLED=拒绝新 Session。", "enum": ["ENABLED", "DISABLED"] },
+        "trafficPolicy": {
+          "description": "流量策略；Phase 10 只执行 FULL。",
+          "type": "object",
+          "required": ["type", "canaryPercent"],
+          "properties": {
+            "type": { "description": "策略类型：FULL=全量，CANARY=预留按百分比分流。", "enum": ["FULL", "CANARY"] },
+            "canaryPercent": { "description": "Canary 百分比；FULL 时为 0。", "type": "integer", "minimum": 0, "maximum": 99 }
+          },
+          "additionalProperties": false
+        },
+        "version": { "description": "Deployment 乐观锁版本。", "type": "integer", "minimum": 0 },
+        "createdAt": { "description": "Deployment 创建时间。", "type": "string", "format": "date-time" },
+        "updatedAt": { "description": "指针或状态最近变更时间。", "type": "string", "format": "date-time" }
+      },
+      "additionalProperties": false
+    },
+    "CreateAgentRequest": {
+      "description": "创建 Agent 稳定身份和初始 Draft 的请求。",
+      "type": "object",
+      "required": ["key", "name", "draft"],
+      "properties": {
+        "key": { "description": "项目内稳定小写 Key。", "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}$" },
+        "name": { "description": "Agent 展示名称。", "type": "string", "minLength": 1, "maxLength": 128 },
+        "description": { "description": "可空的非敏感用途说明。", "type": ["string", "null"], "maxLength": 512 },
+        "draft": { "description": "首个完整 Draft。", "$ref": "#/$defs/AgentDraftSpec" }
+      },
+      "additionalProperties": false
+    },
+    "UpdateDraftRequest": {
+      "description": "使用乐观锁替换 Agent Draft 的请求。",
+      "type": "object",
+      "required": ["expectedVersion", "draft"],
+      "properties": {
+        "expectedVersion": { "description": "调用方读取的 Draft 乐观锁版本。", "type": "integer", "minimum": 0 },
+        "draft": { "description": "替换后的完整 Draft。", "$ref": "#/$defs/AgentDraftSpec" }
+      },
+      "additionalProperties": false
+    },
+    "PublishRequest": {
+      "description": "幂等发布当前 Draft 的请求。",
+      "type": "object",
+      "required": ["idempotencyKey", "expectedDraftVersion"],
+      "properties": {
+        "idempotencyKey": { "description": "Project + Agent Scope 内稳定幂等键。", "type": "string", "minLength": 1, "maxLength": 128 },
+        "expectedDraftVersion": { "description": "幂等键绑定的 Draft 版本。", "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "CreateDeploymentRequest": {
+      "description": "在 Environment 内创建 Agent Deployment 的请求。",
+      "type": "object",
+      "required": ["agentId", "revisionId", "trafficPolicy", "canaryPercent"],
+      "properties": {
+        "agentId": { "description": "目标 Agent UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "revisionId": { "description": "初始不可变 Revision UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "trafficPolicy": { "description": "流量策略：FULL=全量，CANARY=预留按百分比分流。", "enum": ["FULL", "CANARY"] },
+        "canaryPercent": { "description": "Canary 百分比；FULL 时必须为 0。", "type": "integer", "minimum": 0, "maximum": 99 }
+      },
+      "additionalProperties": false
+    },
+    "MoveDeploymentRequest": {
+      "description": "Promote 或 Rollback Revision 指针的乐观锁请求。",
+      "type": "object",
+      "required": ["revisionId", "expectedVersion"],
+      "properties": {
+        "revisionId": { "description": "目标不可变 Revision UUIDv7。", "$ref": "#/$defs/UuidV7" },
+        "expectedVersion": { "description": "调用方读取的 Deployment 版本。", "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "ChangeDeploymentStatusRequest": {
+      "description": "Enable 或 Disable Deployment 的乐观锁请求。",
+      "type": "object",
+      "required": ["expectedVersion"],
+      "properties": {
+        "expectedVersion": { "description": "调用方读取的 Deployment 版本。", "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    }
+  }
+}

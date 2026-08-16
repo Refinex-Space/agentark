@@ -39,6 +39,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.http.HttpHeaders;
@@ -68,16 +70,28 @@ import space.refinex.agentark.control.iam.application.port.AuthorizationReposito
 import space.refinex.agentark.control.iam.application.port.TenantCatalogRepository;
 import space.refinex.agentark.control.iam.domain.IamScopeType;
 import space.refinex.agentark.control.iam.domain.PrincipalKind;
+import space.refinex.agentark.control.release.ReleaseControlConfiguration;
+import space.refinex.agentark.control.release.application.AgentPublisher;
+import space.refinex.agentark.control.release.application.ReleaseApplicationService;
+import space.refinex.agentark.control.release.application.RuntimeInternalContractService;
+import space.refinex.agentark.control.release.application.port.KnowledgeSnapshotLookup;
+import space.refinex.agentark.control.release.domain.AgentDraftSpec;
+import space.refinex.agentark.control.release.domain.AgentDraftSpec.LimitSpec;
+import space.refinex.agentark.control.release.domain.AgentDraftSpec.ModelBinding;
+import space.refinex.agentark.control.release.domain.AgentDraftSpec.PermissionBinding;
+import space.refinex.agentark.control.release.domain.AgentDraftSpec.ProfileBindings;
+import space.refinex.agentark.control.release.domain.ReleaseModels.TrafficPolicy;
 import space.refinex.agentark.control.secret.application.SecretApplicationService;
 import space.refinex.agentark.control.secret.domain.*;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
 import space.refinex.agentark.foundation.security.PrincipalType;
-import space.refinex.agentark.kernel.id.ProjectId;
+import space.refinex.agentark.foundation.security.ServiceIdentity;
+import space.refinex.agentark.kernel.id.*;
 import space.refinex.agentark.kernel.ref.Checksum;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * 使用真实 MySQL、MVC 安全链和 MyBatis 适配器验证跨租户拒绝与 API Key 秘密边界。
+ * 使用真实 MySQL、MVC 安全链和 MyBatis 适配器验证租户、资产、API Key 与发布全链路。
  *
  * @author refinex
  */
@@ -112,7 +126,8 @@ class IamTenancySecurityIT {
         new MySQLContainer(DockerImageName.parse("mysql:8.4.11"))
             .withDatabaseName("agentark_control")
             .withUsername("agentark_control")
-            .withPassword(DATABASE_PASSWORD);
+            .withPassword(DATABASE_PASSWORD)
+            .withCommand("--log-bin-trust-function-creators=ON");
 
     /** 测试对象存储使用系统临时目录中的独立随机根，不写入仓库。 */
     private static final Path OBJECT_ROOT = Path.of(
@@ -137,6 +152,18 @@ class IamTenancySecurityIT {
     /** Secret Metadata 与 Binding 应用服务。 */
     @Autowired
     private SecretApplicationService secretService;
+
+    /** Agent Draft 与 Deployment 应用服务。 */
+    @Autowired
+    private ReleaseApplicationService releaseService;
+
+    /** 事务型 Agent 发布器。 */
+    @Autowired
+    private AgentPublisher agentPublisher;
+
+    /** Runtime Internal Contract 服务。 */
+    @Autowired
+    private RuntimeInternalContractService internalContractService;
 
     /** 角色持久化端口。 */
     @Autowired
@@ -289,9 +316,9 @@ class IamTenancySecurityIT {
         assertThat(storedDigest).isEqualTo(expectedDigest);
         assertThat(forbiddenColumns).isZero();
 
-        String[] parts = plaintext.split("_", 3);
-        char[] secret = parts[2].toCharArray();
-        var authenticated = apiKeyService.authenticate(parts[1], secret, "agentark-control");
+        String prefix = plaintext.substring(4, 16);
+        char[] secret = plaintext.substring(17).toCharArray();
+        var authenticated = apiKeyService.authenticate(prefix, secret, "agentark-control");
         assertThat(authenticated).isPresent();
         assertThat(authenticated.orElseThrow().authorities())
             .containsExactlyInAnyOrder(
@@ -308,8 +335,8 @@ class IamTenancySecurityIT {
             .doesNotContain(plaintext);
 
         apiKeyService.revoke(owner, project.id(), created.metadata().id(), created.metadata().version());
-        char[] revokedSecret = parts[2].toCharArray();
-        assertThat(apiKeyService.authenticate(parts[1], revokedSecret, "agentark-control"))
+        char[] revokedSecret = plaintext.substring(17).toCharArray();
+        assertThat(apiKeyService.authenticate(prefix, revokedSecret, "agentark-control"))
             .isEmpty();
         assertThat(revokedSecret).containsOnly('\0');
 
@@ -326,10 +353,10 @@ class IamTenancySecurityIT {
                 + "expires_at = DATE_SUB(UTC_TIMESTAMP(6), INTERVAL 1 SECOND) "
                 + "WHERE prefix = ?",
             expiring.metadata().prefix());
-        String[] expiringParts = expiring.plaintext().split("_", 3);
-        char[] expiredSecret = expiringParts[2].toCharArray();
+        String expiringPrefix = expiring.plaintext().substring(4, 16);
+        char[] expiredSecret = expiring.plaintext().substring(17).toCharArray();
         assertThat(apiKeyService.authenticate(
-            expiringParts[1], expiredSecret, "agentark-control")).isEmpty();
+            expiringPrefix, expiredSecret, "agentark-control")).isEmpty();
         assertThat(expiredSecret).containsOnly('\0');
     }
 
@@ -452,6 +479,171 @@ class IamTenancySecurityIT {
     }
 
     /**
+     * 验证真实 MySQL 上从版本化资产、Draft 发布到 Deployment 回退与 Internal Snapshot 的全链路。
+     *
+     * @throws Exception 解析数据库中的 Canonical Snapshot 失败时抛出
+     */
+    @Test
+    void publishesImmutableSnapshotAndRollsBackDeploymentEndToEnd() throws Exception {
+        AgentArkPrincipal owner = platformOwner("release-owner");
+        var organization = iamService.createOrganization(owner, "release-org", "发布组织");
+        var project = iamService.createProject(
+            owner, organization.id(), "release-project", "发布项目");
+        var environment = iamService.createEnvironment(
+            owner, project.id(), "release-prod", "发布生产环境");
+
+        SecretMetadata modelSecret = secretService.createMetadata(
+            owner, project.id(), "release-model-credential", "发布模型凭据",
+            SecretProviderType.CUSTOM, "providers/release/model", "v1", SecretScope.PROJECT);
+        CatalogAsset modelProvider = catalogService.createAsset(
+            owner, project.id(), CatalogAssetKind.MODEL_PROVIDER, "release-model",
+            "发布模型 Provider", "发布链路模型",
+            java.util.Map.of("providerType", "OPENAI_COMPATIBLE", "descriptor",
+                java.util.Map.of("baseUrl", "https://models.example.test/v1")));
+        CatalogVersion modelProfile = catalogService.createVersion(
+            owner, project.id(), CatalogAssetKind.MODEL_PROVIDER,
+            modelProvider.id().asString(), java.util.Map.of(
+                "modelName", "release-model",
+                "capabilities", List.of("STREAMING"),
+                "parameters", java.util.Map.of("temperature", 0.2, "maxTokens", 4096),
+                "credentialSecretRef", modelSecret.projectRef().asString()),
+            CatalogVersionStatus.PUBLISHED);
+
+        CatalogAsset memory = catalogService.createAsset(
+            owner, project.id(), CatalogAssetKind.MEMORY_PROFILE, "release-memory",
+            "发布 Memory", "发布链路 Memory", java.util.Map.of());
+        CatalogVersion memoryVersion = catalogService.createVersion(
+            owner, project.id(), CatalogAssetKind.MEMORY_PROFILE, memory.id().asString(),
+            java.util.Map.of("strategy", "session"), CatalogVersionStatus.PUBLISHED);
+        CatalogAsset workspace = catalogService.createAsset(
+            owner, project.id(), CatalogAssetKind.WORKSPACE_PROFILE, "release-workspace",
+            "发布 Workspace", "发布链路 Workspace", java.util.Map.of());
+        CatalogVersion workspaceVersion = catalogService.createVersion(
+            owner, project.id(), CatalogAssetKind.WORKSPACE_PROFILE, workspace.id().asString(),
+            java.util.Map.of("mode", "isolated"), CatalogVersionStatus.PUBLISHED);
+        CatalogAsset sandbox = catalogService.createAsset(
+            owner, project.id(), CatalogAssetKind.SANDBOX_PROFILE, "release-sandbox",
+            "发布 Sandbox", "发布链路 Sandbox", java.util.Map.of());
+        CatalogVersion sandboxVersion = catalogService.createVersion(
+            owner, project.id(), CatalogAssetKind.SANDBOX_PROFILE, sandbox.id().asString(),
+            java.util.Map.of("network", "deny"), CatalogVersionStatus.PUBLISHED);
+        CatalogAsset policy = catalogService.createAsset(
+            owner, project.id(), CatalogAssetKind.PERMISSION_POLICY, "release-policy",
+            "发布权限策略", "发布链路最小权限", java.util.Map.of());
+        CatalogVersion policyVersion = catalogService.createVersion(
+            owner, project.id(), CatalogAssetKind.PERMISSION_POLICY, policy.id().asString(),
+            java.util.Map.of(
+                "defaultDecision", "DENY", "rules", List.of(), "scopes", List.of(),
+                "approvalPolicy", java.util.Map.of("mode", "disabled")),
+            CatalogVersionStatus.PUBLISHED);
+
+        AgentDraftSpec initialDraft = draft(
+            modelProvider, modelProfile, memory, memoryVersion, workspace, workspaceVersion,
+            sandbox, sandboxVersion, policy, policyVersion, 10);
+        var agent = releaseService.createAgent(
+            owner, project.id(), "release-agent", "发布 Agent", "真实发布链路", initialDraft);
+        var first = agentPublisher.publish(
+            owner, project.id(), agent.id(), "release-e2e-1", 0);
+        var replay = agentPublisher.publish(
+            owner, project.id(), agent.id(), "release-e2e-1", 0);
+        assertThat(replay.id()).isEqualTo(first.id());
+
+        AgentArkPrincipal runtime = new AgentArkPrincipal(
+            "https://issuer.example.test", "runtime", PrincipalType.SERVICE, Set.of(),
+            Optional.empty(), Optional.of(new ServiceIdentity(
+                "agentark-runtime", Set.of(RuntimeInternalContractService.CONTROL_AUDIENCE))));
+        var stored = internalContractService.snapshot(
+            runtime, first.id(), "agentscope-java-2", Set.of(1), Set.of("streaming"));
+        var snapshotJson = jsonMapper.readTree(stored.canonicalJson());
+        assertThat(snapshotJson.get("schemaVersion").asInt()).isEqualTo(1);
+        assertThat(snapshotJson.get("runtimeProvider").asText()).isEqualTo("agentscope-java-2");
+        assertThat(snapshotJson.get("model").get("credential").get("secretRef").asText())
+            .startsWith("secret://project/");
+        assertThat(stored.canonicalJson())
+            .doesNotContain("providers/release/model")
+            .doesNotContain("secretValue")
+            .doesNotContain("plaintext");
+
+        var deployment = releaseService.createDeployment(
+            owner, project.id(), environment.id(), agent.id(), first.id(), TrafficPolicy.full());
+        AgentDraftSpec changedDraft = draft(
+            modelProvider, modelProfile, memory, memoryVersion, workspace, workspaceVersion,
+            sandbox, sandboxVersion, policy, policyVersion, 11);
+        releaseService.updateDraft(owner, project.id(), agent.id(), changedDraft, 0);
+        var second = agentPublisher.publish(
+            owner, project.id(), agent.id(), "release-e2e-2", 1);
+        var promoted = releaseService.promote(
+            owner, project.id(), environment.id(), deployment.id(), second.id(), 0);
+        var rolledBack = releaseService.rollback(
+            owner, project.id(), environment.id(), deployment.id(), first.id(), 1);
+
+        assertThat(second.revisionNumber()).isEqualTo(2);
+        assertThat(promoted.desiredRevisionId()).isEqualTo(second.id());
+        assertThat(rolledBack.desiredRevisionId()).isEqualTo(first.id());
+        assertThat(rolledBack.version()).isEqualTo(2);
+        assertThat(internalContractService.deployment(runtime, deployment.id()).desiredRevisionId())
+            .isEqualTo(first.id().asString());
+        assertThat(jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM agent_revision WHERE agent_id = UUID_TO_BIN(?)",
+            Integer.class, agent.id().asString())).isEqualTo(2);
+        assertThat(jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM control_outbox WHERE aggregate_id IN (?, ?, ?)", Integer.class,
+            first.id().asString(), second.id().asString(), deployment.id().asString())).isEqualTo(5);
+        assertThatThrownBy(() -> releaseService.getDraft(
+            platformOwner("release-intruder"), project.id(), agent.id()))
+            .isInstanceOf(IamAccessDeniedException.class);
+    }
+
+    /**
+     * 创建发布 E2E 使用的最小完整 Draft。
+     *
+     * @param modelProvider 模型 Provider 稳定资产
+     * @param modelProfile 模型不可变版本
+     * @param memory Memory 稳定资产
+     * @param memoryVersion Memory 不可变版本
+     * @param workspace Workspace 稳定资产
+     * @param workspaceVersion Workspace 不可变版本
+     * @param sandbox Sandbox 稳定资产
+     * @param sandboxVersion Sandbox 不可变版本
+     * @param policy Permission Policy 稳定资产
+     * @param policyVersion Permission Policy 不可变版本
+     * @param maxToolCalls 单 Turn Tool 调用上限
+     * @return 强类型 Draft
+     */
+    private AgentDraftSpec draft(
+        CatalogAsset modelProvider,
+        CatalogVersion modelProfile,
+        CatalogAsset memory,
+        CatalogVersion memoryVersion,
+        CatalogAsset workspace,
+        CatalogVersion workspaceVersion,
+        CatalogAsset sandbox,
+        CatalogVersion sandboxVersion,
+        CatalogAsset policy,
+        CatalogVersion policyVersion,
+        int maxToolCalls) {
+        return new AgentDraftSpec(
+            "agentscope-java-2",
+            List.of("streaming"),
+            new ModelBinding(
+                (ModelProviderId) modelProvider.id(), (ModelProfileId) modelProfile.id()),
+            List.of(),
+            List.of(),
+            List.of(),
+            List.of(),
+            new ProfileBindings(
+                (MemoryProfileId) memory.id(), (MemoryProfileVersionId) memoryVersion.id(),
+                (WorkspaceProfileId) workspace.id(),
+                (WorkspaceProfileVersionId) workspaceVersion.id(),
+                (SandboxProfileId) sandbox.id(),
+                (SandboxProfileVersionId) sandboxVersion.id()),
+            new PermissionBinding(
+                (PermissionPolicyId) policy.id(),
+                (PermissionPolicyVersionId) policyVersion.id()),
+            new LimitSpec(300, maxToolCalls, 2));
+    }
+
+    /**
      * 创建具备首个组织创建 Claim 的受信测试用户主体。
      *
      * @param subject 稳定测试 Subject
@@ -478,13 +670,42 @@ class IamTenancySecurityIT {
     }
 
     /**
+     * 在 Release 配置解析前提供测试专用 Knowledge 中立端口。
+     *
+     * @author refinex
+     */
+    @Configuration(proxyBeanMethods = false)
+    static class ReleaseKnowledgeTestConfiguration {
+
+        /** 创建 Knowledge 测试配置。 */
+        ReleaseKnowledgeTestConfiguration() {
+            // Spring 通过无参构造器创建测试配置。
+        }
+
+        /**
+         * 当前 E2E Draft 不引用 Knowledge，因此端口始终返回空。
+         *
+         * @return 始终返回空的 Knowledge 查询端口
+         */
+        @Bean
+        KnowledgeSnapshotLookup knowledgeSnapshotLookup() {
+            return (projectId, knowledgeBaseId, revisionId) -> Optional.empty();
+        }
+    }
+
+    /**
      * 提供只用于集成测试的最小 Spring Boot 应用装配。
      *
      * @author refinex
      */
     @SpringBootConfiguration
     @EnableAutoConfiguration
-    @Import({IamControlConfiguration.class, CatalogControlConfiguration.class})
+    @Import({
+        ReleaseKnowledgeTestConfiguration.class,
+        IamControlConfiguration.class,
+        CatalogControlConfiguration.class,
+        ReleaseControlConfiguration.class
+    })
     static class TestApplication {
 
         /** 创建测试应用配置。 */

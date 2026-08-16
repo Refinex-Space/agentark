@@ -25,6 +25,8 @@ services:
       - --default-time-zone=+00:00
       # 拒绝截断、零日期、非确定分组和除零等宽松写入行为。
       - --sql-mode=STRICT_TRANS_TABLES,ONLY_FULL_GROUP_BY,ERROR_FOR_DIVISION_BY_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE,NO_ENGINE_SUBSTITUTION
+      # 允许最小权限 Schema Owner 创建数据库不可变性 Trigger，禁止改授 SUPER 权限。
+      - --log-bin-trust-function-creators=ON
     # 挂载数据库初始化所需的六个本地 Secret。
     secrets:
       # MySQL root 仅用于首次初始化和健康检查。

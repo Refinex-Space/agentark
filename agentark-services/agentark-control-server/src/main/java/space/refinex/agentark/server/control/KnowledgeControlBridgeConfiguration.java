@@ -29,6 +29,16 @@ import space.refinex.agentark.knowledge.application.KnowledgePermissions;
 import space.refinex.agentark.knowledge.application.KnowledgeProjectContext;
 import space.refinex.agentark.knowledge.application.port.KnowledgeAccessPort;
 import space.refinex.agentark.knowledge.application.port.KnowledgeAuditPort;
+import space.refinex.agentark.knowledge.application.KnowledgeRevisionResolver;
+import space.refinex.agentark.knowledge.application.KnowledgeConflictException;
+import space.refinex.agentark.knowledge.application.KnowledgeNotFoundException;
+import space.refinex.agentark.knowledge.application.port.KnowledgeRepository;
+import space.refinex.agentark.control.release.application.port.KnowledgeSnapshotLookup;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
+
+import java.math.BigDecimal;
+import java.util.Map;
 
 import java.util.Optional;
 
@@ -88,6 +98,100 @@ public class KnowledgeControlBridgeConfiguration {
             record.action(), record.actor(), record.resourceType(), record.resourceId(),
             Optional.of(record.organizationId()), Optional.of(record.projectId()), "SUCCEEDED",
             record.occurredAt()));
+    }
+
+    /**
+     * 把 Knowledge READY Resolver 与 Retrieval Profile 映射为 Control Release 中立查询端口。
+     *
+     * @param resolver READY Revision Resolver
+     * @param repository Knowledge Repository
+     * @param jsonMapper JSON 映射器
+     * @return 不向 agentark-control 暴露 Knowledge 实现类型的 Snapshot 查询端口
+     */
+    @Bean
+    public KnowledgeSnapshotLookup knowledgeSnapshotLookup(
+        KnowledgeRevisionResolver resolver,
+        KnowledgeRepository repository,
+        JsonMapper jsonMapper) {
+        return (projectId, knowledgeBaseId, revisionId) -> {
+            try {
+                var revision = resolver.resolveReady(projectId, revisionId);
+                if (!revision.knowledgeBaseId().equals(knowledgeBaseId)) {
+                    return Optional.empty();
+                }
+                var profile = repository.findRetrievalProfile(
+                        projectId, revision.retrievalProfileId())
+                    .orElseThrow(() -> new IllegalStateException(
+                        "READY knowledge revision retrieval profile is missing"));
+                Map<String, Object> config = readConfig(jsonMapper, profile.configJson());
+                return Optional.of(new KnowledgeSnapshotLookup.ResolvedKnowledge(
+                    revision.id(), integer(config, "topK"),
+                    decimal(config, "scoreThreshold"), text(config, "reranker")));
+            } catch (KnowledgeConflictException | KnowledgeNotFoundException exception) {
+                return Optional.empty();
+            }
+        };
+    }
+
+    /**
+     * 读取持久化的 Retrieval Profile 配置。
+     *
+     * @param mapper JSON 映射器
+     * @param value 配置 JSON
+     * @return 配置对象
+     */
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> readConfig(JsonMapper mapper, String value) {
+        try {
+            return mapper.readValue(value, Map.class);
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("stored retrieval profile JSON is invalid", exception);
+        }
+    }
+
+    /**
+     * 读取必需的整数配置。
+     *
+     * @param config 配置对象
+     * @param key 字段名
+     * @return 整数值
+     */
+    private static int integer(Map<String, Object> config, String key) {
+        Object value = config.get(key);
+        if (!(value instanceof Number number)) {
+            throw new IllegalStateException("retrieval profile " + key + " must be numeric");
+        }
+        return number.intValue();
+    }
+
+    /**
+     * 读取必需的定点数配置。
+     *
+     * @param config 配置对象
+     * @param key 字段名
+     * @return 定点数值
+     */
+    private static BigDecimal decimal(Map<String, Object> config, String key) {
+        Object value = config.get(key);
+        if (value == null) {
+            throw new IllegalStateException("retrieval profile " + key + " is missing");
+        }
+        return new BigDecimal(value.toString());
+    }
+
+    /**
+     * 读取必需的非空文本配置。
+     *
+     * @param config 配置对象
+     * @param key 字段名
+     * @return 非空文本
+     */
+    private static String text(Map<String, Object> config, String key) {
+        Object value = config.get(key);
+        if (!(value instanceof String text) || text.isBlank()) {
+            throw new IllegalStateException("retrieval profile " + key + " is missing");
+        }
+        return text;
     }
 
     /**

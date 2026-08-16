@@ -1388,6 +1388,371 @@ paths:
         # 状态转换冲突。
         "409": { $ref: "#/components/responses/ProblemResponse" }
 
+# Agent 集合端点。
+  /api/v1/projects/{projectId}/agents:
+    # 复用项目路径参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 创建 Agent 稳定身份和首个 Draft。
+    post:
+      # 稳定操作标识。
+      operationId: createAgent
+      # Release 功能分组。
+      tags: [Release]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 固定 JSON 媒体类型。
+        content:
+          # JSON 请求。
+          application/json:
+            # 引用创建 Agent 契约。
+            schema: { $ref: "#/components/schemas/CreateAgentRequest" }
+      # 创建与稳定错误响应。
+      responses:
+        # 创建成功。
+        "201": { $ref: "#/components/responses/AgentResponse" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 冲突响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Agent 单资源端点。
+  /api/v1/projects/{projectId}/agents/{agentId}:
+    # 复用 Project 与 Agent 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Agent 标识 UUIDv7。
+      - { $ref: "#/components/parameters/AgentId" }
+    # 读取 Agent 稳定身份。
+    get:
+      # 稳定操作标识。
+      operationId: getAgent
+      # Release 功能分组。
+      tags: [Release]
+      # 查询响应。
+      responses:
+        # 查询成功。
+        "200": { $ref: "#/components/responses/AgentResponse" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 不可见响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # Agent 当前 Draft 端点。
+  /api/v1/projects/{projectId}/agents/{agentId}/draft:
+    # 复用 Project 与 Agent 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Agent 标识 UUIDv7。
+      - { $ref: "#/components/parameters/AgentId" }
+    # 读取当前 Draft。
+    get:
+      # 稳定操作标识。
+      operationId: getAgentDraft
+      # Release 功能分组。
+      tags: [Release]
+      # 查询响应。
+      responses:
+        # 查询成功。
+        "200": { $ref: "#/components/responses/AgentDraftResponse" }
+        # 稳定错误响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 使用乐观锁更新 Draft。
+    put:
+      # 稳定操作标识。
+      operationId: updateAgentDraft
+      # Release 功能分组。
+      tags: [Release]
+      # 更新请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 固定 JSON 媒体类型。
+        content:
+          # JSON 请求。
+          application/json:
+            # 引用 Draft 更新契约。
+            schema: { $ref: "#/components/schemas/UpdateDraftRequest" }
+      # 更新响应。
+      responses:
+        # 更新成功。
+        "200": { $ref: "#/components/responses/AgentDraftResponse" }
+        # 乐观锁冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Draft 校验端点。
+  /api/v1/projects/{projectId}/agents/{agentId}/draft/validate:
+    # 复用 Project 与 Agent 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Agent 标识 UUIDv7。
+      - { $ref: "#/components/parameters/AgentId" }
+    # 校验并持久化报告。
+    post:
+      # 稳定操作标识。
+      operationId: validateAgentDraft
+      # Release 功能分组。
+      tags: [Release]
+      # 校验响应。
+      responses:
+        # 报告已生成。
+        "200": { $ref: "#/components/responses/ValidationReportResponse" }
+        # 不可见响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # Agent 发布端点。
+  /api/v1/projects/{projectId}/agents/{agentId}/publish:
+    # 复用 Project 与 Agent 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Agent 标识 UUIDv7。
+      - { $ref: "#/components/parameters/AgentId" }
+    # 幂等发布不可变 Revision。
+    post:
+      # 稳定操作标识。
+      operationId: publishAgentRevision
+      # Release 功能分组。
+      tags: [Release]
+      # 发布请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 固定 JSON 媒体类型。
+        content:
+          # JSON 请求。
+          application/json:
+            # 引用发布请求契约。
+            schema: { $ref: "#/components/schemas/PublishRequest" }
+      # 发布响应。
+      responses:
+        # 发布成功或命中原幂等结果。
+        "201": { $ref: "#/components/responses/AgentRevisionResponse" }
+        # 发布前置条件冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Agent Revision 集合端点。
+  /api/v1/projects/{projectId}/agents/{agentId}/revisions:
+    # 复用 Project 与 Agent 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Agent 标识 UUIDv7。
+      - { $ref: "#/components/parameters/AgentId" }
+    # 列出不可变 Revision。
+    get:
+      # 稳定操作标识。
+      operationId: listAgentRevisions
+      # Release 功能分组。
+      tags: [Release]
+      # 查询响应。
+      responses:
+        # Revision 数组。
+        "200": { $ref: "#/components/responses/AgentRevisionListResponse" }
+  # Agent Revision 单资源端点。
+  /api/v1/projects/{projectId}/agents/{agentId}/revisions/{revisionId}:
+    # 复用 Project、Agent 与 Revision 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Agent 标识 UUIDv7。
+      - { $ref: "#/components/parameters/AgentId" }
+      # Revision 标识 UUIDv7。
+      - { $ref: "#/components/parameters/RevisionId" }
+    # 读取不可变 Revision 元数据。
+    get:
+      # 稳定操作标识。
+      operationId: getAgentRevision
+      # Release 功能分组。
+      tags: [Release]
+      # 查询响应。
+      responses:
+        # 查询成功。
+        "200": { $ref: "#/components/responses/AgentRevisionResponse" }
+        # 不可见响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # Environment Deployment 集合端点。
+  /api/v1/projects/{projectId}/environments/{environmentId}/deployments:
+    # 复用 Project 与 Environment 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Environment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/EnvironmentId" }
+    # 创建稳定 Deployment。
+    post:
+      # 稳定操作标识。
+      operationId: createDeployment
+      # Release 功能分组。
+      tags: [Release]
+      # 创建请求体。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 固定 JSON 媒体类型。
+        content:
+          # JSON 请求。
+          application/json:
+            # 引用创建 Deployment 契约。
+            schema: { $ref: "#/components/schemas/CreateDeploymentRequest" }
+      # 创建响应。
+      responses:
+        # 创建成功。
+        "201": { $ref: "#/components/responses/DeploymentResponse" }
+        # 前置条件冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Deployment 单资源端点。
+  /api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}:
+    # 复用 Deployment Scope 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Environment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/EnvironmentId" }
+      # Deployment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/DeploymentId" }
+    # 读取 Deployment。
+    get:
+      # 稳定操作标识。
+      operationId: getDeployment
+      # Release 功能分组。
+      tags: [Release]
+      # 查询响应。
+      responses:
+        # 查询成功。
+        "200": { $ref: "#/components/responses/DeploymentResponse" }
+        # 不可见响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # Deployment Promote 端点。
+  /api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/promote:
+    # 复用 Deployment Scope 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Environment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/EnvironmentId" }
+      # Deployment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/DeploymentId" }
+    # 全量切换到新 Revision。
+    post:
+      # 稳定操作标识。
+      operationId: promoteDeployment
+      # Release 功能分组。
+      tags: [Release]
+      # 指针变更请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # JSON 请求。
+        content:
+          # 固定 JSON 媒体类型。
+          application/json:
+            # 引用指针变更契约。
+            schema: { $ref: "#/components/schemas/MoveDeploymentRequest" }
+      # 变更响应。
+      responses:
+        # 变更成功。
+        "200": { $ref: "#/components/responses/DeploymentResponse" }
+        # 乐观锁冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Deployment Rollback 端点。
+  /api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/rollback:
+    # 复用 Promote 的参数与请求结构。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Environment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/EnvironmentId" }
+      # Deployment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/DeploymentId" }
+    # 回退 Revision 指针。
+    post:
+      # 稳定操作标识。
+      operationId: rollbackDeployment
+      # Release 功能分组。
+      tags: [Release]
+      # 指针变更请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # JSON 请求。
+        content:
+          # 固定 JSON 媒体类型。
+          application/json:
+            # 引用指针变更契约。
+            schema: { $ref: "#/components/schemas/MoveDeploymentRequest" }
+      # 变更响应。
+      responses:
+        # 变更成功。
+        "200": { $ref: "#/components/responses/DeploymentResponse" }
+        # 乐观锁冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Deployment Enable 端点。
+  /api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/enable:
+    # 复用 Deployment Scope 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Environment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/EnvironmentId" }
+      # Deployment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/DeploymentId" }
+    # 启用新 Session。
+    post:
+      # 稳定操作标识。
+      operationId: enableDeployment
+      # Release 功能分组。
+      tags: [Release]
+      # 状态变更请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # JSON 请求。
+        content:
+          # 固定 JSON 媒体类型。
+          application/json:
+            # 引用状态变更契约。
+            schema: { $ref: "#/components/schemas/ChangeDeploymentStatusRequest" }
+      # 变更响应。
+      responses:
+        # 变更成功。
+        "200": { $ref: "#/components/responses/DeploymentResponse" }
+  # Deployment Disable 端点。
+  /api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/disable:
+    # 复用 Deployment Scope 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Environment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/EnvironmentId" }
+      # Deployment 标识 UUIDv7。
+      - { $ref: "#/components/parameters/DeploymentId" }
+    # 禁用新 Session。
+    post:
+      # 稳定操作标识。
+      operationId: disableDeployment
+      # Release 功能分组。
+      tags: [Release]
+      # 状态变更请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # JSON 请求。
+        content:
+          # 固定 JSON 媒体类型。
+          application/json:
+            # 引用状态变更契约。
+            schema: { $ref: "#/components/schemas/ChangeDeploymentStatusRequest" }
+      # 变更响应。
+      responses:
+        # 变更成功。
+        "200": { $ref: "#/components/responses/DeploymentResponse" }
+
 # 汇总可复用的 Schema 与响应组件。
 components:
   # 注册公共 Schema 引用。
@@ -1604,6 +1969,50 @@ components:
     Checksum:
       # 引用版本化 Knowledge 公共契约。
       $ref: ../schemas/knowledge-public/v1.json#/$defs/Checksum
+    # Agent 稳定身份响应。
+    ReleaseAgent:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/Agent
+    # Agent 可编辑 Draft 响应。
+    AgentDraft:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/AgentDraft
+    # Draft 校验报告响应。
+    ValidationReport:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/ValidationReport
+    # Agent 不可变 Revision 响应。
+    AgentRevision:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/AgentRevision
+    # Environment Deployment 响应。
+    Deployment:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/Deployment
+    # 创建 Agent 请求。
+    CreateAgentRequest:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/CreateAgentRequest
+    # 更新 Agent Draft 请求。
+    UpdateDraftRequest:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/UpdateDraftRequest
+    # 幂等发布 Agent Revision 请求。
+    PublishRequest:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/PublishRequest
+    # 创建 Environment Deployment 请求。
+    CreateDeploymentRequest:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/CreateDeploymentRequest
+    # Promote 或 Rollback 指针变更请求。
+    MoveDeploymentRequest:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/MoveDeploymentRequest
+    # 启用或禁用 Deployment 请求。
+    ChangeDeploymentStatusRequest:
+      # 引用版本化 Release 公共契约。
+      $ref: ../schemas/release-public/v1.json#/$defs/ChangeDeploymentStatusRequest
   # 注册路径参数模板。
   parameters:
     # 组织标识路径参数。
@@ -1716,6 +2125,36 @@ components:
       required: true
       # 只允许四类中立 Profile。
       schema: { type: string, enum: [parser, chunk, embedding, retrieval] }
+    # Agent 标识路径参数。
+    AgentId:
+      # 参数名称。
+      name: agentId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # Agent Revision 标识路径参数。
+    RevisionId:
+      # 参数名称。
+      name: revisionId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # Deployment 标识路径参数。
+    DeploymentId:
+      # 参数名称。
+      name: deploymentId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
   # 注册公共 HTTP 响应模板。
   responses:
     # 定义采用 application/problem+json 的错误响应。
@@ -1850,6 +2289,66 @@ components:
         application/json:
           # 引用服务账号响应结构。
           schema: { $ref: "#/components/schemas/ServiceAccount" }
+    # Agent 单对象响应。
+    AgentResponse:
+      # 说明该响应返回 Agent 稳定身份。
+      description: Agent 详情
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用 Agent 响应结构。
+          schema: { $ref: "#/components/schemas/ReleaseAgent" }
+    # Agent Draft 单对象响应。
+    AgentDraftResponse:
+      # 说明该响应返回当前可编辑 Draft。
+      description: Agent Draft 详情
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用 Draft 响应结构。
+          schema: { $ref: "#/components/schemas/AgentDraft" }
+    # Draft 校验报告响应。
+    ValidationReportResponse:
+      # 说明该响应返回持久化校验结论。
+      description: Draft 校验报告
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用校验报告结构。
+          schema: { $ref: "#/components/schemas/ValidationReport" }
+    # Agent Revision 单对象响应。
+    AgentRevisionResponse:
+      # 说明该响应返回不可变 Revision。
+      description: Agent Revision 详情
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用 Revision 响应结构。
+          schema: { $ref: "#/components/schemas/AgentRevision" }
+    # Agent Revision 列表响应。
+    AgentRevisionListResponse:
+      # 说明该响应返回 Agent 的 Revision 集合。
+      description: Agent Revision 列表
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 定义 Revision 数组结构。
+          schema: { type: array, items: { $ref: "#/components/schemas/AgentRevision" } }
+    # Deployment 单对象响应。
+    DeploymentResponse:
+      # 说明该响应返回 Environment Deployment。
+      description: Deployment 详情
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用 Deployment 响应结构。
+          schema: { $ref: "#/components/schemas/Deployment" }
   # 注册 IAM 支持的认证方案。
   securitySchemes:
     # OIDC/JWT Bearer 认证。

@@ -17,9 +17,9 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 |---|---|---|
 | 06 | `V1__phase_06_schema_baseline.sql` | 只建立 Control 独立 Migration History 起点，不创建业务表 |
 | 07 | `V2__phase_07_iam_tenancy.sql`：Organization、Project、Environment、Identity、Membership、Role、Permission、Binding、API Key | IAM 与租户授权事实；十二张业务表 |
-| 08 | Agent、资产稳定身份与不可变版本、Secret Metadata 与 Environment Binding | 不包含发布 Revision/Snapshot；只保存外部 Secret 定位信息，不保存值 |
-| 09 | Knowledge Metadata、Document Revision、Knowledge Revision、Profile 与 Ingestion Request | 只描述摄取工作，不执行 Embedding 或向量写入 |
-| 10 | Agent Draft、Validation、Revision、Snapshot、Publish Operation、Control Outbox、Deployment 与 Deployment Revision | 发布事务原子提交，Deployment 固定目标 Revision |
+| 08 | `V3__phase_08_asset_catalog.sql`：Agent、资产稳定身份与不可变版本、Secret Metadata 与 Environment Binding | 不包含发布 Revision/Snapshot；只保存外部 Secret 定位信息，不保存值 |
+| 09 | `V4__phase_09_knowledge_metadata.sql`：Knowledge Metadata、Document Revision、Knowledge Revision、Profile 与 Ingestion Request | 只描述摄取工作，不执行 Embedding 或向量写入；V4 由 `agentark-knowledge` 所有 |
+| 10 | `V5__phase_10_revision_deployment.sql`：Agent Draft、Validation、Revision、Snapshot、Publish Operation、Control Outbox、Deployment 与 Deployment Revision | 发布事务原子提交，Deployment 固定目标 Revision；独立 `agentark-control` 迁移测试按 V1/V2/V3/V5 运行，Control Server 组合迁移按 V1–V5 运行 |
 | 14 | Knowledge Ingestion Result、实际 Parser/Chunk/Embedding/Vector Adapter 和检索能力 | Scheduler 只提交命令结果，不写 Control 表 |
 | 19 | Secret 轮换治理、Quota、Audit、Usage/Cost、Evaluation、可靠性补齐 | 延续 Phase 08 Secret Owner，不保存 Secret 明文 |
 
@@ -49,16 +49,19 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 | 表 | 关键内容 | 关键约束与索引 |
 |---|---|---|
 | `agent` | id, organization_id, project_id, key, name, status, version | `(project_id, key)` 唯一 |
-| `agent_draft` | id, agent_id, draft_version, metadata, version | 每 Agent 一个活动 Draft；乐观锁 |
-| `agent_draft_component` | draft_id, component_type, component_id, component_version_id, alias, config | Draft 内 alias/type 唯一；Sub-Agent DAG 发布时校验 |
-| `agent_revision` | id, agent_id, revision_number, status, snapshot_id, content_hash | `(agent_id, revision_number)`、`content_hash` 唯一；Published 后不可更新 |
-| `agent_revision_snapshot` | id, agent_revision_id, schema_version, runtime_provider, canonical_json/object_ref, content_hash | revision 一对一；Hash 唯一；无 Secret 明文 |
-| `validation_report` | id, draft_id, request_hash, status, findings_json/object_ref | request_hash 索引；不可变结果 |
-| `publish_operation` | id, agent_id, idempotency_key, request_hash, status, revision_id, error_code | `(agent_id, idempotency_key)` 唯一 |
-| `deployment` | id, environment_id, agent_id, desired_revision_id, desired_status, traffic_policy, version | `(environment_id, agent_id)` 唯一；乐观锁 |
-| `deployment_revision` | id, deployment_id, sequence, revision_id, action, actor, occurred_at | `(deployment_id, sequence)` 唯一；只追加 |
+| `agent_draft` | agent_id, owner chain, spec_json, version, audit | `agent_id` 一对一主键；Draft 可编辑且使用乐观锁；Runtime 禁止读取 |
+| `agent_draft_component` | agent_id, owner chain, component_type/order, owner_id, version_id, binding_json | `(agent_id, component_type, component_order)` 主键；是 `spec_json` 的可查询投影，Draft 更新时同事务重建 |
+| `validation_report` | id, owner chain, agent_id, draft_version, status, findings_json, audit | `VALID/INVALID`；只保存路径、稳定代码、严重程度和说明，不保存资产正文 |
+| `agent_revision` | id, owner chain, agent_id, snapshot_id, revision_number, schema_version, runtime_provider, content_hash, required_capabilities_json, status, audit | `(agent_id, revision_number)` 与 `(agent_id, content_hash)` 唯一；`PUBLISHED` 后由数据库触发器拒绝更新和删除 |
+| `agent_revision_snapshot` | id, owner chain, revision_id, schema_version, runtime_provider, content_hash, snapshot_json, audit | Revision 一对一，Hash 全局唯一；Canonical Snapshot 只含 `SecretRef`；触发器拒绝更新和删除 |
+| `publish_operation` | id, owner chain, agent_id, idempotency_key, draft_version, status, revision_id, audit | `(project_id, agent_id, idempotency_key)` 唯一；同一键绑定一个 Draft 版本和成功 Revision |
+| `deployment` | id, owner chain, environment_id, agent_id, desired_revision_id, desired_status, traffic_policy_type, canary_percent, version, audit | `(environment_id, agent_id)` 唯一；乐观锁；Phase 10 只执行 `FULL`，`CANARY` 只保留合法模型 |
+| `deployment_revision` | id, owner chain, deployment_id, action, from_revision_id, to_revision_id, audit | `CREATE/PROMOTE/ROLLBACK/ENABLE/DISABLE` 只追加历史 |
+| `control_outbox` | id, aggregate_type/id, event_type, payload_json, status, attempts, available_at, published_at | `(status, available_at, id)` Claim 索引；发布与 Deployment 变更均和所属聚合同一事务写入 |
 
-发布事务必须同时提交 `agent_revision`、`agent_revision_snapshot` 和 `control_outbox`。Rollback 只更新 `deployment.desired_revision_id` 并追加历史。
+发布事务必须同时提交 `agent_revision`、`agent_revision_snapshot`、`publish_operation`、成功 `validation_report` 和 `control_outbox`。Outbox 的发布差异摘要只包含上一 Revision ID 和发生变化的顶层区段名，不包含 Prompt、文档、Tool 参数或 Secret 内容。Rollback 只更新 `deployment.desired_revision_id` 并追加 `deployment_revision` 与 Outbox，不复制或修改 Snapshot。
+
+V5 使用四个 `BEFORE UPDATE/DELETE` 触发器保护 Published Revision 与 Snapshot。MySQL 运行账户不授予 `SUPER`；目标实例必须由基础设施显式启用 `log_bin_trust_function_creators=ON`，否则 Flyway 会因二进制日志触发器创建限制失败。该变量只放宽触发器创建前提，不改变应用账号的 Schema Owner 和最小权限边界。
 
 ## 版本化资产
 
