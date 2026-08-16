@@ -1,0 +1,9 @@
+{
+  "type": "agent.text.delta",
+  "payload": {
+    "replyId": "reply-1",
+    "blockId": "block-1",
+    "delta": "hello",
+    "source": ""
+  }
+}

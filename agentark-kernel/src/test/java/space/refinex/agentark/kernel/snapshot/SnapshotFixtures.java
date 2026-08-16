@@ -21,6 +21,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import space.refinex.agentark.kernel.id.AgentId;
 import space.refinex.agentark.kernel.id.KnowledgeRevisionId;
@@ -98,9 +99,9 @@ final class SnapshotFixtures {
             new KnowledgeSpec(
                 KnowledgeRevisionId.generate(),
                 new RetrievalSpec(8, new BigDecimal("0.72"), "default-reranker"))),
-        new MemorySpec(MemoryProfileVersionId.generate()),
-        new WorkspaceSpec(WorkspaceProfileVersionId.generate()),
-        new SandboxSpec(SandboxProfileVersionId.generate()),
+        new MemorySpec(MemoryProfileVersionId.generate(), Map.of("strategy", "session")),
+        new WorkspaceSpec(WorkspaceProfileVersionId.generate(), Map.of("mode", "isolated")),
+        new SandboxSpec(SandboxProfileVersionId.generate(), Map.of("network", "deny")),
         new PermissionSpec(
             PermissionDecision.ASK,
             List.of(new PermissionRuleSpec("tool:filesystem.write", PermissionDecision.DENY))),

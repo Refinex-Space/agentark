@@ -114,11 +114,11 @@ public final class SnapshotAssetResolver {
             .map(binding -> skill(projectId, binding)).toList();
         List<KnowledgeSpec> knowledge = draft.knowledge().stream()
             .map(binding -> knowledge(projectId, binding)).toList();
-        verifyProfile(projectId, CatalogAssetKind.MEMORY_PROFILE,
+        Map<String, Object> memory = profile(projectId, CatalogAssetKind.MEMORY_PROFILE,
             draft.profiles().memoryId(), draft.profiles().memoryVersionId());
-        verifyProfile(projectId, CatalogAssetKind.WORKSPACE_PROFILE,
+        Map<String, Object> workspace = profile(projectId, CatalogAssetKind.WORKSPACE_PROFILE,
             draft.profiles().workspaceId(), draft.profiles().workspaceVersionId());
-        verifyProfile(projectId, CatalogAssetKind.SANDBOX_PROFILE,
+        Map<String, Object> sandbox = profile(projectId, CatalogAssetKind.SANDBOX_PROFILE,
             draft.profiles().sandboxId(), draft.profiles().sandboxVersionId());
 
         return new AgentRevisionSnapshot(
@@ -127,9 +127,9 @@ public final class SnapshotAssetResolver {
             new RuntimeProviderId(draft.runtimeProvider()),
             new AgentSpec(agentName, AgentEntrypoint.HARNESS, draft.requiredCapabilities()),
             model, prompts, mcp, skills, knowledge,
-            new MemorySpec(draft.profiles().memoryVersionId()),
-            new WorkspaceSpec(draft.profiles().workspaceVersionId()),
-            new SandboxSpec(draft.profiles().sandboxVersionId()), permission,
+            new MemorySpec(draft.profiles().memoryVersionId(), memory),
+            new WorkspaceSpec(draft.profiles().workspaceVersionId(), workspace),
+            new SandboxSpec(draft.profiles().sandboxVersionId(), sandbox), permission,
             new RuntimeLimits(Duration.ofSeconds(draft.limits().turnTimeoutSeconds()),
                 draft.limits().maxToolCalls(), draft.limits().maxSubAgents()));
     }
@@ -285,9 +285,9 @@ public final class SnapshotAssetResolver {
     /**
      * @param projectId 项目标识 @param kind Profile 类型 @param ownerId 稳定身份 @param versionId 版本
      */
-    private void verifyProfile(
+    private Map<String, Object> profile(
         ProjectId projectId, CatalogAssetKind kind, StrongId ownerId, StrongId versionId) {
-        version(kind, projectId, ownerId, versionId);
+        return json(version(kind, projectId, ownerId, versionId).payloadJson());
     }
 
     /**

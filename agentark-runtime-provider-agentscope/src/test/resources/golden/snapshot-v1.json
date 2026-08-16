@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "organizationId": "0198a4b0-0001-7001-8001-000000000001",
+  "projectId": "0198a4b0-0002-7002-8002-000000000002",
+  "snapshotId": "0198a4b0-0003-7003-8003-000000000003",
+  "agentId": "0198a4b0-0004-7004-8004-000000000004",
+  "revisionId": "0198a4b0-0005-7005-8005-000000000005",
+  "revisionNumber": 1,
+  "createdAt": "2026-08-16T00:00:00Z",
+  "contentHash": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+  "runtimeProvider": "agentscope-java-2",
+  "agent": {
+    "name": "review-agent",
+    "entrypoint": "harness",
+    "requiredCapabilities": ["streaming"]
+  },
+  "model": {
+    "provider": "fake",
+    "modelName": "stream-model",
+    "parameters": {"temperature": 0.2, "maxTokens": 1024},
+    "credential": {
+      "secretRef": "secret://project/model-test",
+      "resolutionPolicy": "LATEST_ENABLED"
+    }
+  },
+  "prompts": [
+    {
+      "role": "system",
+      "promptVersionId": "0198a4b0-0006-7006-8006-000000000006",
+      "contentHash": "sha256:46f6e1bc209b2b205e4bfdc4740ad1b131203301a4fa1cf8928b038f02cb0077",
+      "content": "You are concise."
+    }
+  ],
+  "mcpServers": [],
+  "skills": [],
+  "knowledge": [],
+  "memory": {
+    "profileVersionId": "0198a4b0-0010-7010-8010-000000000010",
+    "configuration": {"strategy": "session"}
+  },
+  "workspace": {
+    "profileVersionId": "0198a4b0-0011-7011-8011-000000000011",
+    "configuration": {"mode": "isolated"}
+  },
+  "sandbox": {
+    "profileVersionId": "0198a4b0-0012-7012-8012-000000000012",
+    "configuration": {"network": "deny"}
+  },
+  "permissions": {"defaultDecision": "DENY", "rules": []},
+  "limits": {"turnTimeoutSeconds": 30, "maxToolCalls": 4, "maxSubAgents": 0}
+}

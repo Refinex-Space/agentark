@@ -71,4 +71,12 @@ Phase 11 增加以下 Runtime Event 契约约束：
 - Event 不得包含隐藏 Chain-of-Thought。Provider 原始事件必须在 Phase 12 防腐层转换为公开 Message、Tool、Usage、Approval、Error 或安全的未知事件载荷；
 - 终态必须有明确持久 Event；数据库拒绝 Event Update/Delete 和旧 Fencing Token 写入。Phase 13 的 SSE `id` 与 `Last-Event-ID` 必须基于已提交的 `sessionSequence`，不能使用进程内 Preview 序号替代。
 
+Phase 12 增加以下 Snapshot 编译契约约束：
+
+- `contracts/schemas/agent-revision-snapshot/v1.json` 中 Memory、Workspace、Sandbox Profile 的 `configuration` 必须冻结为只含 JSON 值的不可变对象；禁止空属性名、非有限数字以及 Java、Provider 或 SDK 私有类型进入契约；
+- Canonical Snapshot 对对象属性递归按名称排序、保留数组顺序，并在排除顶层 `contentHash` 后计算 SHA-256；Control Golden File、Runtime Provider 编译校验和缓存键必须使用同一规则；
+- Runtime Provider 必须在解析 Secret 或创建运行组件前验证 `schemaVersion`、`runtimeProvider`、`contentHash`、租户标识和资产能力；编译错误转换为稳定 AgentArk 错误，不能透出 AgentScope 原始对象；
+- AgentScope Typed Event 必须映射到 `runtime-event/v1.json` 语义。未知 Event 只保留安全类型标识，Tool 参数、Approval 参数和隐藏推理内容不得进入 Event、日志或缓存；
+- 编译缓存键固定为 Provider、Snapshot Schema、Snapshot Hash 与 Compiler Version，且只缓存不含 Secret 和 Session 可变状态的不可变编译计划；缓存丢失必须能够由 Snapshot 重建。
+
 Golden File、明文 Secret 负例和文档结构 Lint 由 `agentark-kernel` 测试执行，必需文件与 Kernel/Server 边界由知识门禁检查。首次发布后的修改必须增加 Breaking Change 检测；在不存在已发布前一版本的 Phase 03 不伪造兼容比较结果。

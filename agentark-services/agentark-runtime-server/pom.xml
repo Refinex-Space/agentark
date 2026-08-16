@@ -38,6 +38,19 @@
             <artifactId>agentark-runtime</artifactId>
         </dependency>
 
+        <!-- 在部署单元显式装配 Runtime 所属 MyBatis-Plus、Flyway、事务与数据源能力。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-persistence</artifactId>
+        </dependency>
+
+        <!-- 提供 Runtime Server 连接 MySQL 8.4 的运行时 JDBC 驱动。 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
         <!-- 提供健康、Liveness、Readiness 和 Build Info 管理端点。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

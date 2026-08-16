@@ -192,6 +192,19 @@ Phase 10 新增源码、SQL、Schema 与 OpenAPI 均为 AgentArk 独立实现。
 
 Phase 11 新增源码、SQL 与 Runtime Event Schema 均为 AgentArk 独立实现。Redis 只可加速 Lease/通知，MySQL Event、Work、State、Checkpoint 与 Object Storage Ref 始终是恢复权威；不能把缓存存活误写为 Runtime 可恢复性。
 
-## 12. 变更协议
+## 12. Phase 12 实际处置
+
+| 来源范围 | 分类 | 实际结果 | 明确延后或拒绝 |
+|---|---|---|---|
+| `HarnessAgent` Builder、RuntimeContext、Message | `DEPENDENCY/REFERENCE` | 独立 Provider 将 Snapshot 编译为单 Run Handle，显式注入 Project/Session Context 与 AgentArk State Adapter | 不复制 Core/Harness 源码，不使用无 Context 的已废弃入口 |
+| Typed Event、HITL、Cancel/Resume | `ADAPT/DEPENDENCY` | 逐类映射稳定 Signal，过滤 Thinking，Tool 参数流只保留长度、审批参数只暴露 Hash，按 RuntimeContext 与 Fencing Token 定向取消和恢复 | AgentScope Event/Msg 不进入 API、DB、Domain 或 Application |
+| Agent State/Distributed Backend | `ADAPT/DEPENDENCY` | 经典 AgentStateStore API 适配到 `runtime_agent_state`/Checkpoint Port，保留追加版本、Commit 与 Fencing | 拒绝 `agentscope_sessions`、Provider Auto-DDL、本地 JSON State 和跨 Schema Mapper |
+| Model、MCP、Skill、Workspace、Memory、Sandbox、Permission | `DEPENDENCY/REFERENCE` | 编译为无 Secret/Session 状态 Binding，经受控组件工厂贡献 Builder；Skill 增加 Hash/Size/Media Type 校验 | 厂商 SDK、真实 MCP Client、Skill 执行和生产 Sandbox 不伪造，按 P13/P20 装配与审计 |
+| Knowledge/RAG | `REFERENCE/DEFER` | 固定 Knowledge Revision 与 Retrieval Profile 进入编译计划，自定义检索事件映射为稳定 RAG Signal | AgentScope/Qdrant Retriever 实现延后 P14，禁止 Provider 回读 Control Catalog |
+| 固定源码与 Maven 2.0.2 二进制 | `REFERENCE/DEPENDENCY` | 建立 Compatibility Test 与矩阵，运行实现以发布 JAR 为准 | 不因同版本号假定 API 一致；CAS State 与 `disableTranscript` 差异必须显式处理 |
+
+Phase 12 代码均为 AgentArk 独立防腐实现，只通过 Maven 依赖调用 AgentScope 发布 API；没有迁入上游源码、测试、资源或文件头。Snapshot Profile 内容闭包已补齐，Runtime 无需回读 Control Catalog 即可完成编译。
+
+## 13. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

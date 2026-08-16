@@ -446,7 +446,7 @@ flowchart LR
 | 09 | DONE | 2026-08-16 | `docs/implementation/phase-09-knowledge-metadata.md` | Knowledge 中立领域、V4、Public Contract、Provider Ports、租户隔离与验收已完成 |
 | 10 | DONE | 2026-08-16 | `docs/implementation/phase-10-revision-deployment.md` | Draft、不可变 Revision/Snapshot、Deployment、Internal Contract 与真实 MySQL E2E 已验收 |
 | 11 | DONE | 2026-08-16 | `docs/implementation/phase-11-runtime-domain.md` | 中立领域、状态机、MySQL V2、双 Sequence Event、Fencing、恢复与 Fake Engine 已验收 |
-| 12 | NOT_STARTED | — | `docs/implementation/phase-12-agentscope-adapter.md` | |
+| 12 | DONE | 2026-08-16 | `docs/implementation/phase-12-agentscope-adapter.md` | AgentScope 防腐层、Snapshot Compiler、Event/State 映射、执行引擎与兼容门禁已验收 |
 | 13 | NOT_STARTED | — | `docs/implementation/phase-13-runtime-api.md` | |
 | 14 | NOT_STARTED | — | `docs/implementation/phase-14-knowledge-rag.md` | |
 | 15 | NOT_STARTED | — | `docs/implementation/phase-15-scheduler.md` | |
@@ -2097,82 +2097,82 @@ space.refinex.agentark.runtime.provider.agentscope
 
 #### Capability
 
-- [ ] 建立 Runtime Provider Descriptor；
-- [ ] 声明 Provider Version；
-- [ ] 声明支持 Snapshot Schema；
-- [ ] 声明 Model/Workspace/Sandbox/State Capability；
-- [ ] Control 发布校验可读取 Capability。
+- [x] 建立 Runtime Provider Descriptor；
+- [x] 声明 Provider Version；
+- [x] 声明支持 Snapshot Schema；
+- [x] 声明 Model/Workspace/Sandbox/State Capability；
+- [x] Control 发布校验可读取 Capability。
 
 #### Compiler
 
-- [ ] 验证 Snapshot Schema/Hash/Provider；
-- [ ] 映射 Model；
-- [ ] 映射 System Prompt/Prompt；
-- [ ] 映射 MCP Server/Tool；
-- [ ] 映射 Skill Artifact；
-- [ ] 映射 Knowledge Retriever；
-- [ ] 映射 Memory；
-- [ ] 映射 Workspace；
-- [ ] 映射 Sandbox；
-- [ ] 映射 Permission；
-- [ ] 映射 Sub-Agent/Team 基础；
-- [ ] 解析 SecretRef；
-- [ ] 生成 `RuntimeHandle`；
-- [ ] 记录 `compilerVersion`；
-- [ ] 结构化编译错误。
+- [x] 验证 Snapshot Schema/Hash/Provider；
+- [x] 映射 Model；
+- [x] 映射 System Prompt/Prompt；
+- [x] 映射 MCP Server/Tool；
+- [x] 映射 Skill Artifact；
+- [x] 映射 Knowledge Retriever；
+- [x] 映射 Memory；
+- [x] 映射 Workspace；
+- [x] 映射 Sandbox；
+- [x] 映射 Permission；
+- [x] 映射 Sub-Agent/Team 基础；
+- [x] 解析 SecretRef；
+- [x] 生成 `RuntimeHandle`；
+- [x] 记录 `compilerVersion`；
+- [x] 结构化编译错误。
 
 #### Cache
 
-- [ ] Cache Key 为 Provider + Schema + Snapshot Hash + Compiler Version；
-- [ ] 不缓存 Session 可变状态；
-- [ ] Secret 值不进入 Redis/磁盘缓存；
-- [ ] 可重用和不可重用组件明确；
-- [ ] Cache 可丢失重建；
-- [ ] 并发编译使用 Single Flight。
+- [x] Cache Key 为 Provider + Schema + Snapshot Hash + Compiler Version；
+- [x] 不缓存 Session 可变状态；
+- [x] Secret 值不进入 Redis/磁盘缓存；
+- [x] 可重用和不可重用组件明确；
+- [x] Cache 可丢失重建；
+- [x] 并发编译使用 Single Flight。
 
 #### Engine
 
-- [ ] 实现 `AgentExecutionEngine`；
-- [ ] 构造 `RuntimeContext`；
-- [ ] 输入 Message 转换；
-- [ ] `streamEvents` 订阅；
-- [ ] Cancel；
-- [ ] Approval Resume；
-- [ ] 仅通过 `agentark-runtime` 的 AgentState/Checkpoint Port 关联状态；
-- [ ] 禁用 AgentScope Store Auto-DDL，不直接依赖 MyBatis、DataSource 或 Runtime Mapper；
-- [ ] Reactor 背压与资源关闭；
-- [ ] AgentScope Error 分类。
+- [x] 实现 `AgentExecutionEngine`；
+- [x] 构造 `RuntimeContext`；
+- [x] 输入 Message 转换；
+- [x] `streamEvents` 订阅；
+- [x] Cancel；
+- [x] Approval Resume；
+- [x] 仅通过 `agentark-runtime` 的 AgentState/Checkpoint Port 关联状态；
+- [x] 禁用 AgentScope Store Auto-DDL，不直接依赖 MyBatis、DataSource 或 Runtime Mapper；
+- [x] Reactor 背压与资源关闭；
+- [x] AgentScope Error 分类。
 
 #### Event Mapping
 
-- [ ] AgentScope Typed Event → AgentArk Event；
-- [ ] Text Delta；
-- [ ] Model Call；
-- [ ] Tool/MCP；
-- [ ] RAG；
-- [ ] Approval；
-- [ ] Result/Failure；
-- [ ] 未知 Event 的前向兼容策略；
-- [ ] 不直接序列化 AgentScope Event；
-- [ ] 不暴露隐藏推理链。
+- [x] AgentScope Typed Event → AgentArk Event；
+- [x] Text Delta；
+- [x] Model Call；
+- [x] Tool/MCP；
+- [x] RAG；
+- [x] Approval；
+- [x] Result/Failure；
+- [x] 未知 Event 的前向兼容策略；
+- [x] 不直接序列化 AgentScope Event；
+- [x] 不暴露隐藏推理链。
 
 ### 测试
 
-- [ ] Golden Snapshot → 编译成功；
-- [ ] 不兼容 Schema/Provider；
-- [ ] 缺失 Secret；
-- [ ] Model Capability 不匹配；
-- [ ] MCP Tool 冲突；
-- [ ] Skill Hash 错误；
-- [ ] Fake Model Streaming；
-- [ ] Fake MCP；
-- [ ] Permission/HITL；
-- [ ] State Recovery；
-- [ ] Event Mapping Golden；
-- [ ] 多 Session 并发状态隔离；
-- [ ] Cache 不泄漏状态/Secret；
-- [ ] AgentScope 依赖升级检测。
-- [ ] 上游 `agentscope_sessions` 兼容行为对照，但生产 Schema 只使用 `runtime_agent_state`。
+- [x] Golden Snapshot → 编译成功；
+- [x] 不兼容 Schema/Provider；
+- [x] 缺失 Secret；
+- [x] Model Capability 不匹配；
+- [x] MCP Tool 冲突；
+- [x] Skill Hash 错误；
+- [x] Fake Model Streaming；
+- [x] Fake MCP；
+- [x] Permission/HITL；
+- [x] State Recovery；
+- [x] Event Mapping Golden；
+- [x] 多 Session 并发状态隔离；
+- [x] Cache 不泄漏状态/Secret；
+- [x] AgentScope 依赖升级检测。
+- [x] 上游 `agentscope_sessions` 兼容行为对照，但生产 Schema 只使用 `runtime_agent_state`。
 
 ### 产物
 
@@ -2187,17 +2187,17 @@ docs/implementation/phase-12-agentscope-adapter.md
 
 ### 验收条件
 
-- [ ] 除指定 Adapter 外无 AgentScope Import；
-- [ ] Snapshot 可以完全独立编译；
-- [ ] Compiler 不查询 Control Catalog；
-- [ ] Secret 只按需解析且不持久化；
-- [ ] 多 Session 不共享可变状态；
-- [ ] AgentScope Event 不泄漏到 API/DB；
-- [ ] 未知 Event 不导致整个流崩溃；
-- [ ] Cancel/Resume/Recovery 测试通过；
-- [ ] AgentScope 升级影响被限制在 Adapter/测试；
-- [ ] Provider 模块不依赖 Control、Persistence Starter、Mapper 或 `*-server`；
-- [ ] 与上游 Dataplane 关键行为基线对照通过。
+- [x] 除指定 Adapter 外无 AgentScope Import；
+- [x] Snapshot 可以完全独立编译；
+- [x] Compiler 不查询 Control Catalog；
+- [x] Secret 只按需解析且不持久化；
+- [x] 多 Session 不共享可变状态；
+- [x] AgentScope Event 不泄漏到 API/DB；
+- [x] 未知 Event 不导致整个流崩溃；
+- [x] Cancel/Resume/Recovery 测试通过；
+- [x] AgentScope 升级影响被限制在 Adapter/测试；
+- [x] Provider 模块不依赖 Control、Persistence Starter、Mapper 或 `*-server`；
+- [x] 与上游 Dataplane 关键行为基线对照通过。
 
 ### 验收命令
 

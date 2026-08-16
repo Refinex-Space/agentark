@@ -74,27 +74,33 @@ public final class CanonicalSnapshotSerializer {
             root.put("contentHash", snapshot.contentHash().toString());
         }
         root.put("runtimeProvider", snapshot.runtimeProvider().value());
-        root.put("agent", Map.of(
-            "name", snapshot.agent().name(),
-            "entrypoint", snapshot.agent().entrypoint().name().toLowerCase(java.util.Locale.ROOT),
-            "requiredCapabilities", snapshot.agent().requiredCapabilities()));
+        root.put("agent", agent(snapshot.agent()));
         root.put("model", model(snapshot.model()));
         root.put("prompts", snapshot.prompts().stream().map(this::prompt).toList());
         root.put("mcpServers", snapshot.mcpServers().stream().map(this::mcp).toList());
         root.put("skills", snapshot.skills().stream().map(this::skill).toList());
         root.put("knowledge", snapshot.knowledge().stream().map(this::knowledge).toList());
-        root.put("memory", Map.of(
-            "profileVersionId", snapshot.memory().profileVersionId().asString()));
-        root.put("workspace", Map.of(
-            "profileVersionId", snapshot.workspace().profileVersionId().asString()));
-        root.put("sandbox", Map.of(
-            "profileVersionId", snapshot.sandbox().profileVersionId().asString()));
+        root.put("memory", profile(
+            snapshot.memory().profileVersionId().asString(), snapshot.memory().configuration()));
+        root.put("workspace", profile(
+            snapshot.workspace().profileVersionId().asString(), snapshot.workspace().configuration()));
+        root.put("sandbox", profile(
+            snapshot.sandbox().profileVersionId().asString(), snapshot.sandbox().configuration()));
         root.put("permissions", permission(snapshot.permissions()));
-        root.put("limits", Map.of(
-            "turnTimeoutSeconds", snapshot.limits().turnTimeout().toSeconds(),
-            "maxToolCalls", snapshot.limits().maxToolCalls(),
-            "maxSubAgents", snapshot.limits().maxSubAgents()));
+        root.put("limits", limits(snapshot.limits()));
         return root;
+    }
+
+    /**
+     * @param agent Agent 规范
+     * @return 固定字段顺序的 Agent 契约字段
+     */
+    private Map<String, Object> agent(AgentSpec agent) {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("name", agent.name());
+        value.put("entrypoint", agent.entrypoint().name().toLowerCase(java.util.Locale.ROOT));
+        value.put("requiredCapabilities", agent.requiredCapabilities());
+        return value;
     }
 
     /**
@@ -104,9 +110,10 @@ public final class CanonicalSnapshotSerializer {
         Map<String, Object> value = new LinkedHashMap<>();
         value.put("provider", model.provider());
         value.put("modelName", model.modelName());
-        value.put("parameters", Map.of(
-            "temperature", model.parameters().temperature(),
-            "maxTokens", model.parameters().maxTokens()));
+        Map<String, Object> parameters = new LinkedHashMap<>();
+        parameters.put("temperature", model.parameters().temperature());
+        parameters.put("maxTokens", model.parameters().maxTokens());
+        value.put("parameters", parameters);
         value.put("credential", credential(model.credential()));
         return value;
     }
@@ -143,25 +150,29 @@ public final class CanonicalSnapshotSerializer {
      * @param skill Skill 规范 @return Skill 契约字段
      */
     private Map<String, Object> skill(SkillSpec skill) {
-        return Map.of(
-            "skillVersionId", skill.skillVersionId().asString(),
-            "artifact", Map.of(
-                "uri", skill.artifact().uri().toString(),
-                "checksum", skill.artifact().checksum().toString(),
-                "size", skill.artifact().size(),
-                "mediaType", skill.artifact().mediaType()));
+        Map<String, Object> artifact = new LinkedHashMap<>();
+        artifact.put("uri", skill.artifact().uri().toString());
+        artifact.put("checksum", skill.artifact().checksum().toString());
+        artifact.put("size", skill.artifact().size());
+        artifact.put("mediaType", skill.artifact().mediaType());
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("skillVersionId", skill.skillVersionId().asString());
+        value.put("artifact", artifact);
+        return value;
     }
 
     /**
      * @param knowledge Knowledge 规范 @return Knowledge 契约字段
      */
     private Map<String, Object> knowledge(KnowledgeSpec knowledge) {
-        return Map.of(
-            "knowledgeRevisionId", knowledge.knowledgeRevisionId().asString(),
-            "retrievalProfile", Map.of(
-                "topK", knowledge.retrievalProfile().topK(),
-                "scoreThreshold", knowledge.retrievalProfile().scoreThreshold(),
-                "reranker", knowledge.retrievalProfile().reranker()));
+        Map<String, Object> retrievalProfile = new LinkedHashMap<>();
+        retrievalProfile.put("topK", knowledge.retrievalProfile().topK());
+        retrievalProfile.put("scoreThreshold", knowledge.retrievalProfile().scoreThreshold());
+        retrievalProfile.put("reranker", knowledge.retrievalProfile().reranker());
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("knowledgeRevisionId", knowledge.knowledgeRevisionId().asString());
+        value.put("retrievalProfile", retrievalProfile);
+        return value;
     }
 
     /**
@@ -169,19 +180,82 @@ public final class CanonicalSnapshotSerializer {
      */
     private Map<String, Object> permission(PermissionSpec permission) {
         List<Map<String, Object>> rules = permission.rules().stream()
-            .map(rule -> Map.<String, Object>of(
-                "resource", rule.resource(), "decision", rule.decision().name()))
+            .map(rule -> {
+                Map<String, Object> value = new LinkedHashMap<>();
+                value.put("resource", rule.resource());
+                value.put("decision", rule.decision().name());
+                return value;
+            })
             .toList();
-        return Map.of("defaultDecision", permission.defaultDecision().name(), "rules", rules);
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("defaultDecision", permission.defaultDecision().name());
+        value.put("rules", rules);
+        return value;
+    }
+
+    /**
+     * @param profileVersionId Profile 版本标识
+     * @param configuration    发布时冻结的配置
+     * @return 可独立编译的 Profile 契约字段
+     */
+    private Map<String, Object> profile(
+        String profileVersionId, Map<String, Object> configuration) {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("profileVersionId", profileVersionId);
+        value.put("configuration", canonicalObject(configuration));
+        return value;
+    }
+
+    /**
+     * @param limits Runtime 资源限制
+     * @return 固定字段顺序的限制契约字段
+     */
+    private Map<String, Object> limits(RuntimeLimits limits) {
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("turnTimeoutSeconds", limits.turnTimeout().toSeconds());
+        value.put("maxToolCalls", limits.maxToolCalls());
+        value.put("maxSubAgents", limits.maxSubAgents());
+        return value;
     }
 
     /**
      * @param credential 凭据规范 @return 只含 SecretRef 的契约字段
      */
     private Map<String, Object> credential(CredentialSpec credential) {
-        return Map.of(
-            "secretRef", credential.secretRef().toString(),
-            "resolutionPolicy", credential.resolutionPolicy().name());
+        Map<String, Object> value = new LinkedHashMap<>();
+        value.put("secretRef", credential.secretRef().toString());
+        value.put("resolutionPolicy", credential.resolutionPolicy().name());
+        return value;
+    }
+
+    /**
+     * 递归按键名规范化开放配置对象，避免 Map 实现差异改变 Snapshot Hash。
+     *
+     * @param source 待规范化配置对象
+     * @return 深层规范化配置对象
+     */
+    private Map<String, Object> canonicalObject(Map<String, Object> source) {
+        Map<String, Object> value = new LinkedHashMap<>();
+        source.entrySet().stream().sorted(Map.Entry.comparingByKey())
+            .forEach(entry -> value.put(entry.getKey(), canonicalValue(entry.getValue())));
+        return value;
+    }
+
+    /**
+     * 递归规范化开放 JSON 值，同时保留数组的业务顺序。
+     *
+     * @param source 待规范化 JSON 值
+     * @return 规范化 JSON 值
+     */
+    @SuppressWarnings("unchecked")
+    private Object canonicalValue(Object source) {
+        if (source instanceof Map<?, ?> map) {
+            return canonicalObject((Map<String, Object>) map);
+        }
+        if (source instanceof List<?> list) {
+            return list.stream().map(this::canonicalValue).toList();
+        }
+        return source;
     }
 
     /**

@@ -11,7 +11,7 @@
 
     <artifactId>agentark-runtime-provider-agentscope</artifactId>
     <name>AgentArk Runtime Provider AgentScope</name>
-    <description>隔离 AgentScope 依赖的 Runtime Provider 适配器，计划在 Phase 12 开始实现</description>
+    <description>将 AgentArk 不可变 Snapshot 编译为 AgentScope Java 2 Harness 执行时</description>
 
     <dependencyManagement>
         <dependencies>
@@ -27,6 +27,12 @@
     </dependencyManagement>
 
     <dependencies>
+        <!-- 复用供应商中立的 Runtime 执行、状态、Checkpoint 与命令端口。 -->
+        <dependency>
+            <groupId>space.refinex.agentark</groupId>
+            <artifactId>agentark-runtime</artifactId>
+        </dependency>
+
         <!-- 提供 AgentScope Message、Agent 与 Runtime 基础能力，仅允许在 Provider 边界使用。 -->
         <dependency>
             <groupId>io.agentscope</groupId>
@@ -37,6 +43,13 @@
         <dependency>
             <groupId>io.agentscope</groupId>
             <artifactId>agentscope-harness</artifactId>
+        </dependency>
+
+        <!-- 提供 Provider 编译、事件映射、缓存与并发隔离测试基础。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>

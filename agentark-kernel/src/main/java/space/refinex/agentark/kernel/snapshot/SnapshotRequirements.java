@@ -16,8 +16,9 @@
 
 package space.refinex.agentark.kernel.snapshot;
 
-import java.util.List;
-import java.util.Objects;
+import java.math.BigDecimal;
+import java.math.BigInteger;
+import java.util.*;
 import java.util.regex.Pattern;
 
 /**
@@ -84,5 +85,62 @@ final class SnapshotRequirements {
             throw new IllegalArgumentException(field + " must not contain null elements");
         }
         return List.copyOf(values);
+    }
+
+    /**
+     * 校验配置对象只包含语言中立 JSON 值，并按输入顺序创建深层不可变副本。
+     *
+     * @param values 待复制的配置对象
+     * @param field  写入异常上下文的字段名
+     * @return 深层不可变配置对象
+     * @throws NullPointerException     当配置对象为 {@code null} 时抛出
+     * @throws IllegalArgumentException 当键为空、值为 {@code null} 或包含非 JSON 类型时抛出
+     */
+    static Map<String, Object> immutableJsonObject(Map<String, Object> values, String field) {
+        Objects.requireNonNull(values, field + " must not be null");
+        Map<String, Object> copy = new LinkedHashMap<>();
+        values.forEach((key, value) -> {
+            if (key == null || key.isBlank()) {
+                throw new IllegalArgumentException(field + " must not contain blank keys");
+            }
+            copy.put(key, immutableJsonValue(value, field + "." + key));
+        });
+        return Collections.unmodifiableMap(copy);
+    }
+
+    /**
+     * 将单个 JSON 值递归转换为不可变值。
+     *
+     * @param value 待复制值
+     * @param field 写入异常上下文的字段名
+     * @return 不可变 JSON 值
+     */
+    private static Object immutableJsonValue(Object value, String field) {
+        if ((value instanceof Double doubleValue && !Double.isFinite(doubleValue))
+            || (value instanceof Float floatValue && !Float.isFinite(floatValue))) {
+            throw new IllegalArgumentException(field + " must contain a finite JSON number");
+        }
+        if (value instanceof String || value instanceof Boolean || value instanceof Integer
+            || value instanceof Long || value instanceof Short || value instanceof Byte
+            || value instanceof BigInteger || value instanceof BigDecimal
+            || value instanceof Double || value instanceof Float) {
+            return value;
+        }
+        if (value instanceof Map<?, ?> map) {
+            Map<String, Object> typed = new LinkedHashMap<>();
+            map.forEach((key, nested) -> {
+                if (!(key instanceof String text)) {
+                    throw new IllegalArgumentException(field + " must contain string keys");
+                }
+                typed.put(text, nested);
+            });
+            return immutableJsonObject(typed, field);
+        }
+        if (value instanceof List<?> list) {
+            return Collections.unmodifiableList(list.stream()
+                .map(item -> immutableJsonValue(item, field + "[]"))
+                .toList());
+        }
+        throw new IllegalArgumentException(field + " contains a non-JSON value");
     }
 }

@@ -86,9 +86,9 @@ class CanonicalSnapshotSerializerTest {
             List.of(new PromptSpec(
                 PromptRole.SYSTEM, PromptVersionId.generate(), Checksum.sha256("Review."), "Review.")),
             List.of(), List.of(), List.of(),
-            new MemorySpec(MemoryProfileVersionId.generate()),
-            new WorkspaceSpec(WorkspaceProfileVersionId.generate()),
-            new SandboxSpec(SandboxProfileVersionId.generate()),
+            new MemorySpec(MemoryProfileVersionId.generate(), Map.of("strategy", "session")),
+            new WorkspaceSpec(WorkspaceProfileVersionId.generate(), Map.of("mode", "isolated")),
+            new SandboxSpec(SandboxProfileVersionId.generate(), Map.of("network", "deny")),
             new PermissionSpec(PermissionDecision.DENY, List.of()),
             new RuntimeLimits(Duration.ofMinutes(5), 10, 2));
     }

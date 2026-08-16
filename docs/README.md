@@ -25,6 +25,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 09 执行证据 | [Knowledge 元数据与 Provider Ports](implementation/phase-09-knowledge-metadata.md) | 复核中立 Knowledge 领域、不可变版本、状态机、V4、Public API、Ports 与租户隔离 |
 | Phase 10 执行证据 | [Agent Revision 与 Deployment](implementation/phase-10-revision-deployment.md) | 复核 Draft、发布事务、不可变 Snapshot、V5、Deployment 指针和 Runtime Internal Contract |
 | Phase 11 执行证据 | [Runtime 中立领域](implementation/phase-11-runtime-domain.md) | 复核状态机、持久 Work Queue、双层 Event Sequence、Fencing、V2、Fake Engine 与 MySQL 恢复 |
+| Phase 12 执行证据 | [AgentScope 防腐层](implementation/phase-12-agentscope-adapter.md) | 复核 Snapshot Compiler、Provider Descriptor、Event/State 防腐、Secret 生命周期、执行引擎与测试边界 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |
@@ -46,6 +47,7 @@ referenced_by: AGENTS.md#knowledge-map
 | 上游迁移审计 | [源码清单](migration/source-inventory.md) | 定位 Service/Core/Harness/Extensions/Frontend 的具体来源 |
 | 迁移分类 | [迁移清单](migration/migration-manifest.md) | 决定候选路径的取用类型、目标模块和明确拒绝项 |
 | 上游行为 | [行为基线](migration/behavior-baseline.md) | 实现或验收 Gateway、Runtime、Scheduler、HITL、SSE 等关键行为 |
+| AgentScope 兼容性 | [AgentScope 兼容矩阵](migration/agentscope-compatibility-matrix.md) | 修改 AgentScope 版本、Builder、Event、State、HITL 或 Provider Adapter |
 | JPA 语义迁移 | [JPA 到 MyBatis-Plus](migration/jpa-to-mybatis-plus.md) | 实现 Repository、事务、分页、乐观锁、唯一约束或 Tenant 防御 |
 | PostgreSQL 风险 | [PostgreSQL 到 MySQL](migration/postgresql-to-mysql.md) | 迁移类型、SQL、索引、锁、DDL 或上游数据 |
 | 机械迁入证据 | [机械迁入报告](migration/mechanical-import-report.md) | 复核 AgentScope Service 机械基线、文件 Hash、许可补证和原始测试结果 |

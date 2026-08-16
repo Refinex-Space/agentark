@@ -65,9 +65,9 @@
       "maxItems": 1000,
       "items": { "$ref": "#/$defs/knowledge" }
     },
-    "memory": { "description": "冻结的 Memory Profile 版本引用。", "$ref": "#/$defs/profile" },
-    "workspace": { "description": "冻结的 Workspace Profile 版本引用。", "$ref": "#/$defs/profile" },
-    "sandbox": { "description": "冻结的 Sandbox Profile 版本引用。", "$ref": "#/$defs/profile" },
+    "memory": { "description": "冻结的 Memory Profile 版本与完整运行配置。", "$ref": "#/$defs/profile" },
+    "workspace": { "description": "冻结的 Workspace Profile 版本与完整运行配置。", "$ref": "#/$defs/profile" },
+    "sandbox": { "description": "冻结的 Sandbox Profile 版本与完整运行配置。", "$ref": "#/$defs/profile" },
     "permissions": { "description": "运行时默认权限决策与覆盖规则。", "$ref": "#/$defs/permissions" },
     "limits": { "description": "单次运行的超时、工具调用和子 Agent 上限。", "$ref": "#/$defs/limits" }
   },
@@ -256,13 +256,41 @@
       }
     },
     "profile": {
-      "description": "Memory、Workspace 或 Sandbox 的不可变 Profile 版本引用。",
+      "description": "Memory、Workspace 或 Sandbox 的不可变 Profile 版本与运行配置。",
       "type": "object",
       "additionalProperties": false,
-      "required": ["profileVersionId"],
+      "required": ["profileVersionId", "configuration"],
       "properties": {
-        "profileVersionId": { "description": "目标 Profile 的不可变版本标识。", "$ref": "#/$defs/uuidV7" }
+        "profileVersionId": { "description": "目标 Profile 的不可变版本标识。", "$ref": "#/$defs/uuidV7" },
+        "configuration": {
+          "description": "发布时冻结且不含 Secret 明文的供应商中立配置。",
+          "type": "object",
+          "maxProperties": 1000,
+          "propertyNames": { "description": "配置键不能为空白。", "type": "string", "pattern": "\\S" },
+          "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+        }
       }
+    },
+    "jsonValue": {
+      "description": "禁止 null 的语言中立 JSON 配置值。",
+      "oneOf": [
+        { "description": "JSON 文本值。", "type": "string" },
+        { "description": "有限 JSON 数值。", "type": "number" },
+        { "description": "JSON 布尔值。", "type": "boolean" },
+        {
+          "description": "按业务顺序保留的 JSON 数组。",
+          "type": "array",
+          "maxItems": 10000,
+          "items": { "$ref": "#/$defs/jsonValue" }
+        },
+        {
+          "description": "递归 JSON 对象。",
+          "type": "object",
+          "maxProperties": 1000,
+          "propertyNames": { "description": "配置键不能为空白。", "type": "string", "pattern": "\\S" },
+          "additionalProperties": { "$ref": "#/$defs/jsonValue" }
+        }
+      ]
     },
     "permissions": {
       "description": "未命中规则时的默认权限决策和有序覆盖规则。",

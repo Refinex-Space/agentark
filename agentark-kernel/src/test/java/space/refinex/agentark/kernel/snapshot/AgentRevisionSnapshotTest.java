@@ -25,6 +25,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import space.refinex.agentark.kernel.id.PromptVersionId;
 import space.refinex.agentark.kernel.ref.Checksum;
@@ -85,6 +86,18 @@ class AgentRevisionSnapshotTest {
                     PromptVersionId.generate(),
                     Checksum.sha256("different"),
                     "Review this change."))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  /** 验证 Profile 开放配置拒绝 JSON 无法表示的非有限浮点数。 */
+  @Test
+  void profileConfigurationRejectsNonFiniteNumbers() {
+    var profileVersionId = SnapshotFixtures.validSnapshot().memory().profileVersionId();
+
+    assertThatThrownBy(() -> new MemorySpec(profileVersionId, Map.of("ratio", Double.NaN)))
+        .isInstanceOf(IllegalArgumentException.class);
+    assertThatThrownBy(
+            () -> new MemorySpec(profileVersionId, Map.of("ratio", Float.POSITIVE_INFINITY)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

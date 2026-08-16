@@ -384,6 +384,24 @@ public final class RuntimeModels {
     }
 
     /**
+     * @param type    Provider Adapter 转换后的稳定事件类型
+     * @param payload 不含 Provider 对象、Secret 或隐藏推理的语言中立载荷
+     * @author refinex
+     */
+    public record ExecutionSignal(String type, RuntimePayload payload) {
+
+        /**
+         * 校验执行信号类型和载荷完整。
+         */
+        public ExecutionSignal {
+            Objects.requireNonNull(payload, "payload must not be null");
+            if (type == null || !type.matches("[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)+")) {
+                throw new IllegalArgumentException("execution signal type is invalid");
+            }
+        }
+    }
+
+    /**
      * @param id                  Session 标识
      * @param organizationId      所属组织
      * @param projectId           所属项目

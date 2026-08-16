@@ -1,0 +1,20 @@
+{
+  "runtimeProvider": "agentscope-java-2",
+  "providerVersion": "2.0.2",
+  "compilerVersion": "1.0.0",
+  "supportedSnapshotSchemas": [1],
+  "capabilities": [
+    "streaming",
+    "tool-calling",
+    "structured-output",
+    "mcp",
+    "skill",
+    "knowledge",
+    "memory",
+    "workspace",
+    "sandbox",
+    "state",
+    "permission",
+    "sub-agent"
+  ]
+}
