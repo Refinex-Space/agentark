@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 定义 Phase 07 可授予权限的唯一代码注册表，并提供内置角色权限集合。
+ * 定义 Control 可授予权限的唯一代码注册表，并提供内置角色权限集合。
  *
  * @author refinex
  */
@@ -101,6 +101,26 @@ public final class PermissionRegistry {
     public static final String API_KEY_MANAGE = "api_key:manage";
 
     /**
+     * 允许读取项目 AI 资产目录和不可变版本。
+     */
+    public static final String CATALOG_READ = "catalog:read";
+
+    /**
+     * 允许创建、归档 AI 资产并追加不可变版本。
+     */
+    public static final String CATALOG_MANAGE = "catalog:manage";
+
+    /**
+     * 允许读取 Secret 非敏感元数据和环境绑定。
+     */
+    public static final String SECRET_READ = "secret:read";
+
+    /**
+     * 允许管理 Secret 元数据和环境绑定，但不能读取 Secret 值。
+     */
+    public static final String SECRET_MANAGE = "secret:manage";
+
+    /**
      * 按固定顺序保存所有注册权限，便于 Flyway 和 OpenAPI 对齐校验。
      */
     private static final Map<String, Definition> DEFINITIONS = definitions();
@@ -125,7 +145,11 @@ public final class PermissionRegistry {
         SERVICE_ACCOUNT_READ,
         SERVICE_ACCOUNT_MANAGE,
         API_KEY_READ,
-        API_KEY_MANAGE);
+        API_KEY_MANAGE,
+        CATALOG_READ,
+        CATALOG_MANAGE,
+        SECRET_READ,
+        SECRET_MANAGE);
 
     /**
      * 项目开发者拥有的非授权管理权限。
@@ -135,7 +159,9 @@ public final class PermissionRegistry {
         PROJECT_READ,
         ENVIRONMENT_READ,
         SERVICE_ACCOUNT_READ,
-        API_KEY_READ);
+        API_KEY_READ,
+        CATALOG_READ,
+        CATALOG_MANAGE);
 
     /**
      * 项目只读角色拥有的最低读取权限。
@@ -147,7 +173,8 @@ public final class PermissionRegistry {
         MEMBERSHIP_READ,
         ROLE_READ,
         SERVICE_ACCOUNT_READ,
-        API_KEY_READ);
+        API_KEY_READ,
+        CATALOG_READ);
 
     /**
      * 禁止实例化静态权限注册表。
@@ -233,12 +260,14 @@ public final class PermissionRegistry {
         values.put(MEMBERSHIP_MANAGE, new Definition("管理成员关系", PermissionRiskLevel.HIGH));
         values.put(ROLE_READ, new Definition("读取角色", PermissionRiskLevel.LOW));
         values.put(ROLE_MANAGE, new Definition("管理角色和绑定", PermissionRiskLevel.HIGH));
-        values.put(
-            SERVICE_ACCOUNT_READ, new Definition("读取服务账号", PermissionRiskLevel.LOW));
-        values.put(
-            SERVICE_ACCOUNT_MANAGE, new Definition("管理服务账号", PermissionRiskLevel.HIGH));
+        values.put(SERVICE_ACCOUNT_READ, new Definition("读取服务账号", PermissionRiskLevel.LOW));
+        values.put(SERVICE_ACCOUNT_MANAGE, new Definition("管理服务账号", PermissionRiskLevel.HIGH));
         values.put(API_KEY_READ, new Definition("读取 API Key 元数据", PermissionRiskLevel.MEDIUM));
         values.put(API_KEY_MANAGE, new Definition("管理 API Key", PermissionRiskLevel.HIGH));
+        values.put(CATALOG_READ, new Definition("读取 AI 资产目录", PermissionRiskLevel.LOW));
+        values.put(CATALOG_MANAGE, new Definition("管理 AI 资产目录", PermissionRiskLevel.HIGH));
+        values.put(SECRET_READ, new Definition("读取 Secret 非敏感元数据", PermissionRiskLevel.MEDIUM));
+        values.put(SECRET_MANAGE, new Definition("管理 Secret 元数据与环境绑定", PermissionRiskLevel.HIGH));
         return Collections.unmodifiableMap(new LinkedHashMap<>(values));
     }
 

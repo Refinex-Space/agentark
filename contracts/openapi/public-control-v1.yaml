@@ -14,7 +14,7 @@ info:
     identifier: Apache-2.0
 # 固定所有内联 Schema 使用 JSON Schema Draft 2020-12 方言。
 jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
-# Phase 07 只声明已经由 IAM Controller 实现的公开端点。
+# Phase 08 声明已经由 IAM、Catalog 与 Secret Controller 实现的公开端点。
 paths:
   # Organization 集合端点。
   /api/v1/organizations:
@@ -510,6 +510,423 @@ paths:
         "404": { $ref: "#/components/responses/ProblemResponse" }
         # 乐观锁冲突响应。
         "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 项目 AI 资产集合端点；assetKind 为固定分类而不是数据库表名。
+  /api/v1/projects/{projectId}/catalog/{assetKind}:
+    # 项目、分类和游标参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # 资产分类。
+      - { $ref: "#/components/parameters/AssetKind" }
+    # 游标列出当前项目资产。
+    get:
+      # 稳定操作标识。
+      operationId: listCatalogAssets
+      # Catalog 功能分组。
+      tags: [Catalog]
+      # 可选游标参数。
+      parameters:
+        # 不透明游标。
+        - { $ref: "#/components/parameters/Cursor" }
+        # 页大小。
+        - { $ref: "#/components/parameters/Limit" }
+      # 查询结果。
+      responses:
+        # 资产游标页。
+        "200":
+          # 成功说明。
+          description: AI 资产游标页
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 资产页契约。
+              schema: { $ref: "#/components/schemas/CursorPageCatalogAsset" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 资源不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建稳定资产身份。
+    post:
+      # 稳定操作标识。
+      operationId: createCatalogAsset
+      # Catalog 功能分组。
+      tags: [Catalog]
+      # 创建请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 创建资产契约。
+            schema: { $ref: "#/components/schemas/CreateCatalogAssetRequest" }
+      # 创建结果。
+      responses:
+        # 创建成功。
+        "201":
+          # 成功说明。
+          description: AI 资产稳定身份已创建
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 资产响应。
+              schema: { $ref: "#/components/schemas/CatalogAsset" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 单个资产不可变版本集合端点。
+  /api/v1/projects/{projectId}/catalog/{assetKind}/{assetId}/versions:
+    # 复用路径参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # 资产分类。
+      - { $ref: "#/components/parameters/AssetKind" }
+      # 稳定资产标识。
+      - { $ref: "#/components/parameters/AssetId" }
+    # 游标列出版本。
+    get:
+      # 稳定操作标识。
+      operationId: listCatalogVersions
+      # Catalog 功能分组。
+      tags: [Catalog]
+      # 可选分页参数。
+      parameters:
+        # 不透明游标。
+        - { $ref: "#/components/parameters/Cursor" }
+        # 页大小。
+        - { $ref: "#/components/parameters/Limit" }
+      # 查询结果。
+      responses:
+        # 版本游标页。
+        "200":
+          # 成功说明。
+          description: 不可变版本游标页
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 版本页契约。
+              schema: { $ref: "#/components/schemas/CursorPageCatalogVersion" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 只追加新版本。
+    post:
+      # 稳定操作标识。
+      operationId: createCatalogVersion
+      # Catalog 功能分组。
+      tags: [Catalog]
+      # 版本请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 版本创建契约。
+            schema: { $ref: "#/components/schemas/CreateCatalogVersionRequest" }
+      # 创建结果。
+      responses:
+        # 创建成功。
+        "201":
+          # 成功说明。
+          description: 不可变版本已追加
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 版本响应。
+              schema: { $ref: "#/components/schemas/CatalogVersion" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 引用或 Owner 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 唯一版本或 Hash 冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 不回显值的版本 Diff 端点。
+  /api/v1/projects/{projectId}/catalog/{assetKind}/{assetId}/versions:diff:
+    # 复用路径参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # 资产分类。
+      - { $ref: "#/components/parameters/AssetKind" }
+      # 稳定资产标识。
+      - { $ref: "#/components/parameters/AssetId" }
+    # 比较两个不可变版本。
+    get:
+      # 稳定操作标识。
+      operationId: diffCatalogVersions
+      # Catalog 功能分组。
+      tags: [Catalog]
+      # 版本标识参数。
+      parameters:
+        # 基准版本。
+        - { name: baseVersionId, in: query, required: true, schema: { $ref: "#/components/schemas/UuidV7" } }
+        # 目标版本。
+        - { name: targetVersionId, in: query, required: true, schema: { $ref: "#/components/schemas/UuidV7" } }
+      # Diff 响应。
+      responses:
+        # 变化路径。
+        "200":
+          # 成功说明。
+          description: 版本变化 JSON Pointer
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Diff 契约。
+              schema: { $ref: "#/components/schemas/CatalogVersionDiff" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 版本不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # 稳定资产归档端点，不物理删除版本。
+  /api/v1/projects/{projectId}/catalog/{assetKind}/{assetId}/archive:
+    # 复用路径参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # 资产分类。
+      - { $ref: "#/components/parameters/AssetKind" }
+      # 稳定资产标识。
+      - { $ref: "#/components/parameters/AssetId" }
+    # 乐观锁归档稳定身份。
+    post:
+      # 稳定操作标识。
+      operationId: archiveCatalogAsset
+      # Catalog 功能分组。
+      tags: [Catalog]
+      # 归档请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 乐观锁契约。
+            schema: { $ref: "#/components/schemas/ArchiveCatalogAssetRequest" }
+      # 归档结果。
+      responses:
+        # 归档成功。
+        "204": { description: 稳定资产身份已归档，历史版本保留 }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 乐观锁冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Skill Artifact 受控上传端点。
+  /api/v1/projects/{projectId}/skill-artifacts:
+    # 复用项目参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 上传但不执行 Skill Artifact。
+    post:
+      # 稳定操作标识。
+      operationId: uploadSkillArtifact
+      # Catalog 功能分组。
+      tags: [Catalog]
+      # Multipart 请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 Multipart 类型。
+          multipart/form-data:
+            # 文件与可选校验和。
+            schema:
+              # Multipart 对象。
+              type: object
+              # 文件不可省略。
+              required: [file]
+              # Multipart 属性。
+              properties:
+                # 二进制 Artifact。
+                file: { type: string, format: binary }
+                # 可选预期 SHA-256。
+                checksum: { type: string, pattern: "^sha256:[0-9a-f]{64}$" }
+      # 上传结果。
+      responses:
+        # 上传成功。
+        "201":
+          # 成功说明。
+          description: Artifact 已写入 Object Store
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # ObjectRef 契约。
+              schema: { $ref: "#/components/schemas/ObjectRef" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # Object Store 冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Secret 非敏感 Metadata 集合端点。
+  /api/v1/projects/{projectId}/secrets:
+    # 复用项目参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+    # 游标列出 Metadata。
+    get:
+      # 稳定操作标识。
+      operationId: listSecretMetadata
+      # Secret 功能分组。
+      tags: [Secret]
+      # 分页参数。
+      parameters:
+        # 不透明游标。
+        - { $ref: "#/components/parameters/Cursor" }
+        # 页大小。
+        - { $ref: "#/components/parameters/Limit" }
+      # 查询结果。
+      responses:
+        # Metadata 游标页。
+        "200":
+          # 成功说明。
+          description: Secret 非敏感 Metadata 游标页
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Metadata 页契约。
+              schema: { $ref: "#/components/schemas/CursorPageSecretMetadata" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建 Metadata，绝不接收 Secret 值。
+    post:
+      # 稳定操作标识。
+      operationId: createSecretMetadata
+      # Secret 功能分组。
+      tags: [Secret]
+      # 创建请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # Metadata 创建契约。
+            schema: { $ref: "#/components/schemas/CreateSecretMetadataRequest" }
+      # 创建结果。
+      responses:
+        # 创建成功。
+        "201":
+          # 成功说明。
+          description: Secret Metadata 已创建
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Metadata 响应。
+              schema: { $ref: "#/components/schemas/SecretMetadata" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Environment Secret Binding 集合端点。
+  /api/v1/projects/{projectId}/environments/{environmentId}/secret-bindings:
+    # 复用项目和环境参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # 环境标识。
+      - { $ref: "#/components/parameters/EnvironmentId" }
+    # 游标列出 Binding。
+    get:
+      # 稳定操作标识。
+      operationId: listSecretBindings
+      # Secret 功能分组。
+      tags: [Secret]
+      # 分页参数。
+      parameters:
+        # 不透明游标。
+        - { $ref: "#/components/parameters/Cursor" }
+        # 页大小。
+        - { $ref: "#/components/parameters/Limit" }
+      # 查询结果。
+      responses:
+        # Binding 游标页。
+        "200":
+          # 成功说明。
+          description: Environment Secret Binding 游标页
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Binding 页契约。
+              schema: { $ref: "#/components/schemas/CursorPageSecretBinding" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建同项目 Environment Binding。
+    post:
+      # 稳定操作标识。
+      operationId: createSecretBinding
+      # Secret 功能分组。
+      tags: [Secret]
+      # 创建请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # Binding 创建契约。
+            schema: { $ref: "#/components/schemas/CreateSecretBindingRequest" }
+      # 创建结果。
+      responses:
+        # 创建成功。
+        "201":
+          # 成功说明。
+          description: Environment Secret Binding 已创建
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # Binding 响应。
+              schema: { $ref: "#/components/schemas/SecretBinding" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 不存在。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+        # 冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+
 # 汇总可复用的 Schema 与响应组件。
 components:
   # 注册公共 Schema 引用。
@@ -598,6 +1015,66 @@ components:
     RevokeApiKeyRequest:
       # 引用版本化 IAM 公共契约。
       $ref: ../schemas/iam-public/v1.json#/$defs/RevokeApiKeyRequest
+    # AI 资产稳定身份响应。
+    CatalogAsset:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CatalogAsset
+    # AI 资产不可变版本响应。
+    CatalogVersion:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CatalogVersion
+    # 资产游标页。
+    CursorPageCatalogAsset:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CursorPageCatalogAsset
+    # 版本游标页。
+    CursorPageCatalogVersion:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CursorPageCatalogVersion
+    # 创建资产请求。
+    CreateCatalogAssetRequest:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CreateCatalogAssetRequest
+    # 创建不可变版本请求。
+    CreateCatalogVersionRequest:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CreateCatalogVersionRequest
+    # 资产归档请求。
+    ArchiveCatalogAssetRequest:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/ArchiveCatalogAssetRequest
+    # 不回显内容值的版本 Diff。
+    CatalogVersionDiff:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CatalogVersionDiff
+    # Skill Artifact 持久对象引用。
+    ObjectRef:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/ObjectRef
+    # Secret 非敏感元数据。
+    SecretMetadata:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/SecretMetadata
+    # 创建 Secret Metadata 请求。
+    CreateSecretMetadataRequest:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CreateSecretMetadataRequest
+    # 环境 Secret Binding 非敏感元数据。
+    SecretBinding:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/SecretBinding
+    # 创建 Environment Secret Binding 请求。
+    CreateSecretBindingRequest:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CreateSecretBindingRequest
+    # Secret Metadata 游标页。
+    CursorPageSecretMetadata:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CursorPageSecretMetadata
+    # Secret Binding 游标页。
+    CursorPageSecretBinding:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/CursorPageSecretBinding
   # 注册路径参数模板。
   parameters:
     # 组织标识路径参数。
@@ -620,6 +1097,56 @@ components:
       required: true
       # UUIDv7 参数结构。
       schema: { $ref: "#/components/schemas/UuidV7" }
+    # 环境标识路径参数。
+    EnvironmentId:
+      # 参数名称。
+      name: environmentId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # 资产分类路径参数。
+    AssetKind:
+      # 参数名称。
+      name: assetKind
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # 只允许固定公开分类。
+      schema: { $ref: ../schemas/catalog-public/v1.json#/$defs/AssetKind }
+    # 稳定资产标识路径参数。
+    AssetId:
+      # 参数名称。
+      name: assetId
+      # 参数位置。
+      in: path
+      # 路径参数不可省略。
+      required: true
+      # UUIDv7 参数结构。
+      schema: { $ref: "#/components/schemas/UuidV7" }
+    # 不透明游标查询参数。
+    Cursor:
+      # 参数名称。
+      name: cursor
+      # 参数位置。
+      in: query
+      # 首次查询可省略。
+      required: false
+      # URL 安全短字符串。
+      schema: { type: string, minLength: 1, maxLength: 256 }
+    # 游标页大小查询参数。
+    Limit:
+      # 参数名称。
+      name: limit
+      # 参数位置。
+      in: query
+      # 使用服务端默认值时可省略。
+      required: false
+      # 页大小边界与实现一致。
+      schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
     # API Key 标识路径参数。
     ApiKeyId:
       # 参数名称。

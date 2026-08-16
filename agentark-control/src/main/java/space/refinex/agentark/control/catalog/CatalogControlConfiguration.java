@@ -1,0 +1,195 @@
+/*
+ * Copyright 2026 refinex.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package space.refinex.agentark.control.catalog;
+
+import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.context.annotation.*;
+import space.refinex.agentark.control.catalog.adapter.in.web.*;
+import space.refinex.agentark.control.catalog.adapter.out.persistence.*;
+import space.refinex.agentark.control.catalog.application.*;
+import space.refinex.agentark.control.catalog.application.port.CatalogRepository;
+import space.refinex.agentark.control.iam.application.*;
+import space.refinex.agentark.control.iam.application.port.TenantCatalogRepository;
+import space.refinex.agentark.control.secret.SecretProperties;
+import space.refinex.agentark.control.secret.adapter.in.web.*;
+import space.refinex.agentark.control.secret.adapter.out.local.LocalFileSecretResolver;
+import space.refinex.agentark.control.secret.adapter.out.persistence.*;
+import space.refinex.agentark.control.secret.application.SecretApplicationService;
+import space.refinex.agentark.control.secret.application.port.*;
+import space.refinex.agentark.foundation.storage.ObjectStore;
+import space.refinex.agentark.foundation.web.RequestContextAccessor;
+import tools.jackson.databind.json.JsonMapper;
+
+import java.io.IOException;
+import java.time.Clock;
+import java.util.Optional;
+
+/**
+ * 装配 AI 资产目录、Secret Metadata、MyBatis 适配器、Public API 和开发 Local Provider。
+ *
+ * @author refinex
+ */
+@Configuration(proxyBeanMethods = false)
+@ConditionalOnProperty(
+    prefix = "agentark.control.catalog",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
+@EnableConfigurationProperties({CatalogProperties.class, SecretProperties.class})
+@MapperScan(basePackageClasses = {CatalogMapper.class, SecretMapper.class})
+public class CatalogControlConfiguration {
+
+    /** 创建 Catalog Control 装配。 */
+    public CatalogControlConfiguration() {
+        // Spring 通过公开无参构造器创建配置实例。
+    }
+
+    /**
+     * @param mapper 资产目录 Mapper
+     * @return MyBatis 资产目录仓储
+     */
+    @Bean
+    public CatalogRepository catalogRepository(CatalogMapper mapper) {
+        return new MybatisCatalogRepository(mapper);
+    }
+
+    /**
+     * @param mapper Secret 元数据 Mapper
+     * @return MyBatis Secret 元数据仓储
+     */
+    @Bean
+    public SecretRepository secretRepository(SecretMapper mapper) {
+        return new MybatisSecretRepository(mapper);
+    }
+
+    /**
+     * @param jsonMapper 应用统一 JSON 映射器
+     * @return 分类载荷校验器
+     */
+    @Bean
+    public CatalogPayloadValidator catalogPayloadValidator(JsonMapper jsonMapper) {
+        return new CatalogPayloadValidator(jsonMapper);
+    }
+
+    /**
+     * @param repository Catalog Repository
+     * @param tenantRepository IAM 租户目录
+     * @param authorizationService IAM 授权服务
+     * @param auditPublisher 审计发布器
+     * @param payloadValidator 载荷校验器
+     * @param secretRepository SecretRef 检查端口
+     * @param objectStoreProvider 可选 ObjectStore
+     * @param properties Catalog 配置
+     * @param clock UTC 时钟
+     * @param jsonMapper JSON 映射器
+     * @return Catalog 应用服务
+     */
+    @Bean
+    public CatalogApplicationService catalogApplicationService(
+        CatalogRepository repository,
+        TenantCatalogRepository tenantRepository,
+        IamAuthorizationService authorizationService,
+        IamAuditPublisher auditPublisher,
+        CatalogPayloadValidator payloadValidator,
+        SecretRepository secretRepository,
+        ObjectProvider<ObjectStore> objectStoreProvider,
+        CatalogProperties properties,
+        Clock clock,
+        JsonMapper jsonMapper) {
+        return new CatalogApplicationService(
+            repository, tenantRepository, authorizationService, auditPublisher, payloadValidator,
+            secretRepository, Optional.ofNullable(objectStoreProvider.getIfAvailable()),
+            properties, clock, jsonMapper);
+    }
+
+    /**
+     * @param repository Secret Repository
+     * @param tenantRepository IAM 租户目录
+     * @param authorizationService IAM 授权服务
+     * @param auditPublisher 审计发布器
+     * @param clock UTC 时钟
+     * @return Secret 应用服务
+     */
+    @Bean
+    public SecretApplicationService secretApplicationService(
+        SecretRepository repository,
+        TenantCatalogRepository tenantRepository,
+        IamAuthorizationService authorizationService,
+        IamAuditPublisher auditPublisher,
+        Clock clock) {
+        return new SecretApplicationService(
+            repository, tenantRepository, authorizationService, auditPublisher, clock);
+    }
+
+    /**
+     * @param service Catalog 应用服务
+     * @param jsonMapper JSON 映射器
+     * @return Catalog Public API
+     */
+    @Bean
+    public CatalogController catalogController(
+        CatalogApplicationService service, JsonMapper jsonMapper) {
+        return new CatalogController(service, jsonMapper);
+    }
+
+    /**
+     * @param service Secret 应用服务
+     * @return Secret Public API
+     */
+    @Bean
+    public SecretController secretController(SecretApplicationService service) {
+        return new SecretController(service);
+    }
+
+    /**
+     * @param accessor 请求上下文
+     * @return Catalog ProblemDetail 映射器
+     */
+    @Bean
+    public CatalogProblemDetailAdvice catalogProblemDetailAdvice(RequestContextAccessor accessor) {
+        return new CatalogProblemDetailAdvice(accessor);
+    }
+
+    /**
+     * @param accessor 请求上下文
+     * @return Secret ProblemDetail 映射器
+     */
+    @Bean
+    public SecretProblemDetailAdvice secretProblemDetailAdvice(RequestContextAccessor accessor) {
+        return new SecretProblemDetailAdvice(accessor);
+    }
+
+    /**
+     * 仅 local Profile 且显式启用时提供文件 Resolver；生产只有 SecretResolver SPI。
+     *
+     * @param properties Secret 配置
+     * @return Local File Secret Resolver
+     * @throws IOException 根目录初始化失败时抛出
+     */
+    @Bean
+    @Profile("local")
+    @ConditionalOnProperty(
+        prefix = "agentark.control.secret",
+        name = "local-provider-enabled",
+        havingValue = "true")
+    public SecretResolver localFileSecretResolver(SecretProperties properties) throws IOException {
+        return new LocalFileSecretResolver(properties.getLocalRoot());
+    }
+}

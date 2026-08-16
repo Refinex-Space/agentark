@@ -17,11 +17,11 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 |---|---|---|
 | 06 | `V1__phase_06_schema_baseline.sql` | 只建立 Control 独立 Migration History 起点，不创建业务表 |
 | 07 | `V2__phase_07_iam_tenancy.sql`：Organization、Project、Environment、Identity、Membership、Role、Permission、Binding、API Key | IAM 与租户授权事实；十二张业务表 |
-| 08 | Agent、资产稳定身份与不可变版本 | 不包含发布 Revision/Snapshot |
+| 08 | Agent、资产稳定身份与不可变版本、Secret Metadata 与 Environment Binding | 不包含发布 Revision/Snapshot；只保存外部 Secret 定位信息，不保存值 |
 | 09 | Draft、Validation、Revision、Snapshot、Publish Operation、Control Outbox | 发布事务必须原子提交 |
 | 10 | Deployment 与 Deployment Revision | 固定目标 Revision，不写 Runtime Session |
 | 14 | Knowledge Metadata、Revision、Ingestion Result | Scheduler 只提交命令结果，不写 Control 表 |
-| 19 | Secret Metadata、Quota、Audit、Usage/Cost、Evaluation、可靠性补齐 | 不保存 Secret 明文 |
+| 19 | Secret 轮换治理、Quota、Audit、Usage/Cost、Evaluation、可靠性补齐 | 延续 Phase 08 Secret Owner，不保存 Secret 明文 |
 
 任何表提前、延后或转移 Owner 都必须先修改本模型；影响平台边界或发布一致性时同步提交 ADR。
 
@@ -77,6 +77,15 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 
 `mcp_tool_descriptor` 从 `mcp_server_version` 派生，保存 tool name、argument schema、read/write、risk、idempotency 和 permission metadata；`(mcp_server_version_id, tool_name)` 唯一。
 
+## Secret Metadata 与 Environment Binding
+
+| 表 | 关键内容 | 关键约束与索引 |
+|---|---|---|
+| `secret_metadata` | id, organization_id, project_id, key, provider, external_path, external_version, scope, status, version | `(project_id, key)` 唯一；只保存外部 Provider 定位和版本，不保存 Secret 值 |
+| `secret_binding` | id, organization_id, project_id, environment_id, secret_metadata_id, binding_key, status, version | `(environment_id, binding_key)` 唯一；复合外键保证 Environment 与 Secret 属于同一 Project |
+
+Phase 08 建立 Secret 元数据、Environment Binding、Resolver Port 和开发 Local Provider；Phase 19 在同一 Owner 下追加轮换、过期和治理流程，不另建第二套 Secret 模型。Model/MCP 等资产版本只保存 `secret://<scope>/<name>` 形式的 `SecretRef`，Resolver 解析出的字符数组不得进入数据库、API、日志、审计或事件。
+
 ## Knowledge Metadata
 
 | 表 | 关键内容 | 关键约束与索引 |
@@ -98,7 +107,7 @@ Scheduler 不写这些表。它调用幂等完成命令；Control 校验 Result 
 
 | 表族 | 关键表与约束 |
 |---|---|
-| Secret | `secret_metadata`, `secret_binding`；只保存 Provider Path/Version/Scope，不保存值 |
+| Secret | Phase 08 已建立 `secret_metadata`、`secret_binding`；Phase 19 只补轮换和过期治理；始终只保存 Provider Path/Version/Scope，不保存值 |
 | Quota | `quota_policy`, `quota_reservation`；Scope + metric + effective version 唯一，并发预留可回收 |
 | Audit | `audit_event`；全局 event_id 唯一、按 organization/time 查询、只追加、Payload 可外置 |
 | Usage/Cost | `usage_aggregate`, `price_table`, `price_table_version`；聚合维度和价格版本固定 |

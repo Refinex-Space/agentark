@@ -51,6 +51,12 @@
             <artifactId>agentark-starter-persistence</artifactId>
         </dependency>
 
+        <!-- 提供 Skill Artifact 的受控上传、完整性校验和非授权 ObjectRef。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-storage</artifactId>
+        </dependency>
+
         <!-- 提供 Control IAM Controller、Servlet 安全过滤链和 Bean Validation 运行时。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

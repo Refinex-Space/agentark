@@ -51,7 +51,20 @@ public sealed interface StrongId
     RoleId,
     PermissionId,
     RoleBindingId,
-    ApiKeyId {
+    ApiKeyId,
+    PromptId,
+    ModelProviderId,
+    ModelProfileId,
+    McpServerId,
+    McpToolDescriptorId,
+    SkillId,
+    MemoryProfileId,
+    WorkspaceProfileId,
+    SandboxProfileId,
+    PermissionPolicyId,
+    PermissionPolicyVersionId,
+    SecretMetadataId,
+    SecretBindingId {
 
     /**
      * 返回领域标识持有的 UUIDv7 原始值。

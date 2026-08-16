@@ -2636,7 +2636,7 @@ contracts/
     ├── agent-revision-snapshot/v1.json
     ├── runtime-event/v1.json
     ├── problem-detail/v1.json
-    └── outbox-event/v1.json       # Phase 08 建立 Outbox 时创建
+    └── outbox-event/v1.json       # Phase 09 建立 Outbox 时创建
 ```
 
 CI 执行：

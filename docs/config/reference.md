@@ -9,7 +9,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2 业务表、OIDC/JWT/API Key 认证与 Public API；Runtime 和 Scheduler 仍只有各自的 Migration History。Gateway 不连接业务数据库。Redis 与 Object Storage 的业务接线仍由后续 Owner Phase 实现。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07 已在 Control 接入 IAM V2；Phase 08 已接入资产目录 V3、Skill Object Store 和开发 Local Secret Provider。Runtime 和 Scheduler 仍只有各自的 Migration History，Gateway 不连接业务数据库。生产 Object Store 和云 Secret Provider 仍必须由部署方提供受支持 Adapter。
 
 ## Server 与本地 Profile
 
@@ -107,6 +107,19 @@ Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334`
 | `AGENTARK_IAM_DEV_ORGANIZATION_SLUG/NAME` | `local-org`、`本地开发组织` | Dev Bootstrap 启用 | 幂等创建本地 Organization |
 | `AGENTARK_IAM_DEV_PROJECT_SLUG/NAME` | `local-project`、`本地开发项目` | Dev Bootstrap 启用 | 幂等创建本地 Project |
 | `AGENTARK_IAM_DEV_ENVIRONMENT_KEY/NAME` | `local`、`本地环境` | Dev Bootstrap 启用 | 幂等创建本地 Environment |
+
+## Control Catalog 与 Secret 配置
+
+| 属性/环境变量 | 默认值 | 启用/必填条件 | 安全与所有权说明 |
+|---|---|---|---|
+| `agentark.control.catalog.enabled` | `true` | Control 正常运行 | 装配 Catalog、Secret Metadata、Public API 和各自 MyBatis Adapter；不装配 Runtime 执行能力 |
+| `agentark.control.catalog.max-artifact-size` | `10MB` | Skill Artifact 上传 | 必须在 1 byte–64 MiB；同时受 ObjectStore `max-object-size` 约束 |
+| `agentark.foundation.storage.enabled` | `false`；`local` 为 `true` | Skill Artifact 上传必须有 ObjectStore | 本地根目录为 `.agentark/data/objects`；生产必须提供受支持 Bean，不能依赖 Local 实现 |
+| `AGENTARK_LOCAL_OBJECT_ROOT` | `.agentark/data/objects` | `local` Storage 启用 | 已忽略的运行数据目录，不得指向仓库根、用户主目录或文件系统根 |
+| `agentark.control.secret.local-provider-enabled` / `AGENTARK_LOCAL_SECRET_PROVIDER_ENABLED` | `false` | 仅 `local` Profile 可开启 | 显式开启后才装配 Local File Resolver；生产 Profile 即使误设也不装配 |
+| `agentark.control.secret.local-root` / `AGENTARK_LOCAL_SECRET_ROOT` | `.agentark/secrets` | Local Provider 启用 | 只允许根目录内普通文件；拒绝目录穿越、符号链接和超过 64 KiB 的值 |
+
+生产 Vault、AWS、Azure、GCP 和 Custom Provider 当前只有枚举与 `SecretResolver` SPI。没有配置实际 Provider Bean 时不会伪造解析成功，也不存在读取 Secret 值的 Public API。
 
 连接、池化、TLS、事务和 Migration 使用 Spring Boot 所属标准属性，例如 `spring.datasource.*`、`spring.flyway.*` 和 `spring.data.redis.*`。Phase 06 已固定 MySQL/Flyway 基线；生产 TLS 信任材料与强制模式仍必须由实际部署环境显式提供，不能依赖本地 Compose 的明文内部网络设置。
 

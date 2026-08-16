@@ -59,9 +59,9 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 | ID | 候选源路径/资源 | 分类 | 目标模块/Phase | Disposition |
 |---|---|---|---|---|
 | AIO-01 | `internal/product/handlers_auth.go`、`handlers_admin.go` | REFERENCE | `agentark-control` / P07 | P07 已参考身份传递与管理 API 语义重建 OIDC/JWT/API Key IAM；拒绝 7 天 HS256、本地用户名密码库、明文 Seed 用户和共享 Internal Token |
-| AIO-02 | Agent/Workspace/Marketplace/File Handlers | ADAPT | `agentark-control` / P08–10 | 以 AgentArk Draft/Revision/Snapshot 重建 |
+| AIO-02 | Agent/Workspace/Marketplace/File Handlers | ADAPT | `agentark-control` / P08–10 | P08 已独立建立 Agent 稳定身份、Workspace Profile 与 Skill ObjectRef；Draft/Revision/Snapshot 继续由 P09–10 重建 |
 | AIO-03 | Product Session Handlers/Internal resolve | ADAPT | Control Contract + Runtime / P10–13 | 拆 Session 生命周期 Owner，版本化 Internal Contract |
-| AIO-04 | Environment/Vault/Memory Handlers | ADAPT | Control / P08–10 | SecretRef、ACL、审计和不可变挂载 |
+| AIO-04 | Environment/Vault/Memory Handlers | ADAPT | Control / P08–10 | P08 已独立建立 Secret Metadata/Binding、Memory Profile、Resolver SPI 和审计；拒绝明文 Vault 请求 |
 | AIO-05 | Deployment/Webhook/Channel Handlers | ADAPT | Control + Scheduling / P10、P15 | Control 保存意图，Scheduler 拥有执行记录 |
 | AIO-06 | Team REST/Store/Controller | DEFER | Control/Runtime Collaboration / P21 | Team 契约、权限、恢复 Gate 后迁移 |
 | AIO-07 | Runtime Store Session/Turn/Event/Command | REFERENCE | Runtime / P11–13 | 状态语义和测试参考，不复制 Go Store/SQL |
@@ -140,6 +140,19 @@ AgentScope Framework 的“直接依赖”在分类列记为 `REFERENCE`，Dispo
 
 以上代码均为 AgentArk 独立实现，只依据固定上游提炼行为语义；没有迁入上游实现文件、文件头、资源或第三方资产。
 
-## 8. 变更协议
+## 8. Phase 08 实际处置
+
+| 范围 | 分类 | 实际结果 | 未进入本阶段 |
+|---|---|---|---|
+| AgentScope Model Extensions | `DEPENDENCY/REFERENCE` | Control 使用平台中立 Provider Descriptor、Model Profile、能力与参数 JSON、`SecretRef` | 厂商 SDK、模型调用、重试和流式执行 |
+| AgentScope MCP | `DEPENDENCY/REFERENCE` | 独立实现 Server/Version、Transport、Endpoint、SSRF 信息模型与 Tool Descriptor 快照 | MCP Client、健康探测、DNS 在线解析和工具执行 |
+| AgentScope Skill/Workspace/Memory/Sandbox/Permission | `DEPENDENCY/REFERENCE` | 独立实现稳定身份、不可变 Profile/Policy Version 和 Skill ObjectRef | Skill 解包/执行、Workspace 挂载、Memory Backend、Sandbox Runtime |
+| Aistio Agent/Model/MCP/Vault | `ADAPT` | 重建为 Project Owner、只追加版本、Secret Metadata/Binding、Public Contract 和审计 | Go Handler/Store、PostgreSQL DDL、明文 Vault 请求 |
+| AgentScope Frontend 字段 | `REFERENCE` | 仅用于核对功能字段和版本语义 | React 组件、状态管理和视觉代码 |
+| AgentScope/Provider 实现源码 | `REJECT` | `agentark-control` 无 `io.agentscope` 或厂商 SDK 类型 | 任何框架核心复制或私有 Fork |
+
+Phase 08 新增代码均为 AgentArk 独立实现，没有迁入固定上游源码、文件头、品牌资源或第三方资产。运行时转换继续由 Phase 12 的 Provider 防腐层负责。
+
+## 9. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

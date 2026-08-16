@@ -442,7 +442,7 @@ flowchart LR
 | 05 | DONE | 2026-08-15 | `docs/implementation/phase-05-service-shells.md` | 四服务空业务骨架、Core/RAG Compose、Secret 与三 Schema 隔离已验收 |
 | 06 | DONE | 2026-08-15 | `docs/implementation/phase-06-persistence-baseline.md` | 三 Schema、Flyway、MyBatis-Plus、Testcontainers 与迁移规范已验收 |
 | 07 | DONE | 2026-08-16 | `docs/implementation/phase-07-iam-tenancy.md` | IAM、租户隔离、授权、API Key、契约与越权测试已验收 |
-| 08 | NOT_STARTED | — | `docs/implementation/phase-08-asset-catalog.md` | |
+| 08 | DONE | 2026-08-16 | `docs/implementation/phase-08-asset-catalog.md` | 版本化 AI 资产目录、Secret 引用、Skill Object Store、契约与租户隔离已验收 |
 | 09 | NOT_STARTED | — | `docs/implementation/phase-09-knowledge-metadata.md` | |
 | 10 | NOT_STARTED | — | `docs/implementation/phase-10-revision-deployment.md` | |
 | 11 | NOT_STARTED | — | `docs/implementation/phase-11-runtime-domain.md` | |
@@ -1501,62 +1501,62 @@ SecretBinding
 
 #### Prompt
 
-- [ ] Prompt 稳定身份；
-- [ ] PromptVersion 不可变；
-- [ ] 内容、变量 Schema、用途、Hash；
-- [ ] Draft/Published 状态；
-- [ ] 版本 Diff。
+- [x] Prompt 稳定身份；
+- [x] PromptVersion 不可变；
+- [x] 内容、变量 Schema、用途、Hash；
+- [x] Draft/Published 状态；
+- [x] 版本 Diff。
 
 #### Model
 
-- [ ] Provider Descriptor；
-- [ ] Model Profile；
-- [ ] Capability：Tool、Vision、Structured Output、Streaming 等；
-- [ ] 参数约束；
-- [ ] Credential 使用 `SecretRef`；
-- [ ] 不在 DB 保存 API Key。
+- [x] Provider Descriptor；
+- [x] Model Profile；
+- [x] Capability：Tool、Vision、Structured Output、Streaming 等；
+- [x] 参数约束；
+- [x] Credential 使用 `SecretRef`；
+- [x] 不在 DB 保存 API Key。
 
 #### MCP
 
-- [ ] Server 稳定身份与 Version；
-- [ ] Transport/Endpoint/TLS/Auth；
-- [ ] Tool Descriptor Snapshot；
-- [ ] Allowlist、风险、读写、幂等元数据；
-- [ ] 健康检查与版本内容分离；
-- [ ] SSRF 防御信息模型。
+- [x] Server 稳定身份与 Version；
+- [x] Transport/Endpoint/TLS/Auth；
+- [x] Tool Descriptor Snapshot；
+- [x] Allowlist、风险、读写、幂等元数据；
+- [x] 健康检查与版本内容分离；
+- [x] SSRF 防御信息模型。
 
 #### Skill
 
-- [ ] Skill 稳定身份与 Version；
-- [ ] Artifact URI、SHA-256、媒体类型；
-- [ ] 来源、许可证、签名、兼容要求；
-- [ ] Object Store 上传/提交；
-- [ ] 不执行 Skill。
+- [x] Skill 稳定身份与 Version；
+- [x] Artifact URI、SHA-256、媒体类型；
+- [x] 来源、许可证、签名、兼容要求；
+- [x] Object Store 上传/提交；
+- [x] 不执行 Skill。
 
 #### Profiles/Policy
 
-- [ ] Memory、Workspace、Sandbox Profile Version；
-- [ ] PermissionPolicy Version；
-- [ ] 平台/组织/项目/环境/Agent 策略组合预留；
-- [ ] 默认 Decision 语义。
+- [x] Memory、Workspace、Sandbox Profile Version；
+- [x] PermissionPolicy Version；
+- [x] 平台/组织/项目/环境/Agent 策略组合预留；
+- [x] 默认 Decision 语义。
 
 #### Secret
 
-- [ ] 只保存 Metadata/External Path/Scope；
-- [ ] Environment Binding；
-- [ ] Secret Resolver Port；
-- [ ] 开发 Local Provider；
-- [ ] 生产 Provider 只有 SPI/配置，不伪造云实现。
+- [x] 只保存 Metadata/External Path/Scope；
+- [x] Environment Binding；
+- [x] Secret Resolver Port；
+- [x] 开发 Local Provider；
+- [x] 生产 Provider 只有 SPI/配置，不伪造云实现。
 
 #### API/数据
 
-- [ ] Control DB 表和 Flyway；
-- [ ] 乐观锁和版本唯一约束；
-- [ ] Public API/OpenAPI；
-- [ ] 资源授权；
-- [ ] 审计；
-- [ ] 列表 Cursor Pagination；
-- [ ] 引用检查和安全删除/归档。
+- [x] Control DB 表和 Flyway；
+- [x] 乐观锁和版本唯一约束；
+- [x] Public API/OpenAPI；
+- [x] 资源授权；
+- [x] 审计；
+- [x] 列表 Cursor Pagination；
+- [x] 引用检查和安全删除/归档。
 
 ### 产物
 
@@ -1571,16 +1571,16 @@ docs/implementation/phase-08-asset-catalog.md
 
 ### 验收条件
 
-- [ ] 所有行为资产有不可变 Version；
-- [ ] 更新资产不会修改旧 Version；
-- [ ] Model/MCP Secret 只有 `SecretRef`；
-- [ ] Skill Artifact 有 Hash 和来源；
-- [ ] MCP Tool 风险/幂等/权限元数据存在；
-- [ ] Provider SDK/AgentScope 类型不进入 Domain/API；
-- [ ] 资产跨租户不可见；
-- [ ] 被引用 Version 不能物理删除；
-- [ ] API/DB/Contract/审计/测试完整；
-- [ ] 未实现 Runtime 执行逻辑。
+- [x] 所有行为资产有不可变 Version；
+- [x] 更新资产不会修改旧 Version；
+- [x] Model/MCP Secret 只有 `SecretRef`；
+- [x] Skill Artifact 有 Hash 和来源；
+- [x] MCP Tool 风险/幂等/权限元数据存在；
+- [x] Provider SDK/AgentScope 类型不进入 Domain/API；
+- [x] 资产跨租户不可见；
+- [x] 被引用 Version 不能物理删除；
+- [x] API/DB/Contract/审计/测试完整；
+- [x] 未实现 Runtime 执行逻辑。
 
 ### 验收命令
 

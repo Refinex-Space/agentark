@@ -58,6 +58,14 @@ class ContractSchemaTest {
     assertValid("schemas/problem-detail/v1.json", "schemas/problem-detail/examples/valid.json");
   }
 
+  /** 验证 AI 资产目录不可变版本 Golden File 符合公共 Schema。 */
+  @Test
+  void catalogVersionGoldenFileConformsToPublicSchema() throws IOException {
+    assertValid(
+        "schemas/catalog-public/v1.json",
+        "schemas/catalog-public/examples/valid-catalog-version.json");
+  }
+
   /** 验证 Snapshot Schema 拒绝明文凭证字段、值和带用户信息的端点。 */
   @Test
   void snapshotSchemaRejectsPlaintextCredentials() throws IOException {

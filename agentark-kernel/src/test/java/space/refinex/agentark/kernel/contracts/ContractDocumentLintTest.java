@@ -55,7 +55,7 @@ class ContractDocumentLintTest {
   /** 匹配 YAML 注释中至少一个汉字。 */
   private static final Pattern CHINESE_TEXT = Pattern.compile("\\p{IsHan}");
 
-  /** 验证 OpenAPI 已版本化，只有 Public Control 声明 Phase 07 已实现端点。 */
+  /** 验证 OpenAPI 已版本化，只有 Public Control 声明 Phase 08 已实现端点。 */
   @Test
   void openApiContractsAreVersionedAndOnlyExposeImplementedEndpoints() throws IOException {
     for (String fileName : OPEN_API_DOCUMENTS) {
@@ -79,7 +79,14 @@ class ContractDocumentLintTest {
                     "/api/v1/projects/{projectId}/service-accounts",
                     "/api/v1/projects/{projectId}/permissions",
                     "/api/v1/projects/{projectId}/api-keys",
-                    "/api/v1/projects/{projectId}/api-keys/{apiKeyId}/revoke"));
+                    "/api/v1/projects/{projectId}/api-keys/{apiKeyId}/revoke",
+                    "/api/v1/projects/{projectId}/catalog/{assetKind}",
+                    "/api/v1/projects/{projectId}/catalog/{assetKind}/{assetId}/versions",
+                    "/api/v1/projects/{projectId}/catalog/{assetKind}/{assetId}/versions:diff",
+                    "/api/v1/projects/{projectId}/catalog/{assetKind}/{assetId}/archive",
+                    "/api/v1/projects/{projectId}/skill-artifacts",
+                    "/api/v1/projects/{projectId}/secrets",
+                    "/api/v1/projects/{projectId}/environments/{environmentId}/secret-bindings"));
       } else {
         assertThat(document.get("paths")).isEqualTo(Map.of());
       }
@@ -104,6 +111,23 @@ class ContractDocumentLintTest {
         .contains("\"readOnly\": true")
         .doesNotContain("\"writeOnly\": true")
         .doesNotContain("\"digest\"");
+  }
+
+  /** 验证资产公共 Schema 已版本化，Secret 契约只出现引用和外部定位。 */
+  @Test
+  void catalogPublicSchemaIsVersionedAndDoesNotExposeSecretValues() throws IOException {
+    Path schema = CONTRACTS.resolve("schemas/catalog-public/v1.json");
+    String content = Files.readString(schema);
+
+    assertThat(schema).exists();
+    assertThat(content)
+        .contains("https://agentark.refinex.space/contracts/catalog-public/v1.json")
+        .contains("\"CatalogVersion\"")
+        .contains("\"SecretMetadata\"")
+        .contains("\"ObjectRef\"")
+        .doesNotContain("secretValue")
+        .doesNotContain("apiKey")
+        .doesNotContain("plaintext");
   }
 
   /** 验证 AsyncAPI 骨架已版本化且引用统一的运行时事件 Schema。 */

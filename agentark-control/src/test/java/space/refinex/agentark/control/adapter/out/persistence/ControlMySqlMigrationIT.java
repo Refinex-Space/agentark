@@ -62,29 +62,29 @@ class ControlMySqlMigrationIT extends AbstractMySqlMigrationIT {
     }
 
     /**
-     * 声明 Control 当前最新迁移为 Phase 07 的 V2。
+     * 声明 Control 当前最新迁移为 Phase 08 的 V3。
+     *
+     * @return Flyway 版本 3
+     */
+    @Override
+    protected String expectedVersion() {
+        return "3";
+    }
+
+    /**
+     * 声明 Phase 07 的 V2 是当前升级测试起点。
      *
      * @return Flyway 版本 2
      */
     @Override
-    protected String expectedVersion() {
+    protected String previousVersion() {
         return "2";
     }
 
     /**
-     * 声明 Phase 06 的 V1 是当前升级测试起点。
+     * 声明 Phase 07 IAM 与 Phase 08 资产目录允许创建的业务表。
      *
-     * @return Flyway 版本 1
-     */
-    @Override
-    protected String previousVersion() {
-        return "1";
-    }
-
-    /**
-     * 声明 Phase 07 唯一允许创建的 IAM 业务表。
-     *
-     * @return 十二张 IAM 表
+     * @return 十二张 IAM 表和二十张资产、Secret 表
      */
     @Override
     protected Set<String> expectedBusinessTables() {
@@ -100,6 +100,26 @@ class ControlMySqlMigrationIT extends AbstractMySqlMigrationIT {
             "role_permission",
             "role_binding",
             "api_key",
-            "api_key_scope");
+            "api_key_scope",
+            "agent",
+            "prompt",
+            "prompt_version",
+            "model_provider",
+            "model_profile",
+            "mcp_server",
+            "mcp_server_version",
+            "mcp_tool_descriptor",
+            "skill",
+            "skill_version",
+            "memory_profile",
+            "memory_profile_version",
+            "workspace_profile",
+            "workspace_profile_version",
+            "sandbox_profile",
+            "sandbox_profile_version",
+            "permission_policy",
+            "permission_policy_version",
+            "secret_metadata",
+            "secret_binding");
     }
 }

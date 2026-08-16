@@ -1,0 +1,19 @@
+{
+  "id": "019c0000-0000-7000-8000-000000000101",
+  "kind": "prompt",
+  "organizationId": "019c0000-0000-7000-8000-000000000102",
+  "projectId": "019c0000-0000-7000-8000-000000000103",
+  "ownerId": "019c0000-0000-7000-8000-000000000104",
+  "versionNumber": 1,
+  "payload": {
+    "template": "你好 {{name}}",
+    "variableSchema": {
+      "type": "object"
+    },
+    "purpose": "问候"
+  },
+  "contentHash": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "status": "PUBLISHED",
+  "createdAt": "2026-08-16T00:00:00Z"
+}
+

@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.HexFormat;
@@ -53,6 +54,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import space.refinex.agentark.control.iam.adapter.in.web.IamApiModels.ApiKeyView;
+import space.refinex.agentark.control.catalog.CatalogControlConfiguration;
+import space.refinex.agentark.control.catalog.application.CatalogApplicationService;
+import space.refinex.agentark.control.catalog.domain.*;
 import space.refinex.agentark.control.iam.application.AuthorizationCacheKey;
 import space.refinex.agentark.control.iam.application.IamAccessDeniedException;
 import space.refinex.agentark.control.iam.application.IamApiKeyService;
@@ -64,9 +68,12 @@ import space.refinex.agentark.control.iam.application.port.AuthorizationReposito
 import space.refinex.agentark.control.iam.application.port.TenantCatalogRepository;
 import space.refinex.agentark.control.iam.domain.IamScopeType;
 import space.refinex.agentark.control.iam.domain.PrincipalKind;
+import space.refinex.agentark.control.secret.application.SecretApplicationService;
+import space.refinex.agentark.control.secret.domain.*;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
 import space.refinex.agentark.foundation.security.PrincipalType;
 import space.refinex.agentark.kernel.id.ProjectId;
+import space.refinex.agentark.kernel.ref.Checksum;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -83,6 +90,9 @@ import tools.jackson.databind.json.JsonMapper;
         "agentark.foundation.security.enabled=false",
         "agentark.foundation.persistence.tenant-defense-enabled=true",
         "agentark.foundation.persistence.sql-telemetry-enabled=false",
+        "agentark.foundation.storage.enabled=true",
+        "agentark.foundation.storage.authority=catalog-it",
+        "agentark.control.catalog.enabled=true",
         "spring.flyway.enabled=true",
         "spring.flyway.create-schemas=false",
         "spring.flyway.clean-disabled=true",
@@ -104,6 +114,10 @@ class IamTenancySecurityIT {
             .withUsername("agentark_control")
             .withPassword(DATABASE_PASSWORD);
 
+    /** 测试对象存储使用系统临时目录中的独立随机根，不写入仓库。 */
+    private static final Path OBJECT_ROOT = Path.of(
+        System.getProperty("java.io.tmpdir"), "agentark-catalog-" + UUID.randomUUID());
+
     /** IAM 聚合应用服务。 */
     @Autowired
     private IamApplicationService iamService;
@@ -115,6 +129,14 @@ class IamTenancySecurityIT {
     /** API Key 生命周期与认证服务。 */
     @Autowired
     private IamApiKeyService apiKeyService;
+
+    /** AI 资产目录应用服务。 */
+    @Autowired
+    private CatalogApplicationService catalogService;
+
+    /** Secret Metadata 与 Binding 应用服务。 */
+    @Autowired
+    private SecretApplicationService secretService;
 
     /** 角色持久化端口。 */
     @Autowired
@@ -159,6 +181,7 @@ class IamTenancySecurityIT {
         registry.add("spring.datasource.username", MYSQL::getUsername);
         registry.add("spring.datasource.password", MYSQL::getPassword);
         registry.add("spring.datasource.driver-class-name", MYSQL::getDriverClassName);
+        registry.add("agentark.foundation.storage.root", OBJECT_ROOT::toString);
     }
 
     /** 每个测试前从真实 Servlet 上下文构造包含 Spring Security 的 MockMvc。 */
@@ -311,6 +334,124 @@ class IamTenancySecurityIT {
     }
 
     /**
+     * 验证资产版本只追加、SecretRef 存在性、MCP 安全元数据、Skill ObjectRef 和跨租户拒绝。
+     *
+     * @throws Exception MockMvc 或 JSON 校验失败时抛出
+     */
+    @Test
+    void persistsImmutableCatalogVersionsAndRejectsCrossTenantAssets() throws Exception {
+        AgentArkPrincipal ownerA = platformOwner("catalog-owner-a");
+        AgentArkPrincipal ownerB = platformOwner("catalog-owner-b");
+        var organizationA = iamService.createOrganization(ownerA, "catalog-org-a", "资产组织甲");
+        var organizationB = iamService.createOrganization(ownerB, "catalog-org-b", "资产组织乙");
+        var projectA = iamService.createProject(
+            ownerA, organizationA.id(), "catalog-project-a", "资产项目甲");
+        var projectB = iamService.createProject(
+            ownerB, organizationB.id(), "catalog-project-b", "资产项目乙");
+        var environmentA = iamService.createEnvironment(ownerA, projectA.id(), "prod", "生产环境");
+
+        SecretMetadata projectSecret = secretService.createMetadata(
+            ownerA, projectA.id(), "model-credential", "模型凭据",
+            SecretProviderType.CUSTOM, "providers/model/primary", "v1", SecretScope.PROJECT);
+        SecretMetadata environmentSecret = secretService.createMetadata(
+            ownerA, projectA.id(), "mcp-credential", "MCP 凭据",
+            SecretProviderType.CUSTOM, "providers/mcp/primary", "v1", SecretScope.ENVIRONMENT);
+        var binding = secretService.createBinding(
+            ownerA, projectA.id(), environmentA.id(), environmentSecret.id(), "mcp-auth");
+
+        CatalogAsset provider = catalogService.createAsset(
+            ownerA, projectA.id(), CatalogAssetKind.MODEL_PROVIDER, "primary-model",
+            "主模型 Provider", "OpenAI 兼容入口",
+            java.util.Map.of("providerType", "OPENAI_COMPATIBLE", "descriptor",
+                java.util.Map.of("baseUrl", "https://models.example.test/v1")));
+        CatalogVersion model = catalogService.createVersion(
+            ownerA, projectA.id(), CatalogAssetKind.MODEL_PROVIDER, provider.id().asString(),
+            java.util.Map.of(
+                "modelName", "example-model",
+                "capabilities", List.of("TOOL", "STREAMING"),
+                "parameters", java.util.Map.of("temperature", 0.2),
+                "credentialSecretRef", projectSecret.projectRef().asString()),
+            CatalogVersionStatus.PUBLISHED);
+        assertThat(model.versionNumber()).isEqualTo(1);
+
+        CatalogAsset prompt = catalogService.createAsset(
+            ownerA, projectA.id(), CatalogAssetKind.PROMPT, "assistant-prompt",
+            "助手 Prompt", "系统提示", java.util.Map.of());
+        CatalogVersion promptV1 = catalogService.createVersion(
+            ownerA, projectA.id(), CatalogAssetKind.PROMPT, prompt.id().asString(),
+            java.util.Map.of("template", "你好 {{name}}", "variableSchema",
+                java.util.Map.of("type", "object"), "purpose", "问候"),
+            CatalogVersionStatus.DRAFT);
+        CatalogVersion promptV2 = catalogService.createVersion(
+            ownerA, projectA.id(), CatalogAssetKind.PROMPT, prompt.id().asString(),
+            java.util.Map.of("template", "您好 {{name}}", "variableSchema",
+                java.util.Map.of("type", "object"), "purpose", "正式问候"),
+            CatalogVersionStatus.PUBLISHED);
+        assertThat(catalogService.diff(
+            ownerA, projectA.id(), CatalogAssetKind.PROMPT, prompt.id().asString(),
+            promptV1.id().asString(), promptV2.id().asString()).changedPaths())
+            .containsExactly("/purpose", "/template");
+
+        CatalogAsset mcp = catalogService.createAsset(
+            ownerA, projectA.id(), CatalogAssetKind.MCP_SERVER, "orders-mcp",
+            "订单 MCP", "只记录连接元数据", java.util.Map.of());
+        catalogService.createVersion(
+            ownerA, projectA.id(), CatalogAssetKind.MCP_SERVER, mcp.id().asString(),
+            java.util.Map.of(
+                "transport", "STREAMABLE_HTTP",
+                "endpointUri", "https://mcp.example.test/api",
+                "transportConfig", java.util.Map.of("timeoutMs", 5000),
+                "authSecretRef", binding.ref().asString(),
+                "ssrfPolicy", java.util.Map.of(
+                    "denyPrivateNetworks", true, "denyCloudMetadata", true,
+                    "resolveAndPinDns", true),
+                "tools", List.of(java.util.Map.of(
+                    "name", "get-order", "description", "读取订单",
+                    "argumentSchema", java.util.Map.of("type", "object"),
+                    "accessMode", "READ", "riskLevel", "LOW",
+                    "idempotency", "IDEMPOTENT",
+                    "permissionMetadata", java.util.Map.of("allowlisted", true)))),
+            CatalogVersionStatus.PUBLISHED);
+        Integer descriptorCount = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM mcp_tool_descriptor WHERE project_id = UUID_TO_BIN(?)",
+            Integer.class, projectA.id().asString());
+        assertThat(descriptorCount).isOne();
+
+        byte[] artifact = "# Example Skill\n".getBytes(StandardCharsets.UTF_8);
+        var objectRef = catalogService.uploadSkillArtifact(
+            ownerA, projectA.id(), new java.io.ByteArrayInputStream(artifact), artifact.length,
+            "text/markdown", Optional.of(Checksum.sha256(artifact)));
+        CatalogAsset skill = catalogService.createAsset(
+            ownerA, projectA.id(), CatalogAssetKind.SKILL, "example-skill", "示例 Skill",
+            "只提交 Artifact，不执行", java.util.Map.of());
+        catalogService.createVersion(
+            ownerA, projectA.id(), CatalogAssetKind.SKILL, skill.id().asString(),
+            java.util.Map.of(
+                "artifact", java.util.Map.of(
+                    "uri", objectRef.uri().toString(), "checksum", objectRef.checksum().toString(),
+                    "size", objectRef.size(), "mediaType", objectRef.mediaType()),
+                "sourceUri", "https://source.example.test/skills/example",
+                "license", "Apache-2.0", "compatibility", java.util.Map.of("agentark", ">=0.1")),
+            CatalogVersionStatus.PUBLISHED);
+
+        mockMvc.perform(get("/api/v1/projects/{projectId}/catalog/prompt", projectA.id().asString())
+                .with(authentication(springAuthentication(ownerB))))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value("ARK-CATALOG-FORBIDDEN-00001"));
+        mockMvc.perform(get("/api/v1/projects/{projectId}/catalog/prompt", projectB.id().asString())
+                .with(authentication(springAuthentication(ownerA))))
+            .andExpect(status().isForbidden())
+            .andExpect(jsonPath("$.code").value("ARK-CATALOG-FORBIDDEN-00001"));
+
+        Integer forbiddenSecretColumns = jdbcTemplate.queryForObject(
+            "SELECT COUNT(*) FROM information_schema.columns WHERE table_schema = DATABASE() "
+                + "AND table_name IN ('secret_metadata', 'secret_binding') "
+                + "AND column_name IN ('secret', 'secret_value', 'plaintext', 'token', 'api_key')",
+            Integer.class);
+        assertThat(forbiddenSecretColumns).isZero();
+    }
+
+    /**
      * 创建具备首个组织创建 Claim 的受信测试用户主体。
      *
      * @param subject 稳定测试 Subject
@@ -343,7 +484,7 @@ class IamTenancySecurityIT {
      */
     @SpringBootConfiguration
     @EnableAutoConfiguration
-    @Import(IamControlConfiguration.class)
+    @Import({IamControlConfiguration.class, CatalogControlConfiguration.class})
     static class TestApplication {
 
         /** 创建测试应用配置。 */

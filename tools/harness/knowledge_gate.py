@@ -59,6 +59,7 @@ REQUIRED_CONTRACTS = (
     "contracts/schemas/agent-revision-snapshot/v1.json",
     "contracts/schemas/runtime-event/v1.json",
     "contracts/schemas/problem-detail/v1.json",
+    "contracts/schemas/catalog-public/v1.json",
 )
 SERVER_ARTIFACTS = frozenset(APPROVED_SERVICE_MODULES)
 KERNEL_FORBIDDEN_IMPORTS = (

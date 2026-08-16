@@ -21,6 +21,14 @@ agentark:
       audiences:
         # 固定 Control Audience。
         - agentark-control
+    # 本地 Skill Artifact 使用受控目录；生产必须显式提供受支持的 ObjectStore。
+    storage:
+      # 仅 local Profile 启用 Foundation Local ObjectStore。
+      enabled: true
+      # 本地对象根目录位于已忽略的运行数据目录。
+      root: ${AGENTARK_LOCAL_OBJECT_ROOT:.agentark/data/objects}
+      # 固定引用 Authority，调用方不能构造任意授权路径。
+      authority: agentark-local
   # Control Plane 本地 IAM 配置。
   control:
     # IAM 业务始终启用，API 在无 JWT 时仍拒绝匿名请求。
@@ -49,6 +57,18 @@ agentark:
         environment-key: ${AGENTARK_IAM_DEV_ENVIRONMENT_KEY:local}
         # 本地环境展示名称。
         environment-name: ${AGENTARK_IAM_DEV_ENVIRONMENT_NAME:本地环境}
+    # AI 资产目录与 Secret Metadata 配置。
+    catalog:
+      # Control 本地 Profile 启用资产目录。
+      enabled: true
+      # 单次 Skill Artifact 上传上限，避免内存和磁盘被无界请求占用。
+      max-artifact-size: 10MB
+    # 开发 Secret Provider 只解析本地文件，不伪造生产云 Provider。
+    secret:
+      # 仅 local Profile 可启用本地文件解析器。
+      local-provider-enabled: ${AGENTARK_LOCAL_SECRET_PROVIDER_ENABLED:false}
+      # Secret 文件根目录必须位于已忽略的本地运行目录。
+      local-root: ${AGENTARK_LOCAL_SECRET_ROOT:.agentark/secrets}
   # 声明 Control 可见的内部服务端点。
   services:
     # Runtime Plane 基础地址；Compose 使用服务 DNS 覆盖。

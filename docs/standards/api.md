@@ -35,4 +35,14 @@ Phase 07 增加以下 IAM 契约约束：
 - `contracts/schemas/iam-public/v1.json` 是 IAM Public DTO 的唯一 Schema。`ApiKeyView` 不得包含摘要或明文；`CreatedApiKeyResponse.plaintext` 是只在创建响应出现一次的 `readOnly` 字段；
 - API Key 创建不允许调用方自动重试。创建响应丢失时先按非秘密元数据定位并吊销，再显式创建新 Key；不得缓存、记录或通过列表接口恢复明文。
 
+Phase 08 增加以下资产目录契约约束：
+
+- Public Control 增加 Catalog、不可变版本、版本 Diff、Skill Artifact、Secret Metadata 和 Environment Binding 的七组真实路径；契约测试继续精确比较完整 Path 集合；
+- `assetKind` 只能取契约固定分类，不能作为任意数据库表名；所有路径资源先通过 Project Owner 和 IAM 权限校验；
+- 资产与 Secret 列表使用不透明 Cursor，`limit` 范围为 1–100；Cursor 只编码已授权查询的稳定排序值，不携带租户选择或授权事实；
+- 行为资产版本只追加；稳定身份归档使用乐观锁且不物理删除版本。版本 Diff 只返回发生变化的 JSON Pointer，不回显可能敏感的旧值和新值；
+- Skill 上传返回不含签名参数的持久 `ObjectRef`，版本提交再次复核 Hash、大小和媒体类型；上传接口不执行 Artifact；
+- Secret API 只接收和返回 Provider、External Path/Version、Scope、状态和 Binding，不存在接收或读取 Secret 值的 Endpoint；
+- `contracts/schemas/catalog-public/v1.json` 是 Catalog、ObjectRef 与 Secret Public DTO 的版本化 Schema，Golden File 由 Kernel 契约测试验证。
+
 Golden File、明文 Secret 负例和文档结构 Lint 由 `agentark-kernel` 测试执行，必需文件与 Kernel/Server 边界由知识门禁检查。首次发布后的修改必须增加 Breaking Change 检测；在不存在已发布前一版本的 Phase 03 不伪造兼容比较结果。

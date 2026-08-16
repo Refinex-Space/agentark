@@ -1,0 +1,318 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/catalog-public/v1.json",
+  "title": "AgentArk AI 资产目录公共契约",
+  "oneOf": [
+    { "$ref": "#/$defs/CatalogAsset" },
+    { "$ref": "#/$defs/CatalogVersion" },
+    { "$ref": "#/$defs/ObjectRef" },
+    { "$ref": "#/$defs/SecretMetadata" },
+    { "$ref": "#/$defs/SecretBinding" }
+  ],
+  "$defs": {
+    "UuidV7": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "AssetKind": {
+      "type": "string",
+      "enum": [
+        "agent",
+        "prompt",
+        "model-provider",
+        "mcp-server",
+        "skill",
+        "memory-profile",
+        "workspace-profile",
+        "sandbox-profile",
+        "permission-policy"
+      ]
+    },
+    "CatalogAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "organizationId",
+        "projectId",
+        "key",
+        "name",
+        "description",
+        "metadata",
+        "status",
+        "version",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "kind": { "$ref": "#/$defs/AssetKind" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 512 },
+        "metadata": { "type": "object" },
+        "status": { "type": "string", "enum": ["ACTIVE", "ARCHIVED"] },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CatalogVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "kind",
+        "organizationId",
+        "projectId",
+        "ownerId",
+        "versionNumber",
+        "payload",
+        "contentHash",
+        "status",
+        "createdAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "kind": { "$ref": "#/$defs/AssetKind" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "ownerId": { "$ref": "#/$defs/UuidV7" },
+        "versionNumber": { "type": "integer", "minimum": 1 },
+        "payload": { "type": "object" },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CreateCatalogAssetRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "metadata"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "description": { "type": "string", "maxLength": 512 },
+        "metadata": { "type": "object" }
+      }
+    },
+    "CreateCatalogVersionRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["payload", "status"],
+      "properties": {
+        "payload": { "type": "object" },
+        "status": {
+          "type": "string",
+          "enum": ["DRAFT", "PUBLISHED", "ARCHIVED"]
+        }
+      }
+    },
+    "ArchiveCatalogAssetRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expectedVersion"],
+      "properties": {
+        "expectedVersion": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "CursorPageCatalogAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "nextCursor", "hasMore"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/CatalogAsset" }
+        },
+        "nextCursor": { "type": ["string", "null"] },
+        "hasMore": { "type": "boolean" }
+      }
+    },
+    "CursorPageCatalogVersion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "nextCursor", "hasMore"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/CatalogVersion" }
+        },
+        "nextCursor": { "type": ["string", "null"] },
+        "hasMore": { "type": "boolean" }
+      }
+    },
+    "CatalogVersionDiff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["baseVersionId", "targetVersionId", "changedPaths"],
+      "properties": {
+        "baseVersionId": { "$ref": "#/$defs/UuidV7" },
+        "targetVersionId": { "$ref": "#/$defs/UuidV7" },
+        "changedPaths": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^/" }
+        }
+      }
+    },
+    "ObjectRef": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri", "checksum", "size", "mediaType"],
+      "properties": {
+        "uri": {
+          "type": "string",
+          "pattern": "^(object|s3|oss|cos)://[^/?#]+/[^?#]+$"
+        },
+        "checksum": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "size": { "type": "integer", "minimum": 0 },
+        "mediaType": { "type": "string", "minLength": 3, "maxLength": 255 }
+      }
+    },
+    "SecretMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "organizationId",
+        "projectId",
+        "key",
+        "name",
+        "provider",
+        "externalPath",
+        "externalVersion",
+        "scope",
+        "status",
+        "version",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "provider": {
+          "type": "string",
+          "enum": [
+            "LOCAL_FILE",
+            "VAULT",
+            "AWS_SECRETS_MANAGER",
+            "AZURE_KEY_VAULT",
+            "GCP_SECRET_MANAGER",
+            "CUSTOM"
+          ]
+        },
+        "externalPath": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "externalVersion": { "type": "string", "maxLength": 255 },
+        "scope": { "type": "string", "enum": ["PROJECT", "ENVIRONMENT"] },
+        "status": {
+          "type": "string",
+          "enum": ["ENABLED", "DISABLED", "REVOKED"]
+        },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CreateSecretMetadataRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "provider", "externalPath", "scope"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}$" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "provider": {
+          "type": "string",
+          "enum": [
+            "LOCAL_FILE",
+            "VAULT",
+            "AWS_SECRETS_MANAGER",
+            "AZURE_KEY_VAULT",
+            "GCP_SECRET_MANAGER",
+            "CUSTOM"
+          ]
+        },
+        "externalPath": { "type": "string", "minLength": 1, "maxLength": 1024 },
+        "externalVersion": { "type": "string", "maxLength": 255 },
+        "scope": { "type": "string", "enum": ["PROJECT", "ENVIRONMENT"] }
+      }
+    },
+    "SecretBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "organizationId",
+        "projectId",
+        "environmentId",
+        "secretMetadataId",
+        "bindingKey",
+        "active",
+        "version",
+        "createdAt",
+        "updatedAt"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "environmentId": { "$ref": "#/$defs/UuidV7" },
+        "secretMetadataId": { "$ref": "#/$defs/UuidV7" },
+        "bindingKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}$" },
+        "active": { "type": "boolean" },
+        "version": { "type": "integer", "minimum": 0 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "CreateSecretBindingRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["secretMetadataId", "bindingKey"],
+      "properties": {
+        "secretMetadataId": { "$ref": "#/$defs/UuidV7" },
+        "bindingKey": { "type": "string", "pattern": "^[a-z][a-z0-9-]{1,62}$" }
+      }
+    },
+    "CursorPageSecretMetadata": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "nextCursor", "hasMore"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SecretMetadata" }
+        },
+        "nextCursor": { "type": ["string", "null"] },
+        "hasMore": { "type": "boolean" }
+      }
+    },
+    "CursorPageSecretBinding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["items", "nextCursor", "hasMore"],
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SecretBinding" }
+        },
+        "nextCursor": { "type": ["string", "null"] },
+        "hasMore": { "type": "boolean" }
+      }
+    }
+  }
+}
