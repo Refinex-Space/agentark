@@ -1394,6 +1394,26 @@ paths:
     parameters:
       # 项目 UUIDv7。
       - { $ref: "#/components/parameters/ProjectId" }
+    # 按稳定 Key 游标列出项目内 Agent。
+    get:
+      # 稳定操作标识。
+      operationId: listAgents
+      # Release 功能分组。
+      tags: [Release]
+      # 注册游标和页大小。
+      parameters:
+        # 不透明游标。
+        - { $ref: "#/components/parameters/Cursor" }
+        # 页大小上限 100。
+        - { $ref: "#/components/parameters/Limit" }
+      # 查询响应。
+      responses:
+        # 返回 Agent 游标页。
+        "200": { $ref: "#/components/responses/AgentPageResponse" }
+        # 未认证响应。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
     # 创建 Agent 稳定身份和首个 Draft。
     post:
       # 稳定操作标识。
@@ -1576,6 +1596,78 @@ paths:
         "200": { $ref: "#/components/responses/AgentRevisionResponse" }
         # 不可见响应。
         "404": { $ref: "#/components/responses/ProblemResponse" }
+  # Agent Revision 的不可变 Snapshot Inspector 端点。
+  /api/v1/projects/{projectId}/agents/{agentId}/revisions/{revisionId}/snapshot:
+    # 复用 Project、Agent 与 Revision 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # 复用 Agent 稳定身份路径参数，限制 Snapshot 归属。
+      - { $ref: "#/components/parameters/AgentId" }
+      # 复用不可变 Revision 路径参数，定位唯一 Snapshot。
+      - { $ref: "#/components/parameters/RevisionId" }
+    # 读取已授权且不含明文 Secret 的 Snapshot。
+    get:
+      # 稳定操作标识。
+      operationId: getAgentRevisionSnapshot
+      # Release 功能分组。
+      tags: [Release]
+      # 查询响应。
+      responses:
+        # 返回 Snapshot Envelope 和 ETag。
+        "200":
+          # 成功说明。
+          description: Agent Revision Snapshot
+          # 响应头。
+          headers:
+            # Canonical Snapshot 内容摘要 ETag。
+            ETag: { description: Canonical Snapshot 内容摘要, schema: { type: string } }
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 引用 Snapshot Inspector 结构。
+              schema: { $ref: "#/components/schemas/AgentSnapshot" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 不可见响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
+  # Agent Revision 的安全差异摘要端点。
+  /api/v1/projects/{projectId}/agents/{agentId}/revisions:diff:
+    # 复用 Project 与 Agent 参数。
+    parameters:
+      # 项目 UUIDv7。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # 复用 Agent 稳定身份路径参数，限制比较范围。
+      - { $ref: "#/components/parameters/AgentId" }
+    # 比较两个不可变 Revision。
+    get:
+      # 稳定操作标识。
+      operationId: compareAgentRevisions
+      # Release 功能分组。
+      tags: [Release]
+      # 注册比较两端查询参数。
+      parameters:
+        # 基准 Revision UUIDv7。
+        - { name: baseRevisionId, in: query, required: true, schema: { $ref: "#/components/schemas/UuidV7" } }
+        # 目标 Revision UUIDv7。
+        - { name: targetRevisionId, in: query, required: true, schema: { $ref: "#/components/schemas/UuidV7" } }
+      # 查询响应。
+      responses:
+        # 返回不包含资产正文的差异摘要。
+        "200":
+          # 成功说明。
+          description: Agent Revision 差异摘要
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 引用差异结构。
+              schema: { $ref: "#/components/schemas/AgentRevisionComparison" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 不可见响应。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
   # Environment Deployment 集合端点。
   /api/v1/projects/{projectId}/environments/{environmentId}/deployments:
     # 复用 Project 与 Environment 参数。
@@ -1584,6 +1676,24 @@ paths:
       - { $ref: "#/components/parameters/ProjectId" }
       # Environment 标识 UUIDv7。
       - { $ref: "#/components/parameters/EnvironmentId" }
+    # 按 UUIDv7 游标列出 Environment 内 Deployment。
+    get:
+      # 稳定操作标识。
+      operationId: listDeployments
+      # Release 功能分组。
+      tags: [Release]
+      # 注册游标与页大小。
+      parameters:
+        # 不透明游标。
+        - { $ref: "#/components/parameters/Cursor" }
+        # 页大小上限 100。
+        - { $ref: "#/components/parameters/Limit" }
+      # 查询响应。
+      responses:
+        # 返回 Deployment 游标页。
+        "200": { $ref: "#/components/responses/DeploymentPageResponse" }
+        # 越权响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
     # 创建稳定 Deployment。
     post:
       # 稳定操作标识。
@@ -1973,6 +2083,22 @@ components:
     ReleaseAgent:
       # 引用版本化 Release 公共契约。
       $ref: ../schemas/release-public/v1.json#/$defs/Agent
+    # Agent 游标页。
+    AgentPage:
+      # 固定对象结构。
+      type: object
+      # 列表、游标和分页标识不可省略。
+      required: [items, nextCursor, hasMore]
+      # 定义分页字段。
+      properties:
+        # 当前页 Agent。
+        items: { type: array, items: { $ref: "#/components/schemas/ReleaseAgent" } }
+        # 下一页游标；末页为空。
+        nextCursor: { type: [string, "null"] }
+        # 是否还有下一页。
+        hasMore: { type: boolean }
+      # 禁止未声明字段。
+      additionalProperties: false
     # Agent 可编辑 Draft 响应。
     AgentDraft:
       # 引用版本化 Release 公共契约。
@@ -1989,6 +2115,58 @@ components:
     Deployment:
       # 引用版本化 Release 公共契约。
       $ref: ../schemas/release-public/v1.json#/$defs/Deployment
+    # Deployment 游标页。
+    DeploymentPage:
+      # 固定对象结构。
+      type: object
+      # 列表、游标和分页标识不可省略。
+      required: [items, nextCursor, hasMore]
+      # 定义分页字段。
+      properties:
+        # 当前页 Deployment。
+        items: { type: array, items: { $ref: "#/components/schemas/Deployment" } }
+        # 下一页游标；末页为空。
+        nextCursor: { type: [string, "null"] }
+        # 是否还有下一页。
+        hasMore: { type: boolean }
+      # 禁止未声明字段。
+      additionalProperties: false
+    # Public Snapshot Inspector 响应。
+    AgentSnapshot:
+      # 固定对象结构。
+      type: object
+      # Revision、摘要和 Snapshot 不可省略。
+      required: [revisionId, contentHash, snapshot]
+      # 定义 Snapshot Envelope。
+      properties:
+        # 返回当前 Snapshot 所属的不可变 Revision UUIDv7。
+        revisionId: { $ref: "#/components/schemas/UuidV7" }
+        # 返回 Canonical Snapshot 的 SHA-256 完整性摘要。
+        contentHash: { $ref: "#/components/schemas/Checksum" }
+        # 不含明文 Secret 的完整 Snapshot；具体递归结构由独立 Snapshot v1 Schema 校验。
+        snapshot: { type: object, additionalProperties: true }
+      # 禁止未声明字段。
+      additionalProperties: false
+    # Revision 安全差异摘要。
+    AgentRevisionComparison:
+      # 固定对象结构。
+      type: object
+      # 两端标识、摘要和变化区段不可省略。
+      required: [baseRevisionId, targetRevisionId, baseContentHash, targetContentHash, changedSections]
+      # 定义比较字段。
+      properties:
+        # 基准 Revision UUIDv7。
+        baseRevisionId: { $ref: "#/components/schemas/UuidV7" }
+        # 目标 Revision UUIDv7。
+        targetRevisionId: { $ref: "#/components/schemas/UuidV7" }
+        # 基准 Snapshot SHA-256。
+        baseContentHash: { $ref: "#/components/schemas/Checksum" }
+        # 目标 Snapshot SHA-256。
+        targetContentHash: { $ref: "#/components/schemas/Checksum" }
+        # 发生变化的非秘密顶层区段。
+        changedSections: { type: array, uniqueItems: true, items: { type: string, pattern: "^[a-z][a-zA-Z0-9]*$" } }
+      # 禁止未声明字段。
+      additionalProperties: false
     # 创建 Agent 请求。
     CreateAgentRequest:
       # 引用版本化 Release 公共契约。
@@ -2299,6 +2477,16 @@ components:
         application/json:
           # 引用 Agent 响应结构。
           schema: { $ref: "#/components/schemas/ReleaseAgent" }
+    # Agent 游标页响应。
+    AgentPageResponse:
+      # 说明返回 Agent 游标页。
+      description: Agent 游标页
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用 Agent 分页结构。
+          schema: { $ref: "#/components/schemas/AgentPage" }
     # Agent Draft 单对象响应。
     AgentDraftResponse:
       # 说明该响应返回当前可编辑 Draft。
@@ -2349,6 +2537,16 @@ components:
         application/json:
           # 引用 Deployment 响应结构。
           schema: { $ref: "#/components/schemas/Deployment" }
+    # Deployment 游标页响应。
+    DeploymentPageResponse:
+      # 说明返回 Environment Deployment 游标页。
+      description: Deployment 游标页
+      # 声明响应内容映射。
+      content:
+        # 固定 JSON 媒体类型。
+        application/json:
+          # 引用 Deployment 分页结构。
+          schema: { $ref: "#/components/schemas/DeploymentPage" }
   # 注册 IAM 支持的认证方案。
   securitySchemes:
     # OIDC/JWT Bearer 认证。

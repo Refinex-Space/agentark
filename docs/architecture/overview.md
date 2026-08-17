@@ -3216,16 +3216,18 @@ agentark-web/src/
 | DeepSeek Harness | 工作台视觉、暗色、信息密度、交互节奏 | 全局 Everything-is-a-plugin 架构 |
 | AgentArk | Design System、领域术语、Revision/Deployment/Governance | — |
 
-### 17.6 Phase 17 实施路由
+### 17.6 Web 实施路由
 
-Phase 17 已按上述边界建立独立 Web Foundation；完整事实分布如下：
+Phase 17 建立独立 Web Foundation，Phase 18 建立真实产品主链路；完整事实分布如下：
 
-- [Web 信息架构](../frontend/information-architecture.md)：实际路由、分层、状态 Owner 和 Phase 18 边界；
+- [Web 信息架构](../frontend/information-architecture.md)：实际路由、分层、状态 Owner 和产品边界；
 - [Web 设计系统](../frontend/design-system.md)：Token、组件、主题与 WCAG 工程基线；
 - [Web 上游参考边界](../frontend/source-reference.md)：固定 Commit、`REFERENCE/REJECT` 决策和许可证据；
 - [Phase 17 执行证据](../implementation/phase-17-web-foundation.md)：工具链、生成 Client、SSE、测试和已知边界。
+- [Phase 18 执行证据](../implementation/phase-18-web-features.md)：Web-readiness Contract、核心 Feature、真实四服务 E2E 和已知边界；
+- [Phase 18 交互证据](../frontend/phase-18-interactions.md)：主链路、截图生成、响应式、可访问性与安全展示约束。
 
-`agentark-web` 仍是独立 pnpm 构建，不进入 Maven Reactor，也不直接访问任何平面的数据库或 Internal API。浏览器只通过 Gateway Public API/SSE 工作，Tenant Context 只表达选择意图。
+`agentark-web` 仍是独立 pnpm 构建，不进入 Maven Reactor，也不直接访问任何平面的数据库或 Internal API。浏览器只通过 Gateway Public API/SSE 工作，Tenant Context 只表达选择意图。统一 Audit、Usage/Cost、Quota 与 Evaluation 由 Phase 19 提供，Phase 18 不用前端本地状态伪造治理事实。
 
 ---
 
@@ -3817,7 +3819,7 @@ ADR 只有在本文、知识地图和相关数据库/契约文档同步后才生
 - Run Console/Event Timeline；
 - Approval Center；
 - Knowledge UI；
-- Audit/Usage。
+- Audit/Usage 关联入口；事实存储和检索由 Phase 19 交付。
 
 验收：Build → Publish → Deploy → Run → Observe 主链路完整。
 

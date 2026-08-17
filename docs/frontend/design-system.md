@@ -11,7 +11,7 @@ referenced_by: docs/README.md
 
 AgentArk Web 面向 Agent 构建、发布、运行和治理工作流，采用紧凑但可读的开发者工作台布局。设计语言由 AgentArk 自己拥有；上游只提供层级和交互参考，不复制品牌、Token 数值、Logo、组件源码、截图或文案。
 
-Phase 17 的可执行组件基线位于 `/design-system`。它没有业务数据和认证能力，只用于验证 Token、主题、组件状态、键盘行为和响应式布局；完整业务页面归 Phase 18。
+可执行组件基线位于 `/design-system`。它没有业务数据和认证能力，只用于验证 Token、主题、组件状态、键盘行为和响应式布局；Phase 18 产品页在同一语义 Token 和组件基线上组合真实业务状态。
 
 ## Token
 
@@ -30,7 +30,7 @@ Token 定义在 `agentark-web/src/app/styles/global.css`，组件只能通过语
 
 ## 组件基线
 
-| 范围 | Phase 17 组件 | 约束 |
+| 范围 | 组件 | 约束 |
 |---|---|---|
 | 输入与动作 | Button、Input | Disabled、Focus、Danger 均有独立语义 |
 | Overlay | Dialog、Popover、Menu | Radix 负责焦点圈定、Escape 和焦点恢复 |
@@ -49,6 +49,7 @@ Token 定义在 `agentark-web/src/app/styles/global.css`，组件只能通过语
 - 导航、主内容、通知和 Inspector 使用正确 Landmark；
 - `prefers-reduced-motion` 下关闭非必要动画；
 - Chromium E2E 使用 axe 检查 `serious`/`critical` 违规，并验证 390px 窄屏无页面级横向溢出；
+- Phase 18 真实 Run 页面重复执行 axe，Operate 页面在 390px 窄屏验证主导航和根节点宽度；
 - 颜色与字体变化后必须重新执行浏览器对比度检查，不能只依赖 jsdom。
 
 以上是 WCAG 2.2 AA 工程基线，不等于完整人工无障碍认证。屏幕阅读器矩阵、缩放 200%、高对比模式和多浏览器验证仍需在产品页面形成后补充。

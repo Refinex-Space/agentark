@@ -17,6 +17,7 @@
 package space.refinex.agentark.foundation.web;
 
 import space.refinex.agentark.kernel.id.*;
+import space.refinex.agentark.kernel.ref.Checksum;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.JsonGenerator;
 import tools.jackson.core.JsonParser;
@@ -29,7 +30,7 @@ import tools.jackson.databind.ser.std.StdSerializer;
 import java.util.function.Function;
 
 /**
- * 将所有 AgentArk 强类型 UUIDv7 标识稳定序列化为规范字符串并执行严格反序列化。
+ * 将 AgentArk 强类型 UUIDv7 标识和 Checksum 稳定序列化为规范字符串并严格反序列化。
  *
  * @author refinex
  */
@@ -46,6 +47,8 @@ public final class AgentArkJacksonModule extends SimpleModule {
     public AgentArkJacksonModule() {
         super("agentark-strong-ids");
         addSerializer(StrongId.class, new StrongIdSerializer());
+        addSerializer(Checksum.class, new ChecksumSerializer());
+        addDeserializer(Checksum.class, new ChecksumDeserializer());
         addId(OrganizationId.class, OrganizationId::parse);
         addId(ProjectId.class, ProjectId::parse);
         addId(EnvironmentId.class, EnvironmentId::parse);
@@ -139,6 +142,66 @@ public final class AgentArkJacksonModule extends SimpleModule {
         public void serialize(StrongId value, JsonGenerator generator, SerializationContext context)
             throws JacksonException {
             generator.writeString(value.asString());
+        }
+    }
+
+    /**
+     * 将 Checksum 输出为带算法前缀的规范字符串。
+     *
+     * @author refinex
+     */
+    private static final class ChecksumSerializer extends StdSerializer<Checksum> {
+
+        /** Jackson 序列化兼容标识。 */
+        private static final long serialVersionUID = 1L;
+
+        /** 创建 Checksum 序列化器。 */
+        private ChecksumSerializer() {
+            super(Checksum.class);
+        }
+
+        /**
+         * 写出规范 {@code sha256:<64-hex>} 字符串。
+         *
+         * @param value     校验和
+         * @param generator JSON 输出器
+         * @param context   Jackson 序列化上下文
+         * @throws JacksonException 输出失败时抛出
+         */
+        @Override
+        public void serialize(Checksum value, JsonGenerator generator, SerializationContext context)
+            throws JacksonException {
+            generator.writeString(value.toString());
+        }
+    }
+
+    /**
+     * 使用 Kernel 构造器严格读取规范 Checksum 字符串。
+     *
+     * @author refinex
+     */
+    private static final class ChecksumDeserializer extends StdDeserializer<Checksum> {
+
+        /** Jackson 反序列化兼容标识。 */
+        private static final long serialVersionUID = 1L;
+
+        /** 创建 Checksum 反序列化器。 */
+        private ChecksumDeserializer() {
+            super(Checksum.class);
+        }
+
+        /**
+         * 读取规范字符串并执行格式校验。
+         *
+         * @param jsonParser JSON 输入器
+         * @param context    Jackson 反序列化上下文
+         * @return 规范 Checksum
+         * @throws JacksonException JSON Token 读取失败时抛出
+         */
+        @Override
+        public Checksum deserialize(JsonParser jsonParser, DeserializationContext context)
+            throws JacksonException {
+            return new Checksum(jsonParser.getString());
         }
     }
 

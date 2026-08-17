@@ -108,7 +108,9 @@ class RuntimeApiE2ETest {
             .expectBody()
             .jsonPath("$[0].eventType").isEqualTo("run.accepted")
             .jsonPath("$[0].sessionSequence").isEqualTo(1)
-            .jsonPath("$[0].sequence").isEqualTo(1);
+            .jsonPath("$[0].sequence").isEqualTo(1)
+            .jsonPath("$[0].payload").exists()
+            .jsonPath("$[0].payloadRef").doesNotExist();
     }
 
     /**
@@ -160,14 +162,14 @@ class RuntimeApiE2ETest {
                 fixture.revisionId, true, provider.providerId(), 1, Set.of()),
             ignored -> fixture.snapshot, providerCatalog, fixture.application);
         RuntimeQueryService query = new RuntimeQueryService(
-            fixture.store, fixture.store, fixture.store);
+            fixture.store, fixture.store, fixture.store, fixture.store);
         RuntimeControlService control = new RuntimeControlService(
             fixture.coordinator, fixture.engine);
         return new RuntimeController(
             admission, query, control, fixture.coordinator,
             new RuntimeAuthorizationService(),
             new RuntimeEventStreamService(fixture.store, fixture.notifier),
-            JsonMapper.builder().build(), providerCatalog);
+            JsonMapper.builder().build(), providerCatalog, Optional.empty());
     }
 
     /**

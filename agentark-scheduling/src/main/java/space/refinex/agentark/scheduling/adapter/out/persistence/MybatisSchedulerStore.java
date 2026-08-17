@@ -136,6 +136,23 @@ public class MybatisSchedulerStore
     }
 
     /**
+     * 按 UUIDv7 游标列出租户 Job。
+     *
+     * @param organizationId 组织标识
+     * @param projectId      项目标识
+     * @param afterId        排除的最后 Job
+     * @param limit          读取上限
+     * @return Job 列表
+     */
+    @Override
+    public List<Job> list(
+        OrganizationId organizationId, ProjectId projectId, JobId afterId, int limit) {
+        return mapper.listJobs(
+                organizationId.value(), projectId.value(), afterId.value(), limit)
+            .stream().map(this::toDomain).toList();
+    }
+
+    /**
      * 在 MySQL 行锁内 Claim Job、接管过期 Attempt、递增 Token 并追加新 Attempt。
      *
      * @param type      Job 类型
@@ -320,6 +337,23 @@ public class MybatisSchedulerStore
     @Override
     public Optional<TriggerDefinition> find(UUID triggerId) {
         return mapper.findTrigger(triggerId).map(this::toDomain);
+    }
+
+    /**
+     * 按 UUIDv7 游标列出租户 Trigger。
+     *
+     * @param organizationId 组织标识
+     * @param projectId      项目标识
+     * @param afterId        排除的最后 Trigger
+     * @param limit          读取上限
+     * @return Trigger 列表
+     */
+    @Override
+    public List<TriggerDefinition> list(
+        OrganizationId organizationId, ProjectId projectId, UUID afterId, int limit) {
+        return mapper.listTriggers(
+                organizationId.value(), projectId.value(), afterId, limit)
+            .stream().map(this::toDomain).toList();
     }
 
     /**

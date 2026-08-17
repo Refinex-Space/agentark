@@ -21,25 +21,25 @@ const foundationSteps = [
   },
   {
     id: "features",
-    title: "产品功能页面",
-    detail: "Agent、资产、发布和运行治理页面由 Phase 18 继续实现。",
-    status: "pending" as const,
-    time: "NEXT",
+    title: "核心产品流程",
+    detail: "Govern、Build、Release、Run、Approval 与 Operate 已连接 Public API。",
+    status: "success" as const,
+    time: "P18",
   },
 ];
 
-/** Phase 17 产品基础总览页。 */
+/** Phase 18 核心产品流程总览页。 */
 export default function DashboardPage() {
   return (
     <div className="page-stack">
       <PageHeader
-        eyebrow="PRODUCT FOUNDATION"
-        title="可控、可追踪的 Agent 运行基线"
-        description="这里先建立稳定的导航、上下文、契约与事件体验；业务资产和运维页面将在下一阶段接入真实数据。"
+        eyebrow="PRODUCT FLOW"
+        title="Build → Publish → Deploy → Run"
+        description="从租户治理、版本资产到不可变发布、运行审批和 Scheduler 运维，所有生产路径均通过真实 Public API。"
         actions={
           <Button asChild>
-            <Link to="/runtime">
-              查看运行工作区
+            <Link to="/build">
+              开始构建 Agent
               <ArrowUpRight aria-hidden="true" size={16} />
             </Link>
           </Button>
@@ -88,9 +88,9 @@ export default function DashboardPage() {
               <p className="eyebrow">READINESS</p>
               <h2>Web Foundation 进度</h2>
             </div>
-            <StatusBadge tone="info">PHASE 17</StatusBadge>
+            <StatusBadge tone="info">PHASE 18</StatusBadge>
           </header>
-          <Timeline items={foundationSteps} ariaLabel="Web Foundation 进度" />
+          <Timeline items={foundationSteps} ariaLabel="核心产品流程进度" />
         </article>
 
         <article className="panel panel--terminal">

@@ -376,14 +376,17 @@ public class SchedulerServerConfiguration {
      * @param service              应用服务
      * @param authorizationService 授权服务
      * @param webhookService       Webhook 服务
+     * @param triggerService       Trigger 定义服务
      * @return Controller
      */
     @Bean
     public SchedulerController schedulerController(
         SchedulerApplicationService service,
         SchedulerAuthorizationService authorizationService,
-        WebhookIngressService webhookService) {
-        return new SchedulerController(service, authorizationService, webhookService);
+        WebhookIngressService webhookService,
+        TriggerDefinitionService triggerService) {
+        return new SchedulerController(
+            service, authorizationService, webhookService, triggerService);
     }
 
     /**

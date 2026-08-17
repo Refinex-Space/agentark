@@ -10,13 +10,169 @@ import type {
   AcceptSchedulerWebhookHeaders,
   ActionRequest,
   CancelSchedulerJobParams,
+  CreateTriggerRequest,
   GetSchedulerJob200,
   GetSchedulerJobParams,
+  JobPage,
   ListSchedulerDeadLetters200,
   ListSchedulerDeadLettersParams,
+  ListSchedulerJobsParams,
+  ListSchedulerTriggersParams,
   ProblemResponseResponse,
   RedriveSchedulerJobParams,
+  TriggerPage,
+  TriggerView,
 } from "./models";
+
+export type listSchedulerJobsResponse200 = {
+  data: JobPage;
+  status: 200;
+};
+
+export type listSchedulerJobsResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listSchedulerJobsResponseSuccess = listSchedulerJobsResponse200 & {
+  headers: Headers;
+};
+export type listSchedulerJobsResponseError = listSchedulerJobsResponse403 & {
+  headers: Headers;
+};
+
+export type listSchedulerJobsResponse =
+  listSchedulerJobsResponseSuccess | listSchedulerJobsResponseError;
+
+export const getListSchedulerJobsUrl = (params: ListSchedulerJobsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/scheduler/jobs?${stringifiedParams}`
+    : `/api/v1/scheduler/jobs`;
+};
+
+export const listSchedulerJobs = async (
+  params: ListSchedulerJobsParams,
+  options?: RequestInit,
+): Promise<listSchedulerJobsResponse> => {
+  const res = await fetch(getListSchedulerJobsUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listSchedulerJobsResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listSchedulerJobsResponse;
+};
+
+export type listSchedulerTriggersResponse200 = {
+  data: TriggerPage;
+  status: 200;
+};
+
+export type listSchedulerTriggersResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listSchedulerTriggersResponseSuccess = listSchedulerTriggersResponse200 & {
+  headers: Headers;
+};
+export type listSchedulerTriggersResponseError = listSchedulerTriggersResponse403 & {
+  headers: Headers;
+};
+
+export type listSchedulerTriggersResponse =
+  listSchedulerTriggersResponseSuccess | listSchedulerTriggersResponseError;
+
+export const getListSchedulerTriggersUrl = (params: ListSchedulerTriggersParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/scheduler/triggers?${stringifiedParams}`
+    : `/api/v1/scheduler/triggers`;
+};
+
+export const listSchedulerTriggers = async (
+  params: ListSchedulerTriggersParams,
+  options?: RequestInit,
+): Promise<listSchedulerTriggersResponse> => {
+  const res = await fetch(getListSchedulerTriggersUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listSchedulerTriggersResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listSchedulerTriggersResponse;
+};
+
+export type createSchedulerTriggerResponse201 = {
+  data: TriggerView;
+  status: 201;
+};
+
+export type createSchedulerTriggerResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type createSchedulerTriggerResponse409 = {
+  data: ProblemResponseResponse;
+  status: 409;
+};
+
+export type createSchedulerTriggerResponseSuccess = createSchedulerTriggerResponse201 & {
+  headers: Headers;
+};
+export type createSchedulerTriggerResponseError = (
+  createSchedulerTriggerResponse403 | createSchedulerTriggerResponse409
+) & {
+  headers: Headers;
+};
+
+export type createSchedulerTriggerResponse =
+  createSchedulerTriggerResponseSuccess | createSchedulerTriggerResponseError;
+
+export const getCreateSchedulerTriggerUrl = () => {
+  return `/api/v1/scheduler/triggers`;
+};
+
+export const createSchedulerTrigger = async (
+  createTriggerRequest: CreateTriggerRequest,
+  options?: RequestInit,
+): Promise<createSchedulerTriggerResponse> => {
+  const res = await fetch(getCreateSchedulerTriggerUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createTriggerRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createSchedulerTriggerResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as createSchedulerTriggerResponse;
+};
 
 export type getSchedulerJobResponse200 = {
   data: GetSchedulerJob200;

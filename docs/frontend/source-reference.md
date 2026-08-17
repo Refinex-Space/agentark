@@ -14,7 +14,7 @@ referenced_by: docs/README.md
 | AgentScope Java | `0c61e7494197ded54eefdeaf9bdeb51807beb752` | `agentscope-service/frontend/src/main.tsx`，Package `agentscope-service-frontend` | `REFERENCE` |
 | DeepSeek Harness | `47f943859bef60e4160492346772ded9b24f765a` | `apps/web/src/main.ts`，Package `@deepseek-ai/dsh-web-frontend`；Shell 位于 `packages/client/web*` | `REFERENCE` |
 
-审计只读取 `.agentark/upstreams/` 的 detached Worktree。Phase 17 没有修改固定视图，也没有把上游源码、资源、品牌或运行时依赖迁入 `agentark-web`。
+审计只读取 `.agentark/upstreams/` 的 detached Worktree。Phase 17–18 没有修改固定视图，也没有把上游源码、资源、品牌或运行时依赖迁入 `agentark-web`。
 
 ## AgentScope Service Frontend
 
@@ -48,7 +48,7 @@ AgentArk Client 只从自己的 Public OpenAPI 生成；Runtime Event 只接受 
 - Native、Python、Plugin Runtime、官方平台 Payload；
 - 许可未核对的字体、Glyph、图标和图片。
 
-Phase 17 的 favicon、Token、布局、文案和组件均为 AgentArk 独立实现，图标来自锁定的 Lucide npm 依赖。
+Phase 17–18 的 favicon、Token、布局、文案、组件和产品 Feature 均为 AgentArk 独立实现，图标来自锁定的 Lucide npm 依赖。Phase 18 只沿既有 `REFERENCE` 边界借鉴工作台层级、Timeline/Inspector 意图和上游功能语义，没有复制页面、组件、样式、测试 Snapshot 或品牌资产。
 
 ## 依赖与许可
 

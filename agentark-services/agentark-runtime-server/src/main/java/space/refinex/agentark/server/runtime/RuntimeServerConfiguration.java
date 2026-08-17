@@ -39,6 +39,7 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Clock;
+import java.util.Optional;
 
 /**
  * 在非测试 Profile 装配 Runtime MySQL 权威状态、Control Client、Lease、API 与 Worker。
@@ -207,7 +208,7 @@ public class RuntimeServerConfiguration {
      */
     @Bean
     public RuntimeQueryService runtimeQueryService(MybatisRuntimeStore store) {
-        return new RuntimeQueryService(store, store, store);
+        return new RuntimeQueryService(store, store, store, store);
     }
 
     /**
@@ -257,6 +258,7 @@ public class RuntimeServerConfiguration {
      * @param eventStreamService   Event Stream 服务
      * @param objectMapper         Jackson 3 Mapper
      * @param providerCatalog      Provider 目录
+     * @param objectStore          可选对象存储
      * @return Runtime Controller
      */
     @Bean
@@ -268,10 +270,11 @@ public class RuntimeServerConfiguration {
         RuntimeAuthorizationService authorizationService,
         RuntimeEventStreamService eventStreamService,
         ObjectMapper objectMapper,
-        RuntimeProviderCatalog providerCatalog) {
+        RuntimeProviderCatalog providerCatalog,
+        Optional<space.refinex.agentark.foundation.storage.ObjectStore> objectStore) {
         return new RuntimeController(
             admissionService, queryService, controlService, coordinator,
-            authorizationService, eventStreamService, objectMapper, providerCatalog);
+            authorizationService, eventStreamService, objectMapper, providerCatalog, objectStore);
     }
 
     /**

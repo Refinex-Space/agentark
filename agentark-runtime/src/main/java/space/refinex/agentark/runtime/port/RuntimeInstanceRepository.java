@@ -20,6 +20,7 @@ import space.refinex.agentark.runtime.domain.RuntimeModels.DrainStatus;
 import space.refinex.agentark.runtime.domain.RuntimeModels.RuntimeInstance;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * 持久化 Runtime Instance 心跳与排空状态，不拥有 Run 执行事实。
@@ -53,4 +54,12 @@ public interface RuntimeInstanceRepository {
      * @return 实例存在时为 true
      */
     boolean updateDrainStatus(String instanceKey, DrainStatus status, Instant occurredAt);
+
+    /**
+     * 列出最近心跳的 Runtime Instance，用于生成不暴露实例身份的运维摘要。
+     *
+     * @param limit 最大读取数量
+     * @return 按最近心跳倒序排列的实例
+     */
+    List<RuntimeInstance> list(int limit);
 }

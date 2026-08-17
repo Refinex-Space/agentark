@@ -529,6 +529,23 @@ public interface RuntimeMapper {
         @Param("limit") int limit);
 
     /**
+     * 按全局 Event UUID 读取单条 Event 和可选 ObjectRef。
+     *
+     * @param eventId Event UUID
+     * @return Event 行
+     */
+    @Select("""
+        SELECT e.id, e.organization_id, e.project_id, e.session_id, e.turn_id, e.run_id,
+               e.session_sequence, e.run_sequence, e.type, e.schema_version, e.trace_id,
+               e.payload_storage, e.payload_json, e.occurred_at, e.fencing_token,
+               r.object_uri, r.content_hash AS object_hash, r.object_size, r.media_type
+        FROM runtime_event e
+        LEFT JOIN runtime_event_payload_ref r ON r.event_id = e.id
+        WHERE e.id = #{eventId,jdbcType=BINARY}
+        """)
+    Optional<EventRow> findEvent(@Param("eventId") UUID eventId);
+
+    /**
      * 插入幂等记录。
      *
      * @param row 幂等数据库行
@@ -802,6 +819,20 @@ public interface RuntimeMapper {
         @Param("instanceKey") String instanceKey,
         @Param("status") String status,
         @Param("occurredAt") Instant occurredAt);
+
+    /**
+     * 按最近心跳倒序列出 Runtime Instance。
+     *
+     * @param limit 最大读取数量
+     * @return Runtime Instance 行
+     */
+    @Select("""
+        SELECT id, instance_key, started_at, heartbeat_at, capabilities, drain_status
+        FROM runtime_instance
+        ORDER BY heartbeat_at DESC, id DESC
+        LIMIT #{limit}
+        """)
+    List<RuntimeInstanceRow> listRuntimeInstances(@Param("limit") int limit);
 
     /**
      * 插入 Agent State Version。

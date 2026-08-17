@@ -5,6 +5,7 @@ export * from "./input";
 export * from "./inspector";
 export * from "./menu";
 export * from "./popover";
+export * from "./problem-state";
 export * from "./split-pane";
 export * from "./states";
 export * from "./status-badge";

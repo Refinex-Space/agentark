@@ -6,15 +6,19 @@
  */
 import type {
   AgentDraftResponseResponse,
+  AgentPageResponseResponse,
   AgentResponseResponse,
+  AgentRevisionComparison,
   AgentRevisionListResponseResponse,
   AgentRevisionResponseResponse,
+  AgentSnapshot,
   ApiKeyListResponse,
   ArchiveCatalogAssetRequest,
   CatalogAsset,
   CatalogVersion,
   CatalogVersionDiff,
   ChangeDeploymentStatusRequest,
+  CompareAgentRevisionsParams,
   CreateAgentRequest,
   CreateApiKeyRequest,
   CreateCatalogAssetRequest,
@@ -48,6 +52,7 @@ import type {
   CursorPageSecretBinding,
   CursorPageSecretMetadata,
   DataSource,
+  DeploymentPageResponseResponse,
   DeploymentResponseResponse,
   DiffCatalogVersionsParams,
   DocumentRevision,
@@ -57,8 +62,10 @@ import type {
   KnowledgeIngestionRequest,
   KnowledgeProfile,
   KnowledgeRevision,
+  ListAgentsParams,
   ListCatalogAssetsParams,
   ListCatalogVersionsParams,
+  ListDeploymentsParams,
   ListKnowledgeBasesParams,
   ListKnowledgeDataSourcesParams,
   ListKnowledgeDocumentsParams,
@@ -2654,6 +2661,62 @@ export const requestKnowledgeRevisionDeletion = async (
   } as requestKnowledgeRevisionDeletionResponse;
 };
 
+export type listAgentsResponse200 = {
+  data: AgentPageResponseResponse;
+  status: 200;
+};
+
+export type listAgentsResponse401 = {
+  data: ProblemResponseResponse;
+  status: 401;
+};
+
+export type listAgentsResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listAgentsResponseSuccess = listAgentsResponse200 & {
+  headers: Headers;
+};
+export type listAgentsResponseError = (listAgentsResponse401 | listAgentsResponse403) & {
+  headers: Headers;
+};
+
+export type listAgentsResponse = listAgentsResponseSuccess | listAgentsResponseError;
+
+export const getListAgentsUrl = (projectId: string, params?: ListAgentsParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/agents?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/agents`;
+};
+
+export const listAgents = async (
+  projectId: string,
+  params?: ListAgentsParams,
+  options?: RequestInit,
+): Promise<listAgentsResponse> => {
+  const res = await fetch(getListAgentsUrl(projectId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listAgentsResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listAgentsResponse;
+};
+
 export type createAgentResponse201 = {
   data: AgentResponseResponse;
   status: 201;
@@ -2992,6 +3055,178 @@ export const getAgentRevision = async (
 
   const data: getAgentRevisionResponse["data"] = body ? JSON.parse(body) : {};
   return { data, status: res.status, headers: res.headers } as getAgentRevisionResponse;
+};
+
+export type getAgentRevisionSnapshotResponse200 = {
+  data: AgentSnapshot;
+  status: 200;
+};
+
+export type getAgentRevisionSnapshotResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type getAgentRevisionSnapshotResponse404 = {
+  data: ProblemResponseResponse;
+  status: 404;
+};
+
+export type getAgentRevisionSnapshotResponseSuccess = getAgentRevisionSnapshotResponse200 & {
+  headers: Headers;
+};
+export type getAgentRevisionSnapshotResponseError = (
+  getAgentRevisionSnapshotResponse403 | getAgentRevisionSnapshotResponse404
+) & {
+  headers: Headers;
+};
+
+export type getAgentRevisionSnapshotResponse =
+  getAgentRevisionSnapshotResponseSuccess | getAgentRevisionSnapshotResponseError;
+
+export const getGetAgentRevisionSnapshotUrl = (
+  projectId: string,
+  agentId: string,
+  revisionId: string,
+) => {
+  return `/api/v1/projects/${projectId}/agents/${agentId}/revisions/${revisionId}/snapshot`;
+};
+
+export const getAgentRevisionSnapshot = async (
+  projectId: string,
+  agentId: string,
+  revisionId: string,
+  options?: RequestInit,
+): Promise<getAgentRevisionSnapshotResponse> => {
+  const res = await fetch(getGetAgentRevisionSnapshotUrl(projectId, agentId, revisionId), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getAgentRevisionSnapshotResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as getAgentRevisionSnapshotResponse;
+};
+
+export type compareAgentRevisionsResponse200 = {
+  data: AgentRevisionComparison;
+  status: 200;
+};
+
+export type compareAgentRevisionsResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type compareAgentRevisionsResponse404 = {
+  data: ProblemResponseResponse;
+  status: 404;
+};
+
+export type compareAgentRevisionsResponseSuccess = compareAgentRevisionsResponse200 & {
+  headers: Headers;
+};
+export type compareAgentRevisionsResponseError = (
+  compareAgentRevisionsResponse403 | compareAgentRevisionsResponse404
+) & {
+  headers: Headers;
+};
+
+export type compareAgentRevisionsResponse =
+  compareAgentRevisionsResponseSuccess | compareAgentRevisionsResponseError;
+
+export const getCompareAgentRevisionsUrl = (
+  projectId: string,
+  agentId: string,
+  params: CompareAgentRevisionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/agents/${agentId}/revisions:diff?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/agents/${agentId}/revisions:diff`;
+};
+
+export const compareAgentRevisions = async (
+  projectId: string,
+  agentId: string,
+  params: CompareAgentRevisionsParams,
+  options?: RequestInit,
+): Promise<compareAgentRevisionsResponse> => {
+  const res = await fetch(getCompareAgentRevisionsUrl(projectId, agentId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: compareAgentRevisionsResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as compareAgentRevisionsResponse;
+};
+
+export type listDeploymentsResponse200 = {
+  data: DeploymentPageResponseResponse;
+  status: 200;
+};
+
+export type listDeploymentsResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listDeploymentsResponseSuccess = listDeploymentsResponse200 & {
+  headers: Headers;
+};
+export type listDeploymentsResponseError = listDeploymentsResponse403 & {
+  headers: Headers;
+};
+
+export type listDeploymentsResponse = listDeploymentsResponseSuccess | listDeploymentsResponseError;
+
+export const getListDeploymentsUrl = (
+  projectId: string,
+  environmentId: string,
+  params?: ListDeploymentsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/environments/${environmentId}/deployments?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/environments/${environmentId}/deployments`;
+};
+
+export const listDeployments = async (
+  projectId: string,
+  environmentId: string,
+  params?: ListDeploymentsParams,
+  options?: RequestInit,
+): Promise<listDeploymentsResponse> => {
+  const res = await fetch(getListDeploymentsUrl(projectId, environmentId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listDeploymentsResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listDeploymentsResponse;
 };
 
 export type createDeploymentResponse201 = {

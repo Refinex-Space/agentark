@@ -145,7 +145,7 @@ test-results/
 blob-report/
 allure-results/
 .playwright-cli/
-output/playwright/
+**/output/playwright/
 
 # Keep package-manager lockfiles committed.
 !pnpm-lock.yaml

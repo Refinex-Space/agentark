@@ -429,6 +429,18 @@ public class MybatisRuntimeStore implements
     }
 
     /**
+     * 按全局 Event 标识读取单条持久事实。
+     *
+     * @param eventId Event 标识
+     * @return Event
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<RuntimeEvent> find(EventId eventId) {
+        return mapper.findEvent(eventId.value()).map(this::event);
+    }
+
+    /**
      * 追加 Checkpoint，数据库触发器验证 State 可见性与当前令牌。
      *
      * @param checkpoint Checkpoint
@@ -726,6 +738,22 @@ public class MybatisRuntimeStore implements
         String instanceKey, DrainStatus status, Instant occurredAt) {
         return mapper.updateRuntimeInstanceDrain(
             instanceKey, status.name(), occurredAt) == 1;
+    }
+
+    /**
+     * 按最近心跳倒序列出 Runtime Instance。
+     *
+     * @param limit 最大读取数量
+     * @return Runtime Instance 列表
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<RuntimeInstance> list(int limit) {
+        return mapper.listRuntimeInstances(limit).stream()
+            .map(row -> new RuntimeInstance(
+                new JobId(row.id()), row.instanceKey(), row.startedAt(), row.heartbeatAt(),
+                readStringMap(row.capabilities()), DrainStatus.valueOf(row.drainStatus())))
+            .toList();
     }
 
     /**

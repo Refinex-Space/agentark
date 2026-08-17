@@ -30,6 +30,7 @@ import space.refinex.agentark.control.release.domain.AgentDraftSpec;
 import space.refinex.agentark.control.release.domain.ReleaseModels.*;
 import space.refinex.agentark.control.secret.application.port.SecretRepository;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
+import space.refinex.agentark.foundation.web.CursorPage;
 import space.refinex.agentark.kernel.id.*;
 import space.refinex.agentark.kernel.ref.SecretRef;
 import tools.jackson.core.JacksonException;
@@ -164,6 +165,30 @@ public class ReleaseApplicationService {
     }
 
     /**
+     * 按稳定 Key 游标列出项目内 Agent，不允许通过通用 Catalog API 绕过 Draft Owner。
+     *
+     * @param principal 已认证主体
+     * @param projectId 项目标识
+     * @param cursor    可选不透明游标
+     * @param limit     页大小
+     * @return Agent 游标页
+     */
+    @Transactional(readOnly = true)
+    public CursorPage<Agent> listAgents(
+        AgentArkPrincipal principal, ProjectId projectId, String cursor, int limit) {
+        authorize(principal, projectId, PermissionRegistry.AGENT_READ);
+        int pageSize = requireLimit(limit);
+        List<CatalogAsset> loaded = catalogRepository.listAssets(
+            CatalogAssetKind.AGENT, projectId, ReleaseCursorCodec.decode(cursor, ""), pageSize + 1);
+        boolean hasMore = loaded.size() > pageSize;
+        List<Agent> items = loaded.stream().limit(pageSize).map(this::agent).toList();
+        Optional<String> next = hasMore
+            ? Optional.of(ReleaseCursorCodec.encode(items.getLast().key()))
+            : Optional.empty();
+        return new CursorPage<>(items, next, hasMore);
+    }
+
+    /**
      * 读取 Agent 当前唯一 Draft。
      *
      * @param principal 已认证主体
@@ -245,6 +270,55 @@ public class ReleaseApplicationService {
     }
 
     /**
+     * 读取已授权 Agent Revision 的不可变 Canonical Snapshot。
+     *
+     * @param principal  已认证主体
+     * @param projectId  项目标识
+     * @param agentId    Agent 标识
+     * @param revisionId Revision 标识
+     * @return 不含明文 Secret 的不可变 Snapshot
+     */
+    @Transactional(readOnly = true)
+    public StoredSnapshot getSnapshot(
+        AgentArkPrincipal principal,
+        ProjectId projectId,
+        AgentId agentId,
+        RevisionId revisionId) {
+        authorize(principal, projectId, PermissionRegistry.AGENT_READ);
+        return requiredRevision(projectId, agentId, revisionId);
+    }
+
+    /**
+     * 比较两个不可变 Snapshot，只返回非秘密顶层区段名称和内容摘要。
+     *
+     * @param principal      已认证主体
+     * @param projectId      项目标识
+     * @param agentId        Agent 标识
+     * @param baseRevisionId 基准 Revision
+     * @param targetRevisionId 目标 Revision
+     * @return 不包含资产正文的 Revision 差异摘要
+     */
+    @Transactional(readOnly = true)
+    public RevisionComparison compareRevisions(
+        AgentArkPrincipal principal,
+        ProjectId projectId,
+        AgentId agentId,
+        RevisionId baseRevisionId,
+        RevisionId targetRevisionId) {
+        authorize(principal, projectId, PermissionRegistry.AGENT_READ);
+        StoredSnapshot base = requiredRevision(projectId, agentId, baseRevisionId);
+        StoredSnapshot target = requiredRevision(projectId, agentId, targetRevisionId);
+        Map<String, Object> baseFields = snapshotFields(base.canonicalJson());
+        Map<String, Object> targetFields = snapshotFields(target.canonicalJson());
+        List<String> changed = AgentPublisher.DIFF_SECTIONS.stream()
+            .filter(section -> !Objects.equals(baseFields.get(section), targetFields.get(section)))
+            .toList();
+        return new RevisionComparison(
+            base.revision().id(), target.revision().id(), base.revision().contentHash(),
+            target.revision().contentHash(), changed);
+    }
+
+    /**
      * 创建 Environment 内稳定 Deployment。
      *
      * @param principal     主体
@@ -300,6 +374,38 @@ public class ReleaseApplicationService {
         authorizeEnvironment(principal, projectId, environmentId, PermissionRegistry.DEPLOYMENT_READ);
         return repository.findDeployment(projectId, environmentId, id)
             .orElseThrow(() -> new IamNotFoundException("deployment is not visible"));
+    }
+
+    /**
+     * 按 UUIDv7 游标列出 Environment 内 Deployment。
+     *
+     * @param principal     已认证主体
+     * @param projectId     项目标识
+     * @param environmentId 环境标识
+     * @param cursor        可选不透明游标
+     * @param limit         页大小
+     * @return Deployment 游标页
+     */
+    @Transactional(readOnly = true)
+    public CursorPage<Deployment> listDeployments(
+        AgentArkPrincipal principal,
+        ProjectId projectId,
+        EnvironmentId environmentId,
+        String cursor,
+        int limit) {
+        authorizeEnvironment(
+            principal, projectId, environmentId, PermissionRegistry.DEPLOYMENT_READ);
+        int pageSize = requireLimit(limit);
+        String after = ReleaseCursorCodec.decode(
+            cursor, "00000000-0000-7000-8000-000000000000");
+        List<Deployment> loaded = repository.listDeployments(
+            projectId, environmentId, DeploymentId.parse(after), pageSize + 1);
+        boolean hasMore = loaded.size() > pageSize;
+        List<Deployment> items = loaded.stream().limit(pageSize).toList();
+        Optional<String> next = hasMore
+            ? Optional.of(ReleaseCursorCodec.encode(items.getLast().id().asString()))
+            : Optional.empty();
+        return new CursorPage<>(items, next, hasMore);
     }
 
     /**
@@ -540,6 +646,34 @@ public class ReleaseApplicationService {
         } catch (JacksonException exception) {
             throw new IllegalStateException("stored snapshot JSON is invalid", exception);
         }
+    }
+
+    /**
+     * 读取已经过发布契约校验的 Snapshot 顶层字段，用于无正文差异摘要。
+     *
+     * @param canonicalJson Canonical Snapshot JSON
+     * @return 保持字段结构的稳定映射
+     */
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> snapshotFields(String canonicalJson) {
+        try {
+            return new LinkedHashMap<>(jsonMapper.readValue(canonicalJson, Map.class));
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("stored snapshot JSON is invalid", exception);
+        }
+    }
+
+    /**
+     * 限制 Release 列表页大小，避免无界数据库读取。
+     *
+     * @param limit 请求页大小
+     * @return 已验证页大小
+     */
+    private int requireLimit(int limit) {
+        if (limit < 1 || limit > 100) {
+            throw new IllegalArgumentException("limit must be between 1 and 100");
+        }
+        return limit;
     }
 
     /**

@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 
 import { createMemoryCredentialProvider } from "@/shared/api/http";
+import type { TenantSelection } from "@/shared/api/http";
 
 /** 已认证主体的最小前端投影。 */
 export interface AuthPrincipal {
@@ -10,6 +11,8 @@ export interface AuthPrincipal {
   displayName: string;
   /** 当前身份来源，仅用于 UI 提示。 */
   kind: "user" | "service" | "preview";
+  /** 已验证 Token 中的非敏感租户选择提示，不替代服务端授权。 */
+  tenantSelection?: TenantSelection;
 }
 
 /** 认证会话状态。 */

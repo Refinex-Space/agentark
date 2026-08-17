@@ -60,6 +60,18 @@ public interface SchedulerRepository {
     Optional<Job> find(JobId jobId);
 
     /**
+     * 按 UUIDv7 顺序列出租户 Job，不返回未授权租户数据。
+     *
+     * @param organizationId 组织标识
+     * @param projectId      项目标识
+     * @param afterId        不包含当前值的 Job 游标
+     * @param limit          读取上限
+     * @return Job 列表
+     */
+    List<Job> list(
+        OrganizationId organizationId, ProjectId projectId, JobId afterId, int limit);
+
+    /**
      * 原子领取一个到期 Job，递增 Fencing Token 并追加 Attempt。
      *
      * @param type      Worker Pool 可处理的 Job 类型

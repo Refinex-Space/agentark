@@ -28,16 +28,17 @@ import space.refinex.agentark.kernel.id.ProjectId;
 import space.refinex.agentark.scheduling.adapter.in.web.SchedulerApiModels.*;
 import space.refinex.agentark.scheduling.application.SchedulerApplicationService;
 import space.refinex.agentark.scheduling.application.SchedulerAuthorizationService;
+import space.refinex.agentark.scheduling.application.TriggerDefinitionService;
+import space.refinex.agentark.scheduling.application.TriggerDefinitionService.CreateTriggerCommand;
 import space.refinex.agentark.scheduling.application.WebhookIngressService;
 import space.refinex.agentark.scheduling.domain.SchedulerException;
 import space.refinex.agentark.scheduling.domain.SchedulerModels.DeadLetter;
 import space.refinex.agentark.scheduling.domain.SchedulerModels.Job;
+import space.refinex.agentark.scheduling.domain.SchedulerModels.*;
 
 import java.io.IOException;
 import java.net.URI;
-import java.util.List;
-import java.util.Objects;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * 提供 Job 状态、取消、Dead Letter Redrive 与 HMAC Webhook 接入端点，不暴露执行 Payload。
@@ -68,21 +69,124 @@ public final class SchedulerController {
     private final WebhookIngressService webhookService;
 
     /**
+     * Trigger 定义服务。
+     */
+    private final TriggerDefinitionService triggerService;
+
+    /**
      * 创建 Scheduler API Controller。
      *
      * @param service              Scheduler 应用服务
      * @param authorizationService 授权服务
      * @param webhookService       Webhook 接入服务
+     * @param triggerService       Trigger 定义服务
      */
     public SchedulerController(
         SchedulerApplicationService service,
         SchedulerAuthorizationService authorizationService,
-        WebhookIngressService webhookService) {
+        WebhookIngressService webhookService,
+        TriggerDefinitionService triggerService) {
         this.service = Objects.requireNonNull(service, "service must not be null");
         this.authorizationService = Objects.requireNonNull(
             authorizationService, "authorizationService must not be null");
         this.webhookService = Objects.requireNonNull(
             webhookService, "webhookService must not be null");
+        this.triggerService = Objects.requireNonNull(
+            triggerService, "triggerService must not be null");
+    }
+
+    /**
+     * 按 UUIDv7 游标列出租户 Job，不返回 Payload、Result 正文或 Secret。
+     *
+     * @param authentication 已认证主体
+     * @param organizationId 组织 UUIDv7
+     * @param projectId      项目 UUIDv7
+     * @param after          可选 Job UUIDv7 游标
+     * @param limit          页大小
+     * @return Job 游标页
+     */
+    @GetMapping("/api/v1/scheduler/jobs")
+    public JobPageResponse listJobs(
+        Authentication authentication,
+        @RequestParam String organizationId,
+        @RequestParam String projectId,
+        @RequestParam(required = false) String after,
+        @RequestParam(defaultValue = "50") int limit) {
+        requirePageLimit(limit);
+        OrganizationId organization = OrganizationId.parse(organizationId);
+        ProjectId project = ProjectId.parse(projectId);
+        authorizationService.requireProject(
+            principal(authentication), SchedulerAuthorizationService.READ,
+            organization, project);
+        JobId cursor = JobId.parse(after == null
+            ? "00000000-0000-7000-8000-000000000000" : after);
+        List<JobResponse> items = service.list(
+                organization, project, cursor, Math.min(limit + 1, 101))
+            .stream().map(this::response).toList();
+        boolean hasMore = items.size() > limit;
+        List<JobResponse> page = items.stream().limit(limit).toList();
+        return new JobPageResponse(page,
+            hasMore ? page.getLast().id() : null);
+    }
+
+    /**
+     * 创建或幂等复用租户 Trigger。
+     *
+     * @param authentication 已认证主体
+     * @param request        Trigger 创建请求
+     * @return 201 Created Trigger
+     */
+    @PostMapping("/api/v1/scheduler/triggers")
+    public ResponseEntity<TriggerResponse> createTrigger(
+        Authentication authentication,
+        @Valid @RequestBody CreateTriggerRequest request) {
+        OrganizationId organization = OrganizationId.parse(request.organizationId());
+        ProjectId project = ProjectId.parse(request.projectId());
+        authorizationService.requireProject(
+            principal(authentication), SchedulerAuthorizationService.MANAGE,
+            organization, project);
+        TriggerDefinition created = triggerService.create(new CreateTriggerCommand(
+            organization, project, request.key(), TriggerType.valueOf(request.type()),
+            Optional.ofNullable(request.cronExpression()), Optional.ofNullable(request.zoneId()),
+            request.config(), Optional.ofNullable(request.secretRef()), request.targetContract(),
+            JobType.valueOf(request.targetJobType())));
+        return ResponseEntity.created(URI.create(
+                "/api/v1/scheduler/triggers/" + created.id()))
+            .body(response(created));
+    }
+
+    /**
+     * 按 UUIDv7 游标列出租户 Trigger。
+     *
+     * @param authentication 已认证主体
+     * @param organizationId 组织 UUIDv7
+     * @param projectId      项目 UUIDv7
+     * @param after          可选 Trigger UUIDv7 游标
+     * @param limit          页大小
+     * @return Trigger 游标页
+     */
+    @GetMapping("/api/v1/scheduler/triggers")
+    public TriggerPageResponse listTriggers(
+        Authentication authentication,
+        @RequestParam String organizationId,
+        @RequestParam String projectId,
+        @RequestParam(required = false) String after,
+        @RequestParam(defaultValue = "50") int limit) {
+        requirePageLimit(limit);
+        OrganizationId organization = OrganizationId.parse(organizationId);
+        ProjectId project = ProjectId.parse(projectId);
+        authorizationService.requireProject(
+            principal(authentication), SchedulerAuthorizationService.READ,
+            organization, project);
+        UUID cursor = UUID.fromString(after == null
+            ? "00000000-0000-7000-8000-000000000000" : after);
+        List<TriggerResponse> items = triggerService.list(
+                organization, project, cursor, Math.min(limit + 1, 101))
+            .stream().map(this::response).toList();
+        boolean hasMore = items.size() > limit;
+        List<TriggerResponse> page = items.stream().limit(limit).toList();
+        return new TriggerPageResponse(page,
+            hasMore ? page.getLast().id() : null);
     }
 
     /**
@@ -251,6 +355,34 @@ public final class SchedulerController {
                 "SCHEDULER_AUTHENTICATION_REQUIRED", "scheduler authentication is required");
         }
         return principal;
+    }
+
+    /**
+     * 将 Trigger 领域模型映射为不含 Secret 值的 Public API 视图。
+     *
+     * @param trigger Trigger 定义
+     * @return Trigger 响应
+     */
+    private TriggerResponse response(TriggerDefinition trigger) {
+        return new TriggerResponse(
+            trigger.id().toString(), trigger.organizationId().asString(),
+            trigger.projectId().asString(), trigger.key(), trigger.type().name(),
+            trigger.cronExpression().orElse(null),
+            trigger.zoneId().map(java.time.ZoneId::getId).orElse(null), trigger.config(),
+            trigger.secretRef().orElse(null), trigger.targetContract(),
+            trigger.targetJobType().name(), trigger.status().name(), trigger.version(),
+            trigger.createdAt(), trigger.updatedAt());
+    }
+
+    /**
+     * 限制 Public 列表页大小，内部多读取一项只用于判断下一页。
+     *
+     * @param limit 请求页大小
+     */
+    private void requirePageLimit(int limit) {
+        if (limit < 1 || limit > 100) {
+            throw new IllegalArgumentException("limit must be between 1 and 100");
+        }
     }
 
     /**

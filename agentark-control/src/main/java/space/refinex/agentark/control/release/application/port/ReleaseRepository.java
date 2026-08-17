@@ -111,6 +111,18 @@ public interface ReleaseRepository {
     List<AgentRevision> listRevisions(ProjectId projectId, AgentId agentId);
 
     /**
+     * 按 UUIDv7 顺序列出 Environment 内的 Deployment。
+     *
+     * @param projectId     项目标识
+     * @param environmentId 环境标识
+     * @param afterId       不包含当前值的 UUIDv7 游标
+     * @param limit         读取上限
+     * @return 按 UUIDv7 升序排列的 Deployment
+     */
+    List<Deployment> listDeployments(
+        ProjectId projectId, EnvironmentId environmentId, DeploymentId afterId, int limit);
+
+    /**
      * @param deployment 部署聚合 @param history 首次历史 @param outbox 事件 @param actor 主体
      */
     void insertDeployment(

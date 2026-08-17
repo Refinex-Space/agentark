@@ -262,7 +262,7 @@ Phase 16 没有复制上游源码或资产。Gateway 只新增边缘 Adapter、�
 
 | 候选能力 | 分类 | AgentArk 落点 | 明确边界 |
 |---|---|---|---|
-| AgentScope Agent/Environment/Session/Event/HITL/Team | `REFERENCE` | Web IA、Feature 语义、Runtime Timeline/Approval 需求 | 不复制页面、DTO、Client、状态管理、样式或品牌；业务流程归 Phase 18 |
+| AgentScope Agent/Environment/Session/Event/HITL/Team | `REFERENCE` | Web IA、Feature 语义、Runtime Timeline/Approval 需求 | 不复制页面、DTO、Client、状态管理、样式或品牌；Phase 18 已在该边界内独立实现业务流程 |
 | AgentScope TanStack/Router/Radix/Tailwind 工程经验 | `REFERENCE` | AgentArk 独立依赖选择、Provider/Router 和 Design System | 不把上游目录或生成模型作为 UI Domain，不引入 Service 私有协议 |
 | DeepSeek Web Entry/Shell/Layout | `REFERENCE` | Sidebar/Header/Command/Panel 和 Lazy Shell 的交互层级 | 不迁入 Cordis/Plugin 装配，不复制 React/CSS 源码或测试 Snapshot |
 | DeepSeek Theme/Terminal/Timeline/Inspector | `REFERENCE` | AgentArk 自有 Token、主题、Split Pane、Timeline、Inspector | 不复制 `--dsw-*` 数值、Logo、favicon、图片、Glyph、文案或像素资产 |
@@ -271,6 +271,18 @@ Phase 16 没有复制上游源码或资产。Gateway 只新增边缘 Adapter、�
 
 Phase 17 新增源码、SVG、文案和 Token 均为 AgentArk 独立实现。上游固定 Worktree 保持只读，Web Lockfile 不含 AgentScope Service、DeepSeek Harness、Cordis 或 Plugin Runtime Package；完整证据见 [Web 上游参考边界](../frontend/source-reference.md)。
 
-## 18. 变更协议
+## 18. Phase 18 实际处置
+
+| 候选能力 | 分类 | AgentArk 落点 | 明确边界 |
+|---|---|---|---|
+| AgentScope Agent/Environment/Session/HITL 页面语义 | `REFERENCE` | Govern、Build、Release、Runtime、Approval Feature 的状态与操作范围 | 不复制 React 页面、DTO、Client 或 Dataplane 私有协议；只调用 AgentArk Public Contract |
+| AgentScope Event/Team/Task 交互 | `REFERENCE` | 持久 Event Timeline、消息流、调用树、Inspector 和 Approval 关联 | 不序列化 Provider Event，不展示隐藏推理链，不把聊天气泡当唯一事件视图 |
+| DeepSeek Workbench/Split/Command/Dense UI | `REFERENCE` | AgentArk 自有 App Shell、工作台布局、Command Palette、表格和窄屏导航 | 不复制 Token 数值、CSS/React 源码、品牌、图片、Cordis 或 Plugin Runtime |
+| Control/Runtime/Scheduler Public Contract | `ADAPT` | Agent/Deployment 列表、Snapshot/Diff、Runtime 状态/Payload、Job/Trigger 列表 | 只补齐 Web 必需的 Owner API；不共享 Mapper、数据库或 Internal API |
+| Phase 18 真实产品 E2E | `ADAPT` | 临时 MySQL/Redis、RS256 身份、四服务 Test Classpath 和 Playwright | 使用确定性测试 Engine；不伪造生产 OIDC、真实模型或外部 Provider 验收 |
+
+Phase 18 没有迁入上游源码、资产、品牌或新运行时依赖。新增页面、Token、文案、E2E Harness 和截图均为 AgentArk 独立实现；本地截图属于忽略的测试产物。
+
+## 19. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

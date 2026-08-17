@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import space.refinex.agentark.scheduling.application.SchedulerApplicationService;
 import space.refinex.agentark.scheduling.application.SchedulerAuthorizationService;
 import space.refinex.agentark.scheduling.application.WebhookIngressService;
+import space.refinex.agentark.scheduling.application.TriggerDefinitionService;
 import space.refinex.agentark.scheduling.domain.SchedulerException;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -50,7 +51,7 @@ class SchedulerControllerTest {
         HttpServletRequest request = mock(HttpServletRequest.class);
         when(request.getContentLengthLong()).thenReturn(1_048_577L);
         SchedulerController controller = new SchedulerController(
-            service, authorization, webhook);
+            service, authorization, webhook, mock(TriggerDefinitionService.class));
 
         assertThatThrownBy(() -> controller.webhook(
             "01990f72-9e84-7000-8000-000000000001", "1786874400",

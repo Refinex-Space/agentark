@@ -333,6 +333,32 @@ public interface ReleaseMapper {
         @Param("id") UUID id);
 
     /**
+     * 按 UUIDv7 顺序列出 Environment Deployment，查询始终带 Project 与 Environment Scope。
+     *
+     * @param projectId     项目 UUID
+     * @param environmentId 环境 UUID
+     * @param afterId       排除的最后 UUIDv7
+     * @param limit         读取上限
+     * @return Deployment 行列表
+     */
+    @Select("""
+        SELECT id, organization_id, project_id, environment_id, agent_id,
+               desired_revision_id, desired_status, traffic_policy_type, canary_percent,
+               version, created_at, updated_at
+        FROM deployment
+        WHERE project_id = #{projectId,jdbcType=BINARY}
+          AND environment_id = #{environmentId,jdbcType=BINARY}
+          AND id > #{afterId,jdbcType=BINARY}
+        ORDER BY id
+        LIMIT #{limit}
+        """)
+    List<DeploymentRow> listDeployments(
+        @Param("projectId") UUID projectId,
+        @Param("environmentId") UUID environmentId,
+        @Param("afterId") UUID afterId,
+        @Param("limit") int limit);
+
+    /**
      * @param id Deployment UUID @return 内部运行时使用的 Deployment
      */
     @Select("""

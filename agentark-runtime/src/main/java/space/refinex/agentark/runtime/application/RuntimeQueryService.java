@@ -22,6 +22,7 @@ import space.refinex.agentark.runtime.domain.RuntimeNotFoundException;
 import space.refinex.agentark.runtime.port.ApprovalRepository;
 import space.refinex.agentark.runtime.port.RuntimeEventStore;
 import space.refinex.agentark.runtime.port.RuntimeRepository;
+import space.refinex.agentark.runtime.port.RuntimeInstanceRepository;
 
 import java.util.List;
 import java.util.Objects;
@@ -50,20 +51,29 @@ public final class RuntimeQueryService {
     private final ApprovalRepository approvalRepository;
 
     /**
+     * Runtime Instance 仓储。
+     */
+    private final RuntimeInstanceRepository instanceRepository;
+
+    /**
      * 创建 Runtime 查询服务。
      *
      * @param repository         Runtime 聚合仓储
      * @param eventStore         Event Store
      * @param approvalRepository Approval 仓储
+     * @param instanceRepository Runtime Instance 仓储
      */
     public RuntimeQueryService(
         RuntimeRepository repository,
         RuntimeEventStore eventStore,
-        ApprovalRepository approvalRepository) {
+        ApprovalRepository approvalRepository,
+        RuntimeInstanceRepository instanceRepository) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
         this.eventStore = Objects.requireNonNull(eventStore, "eventStore must not be null");
         this.approvalRepository = Objects.requireNonNull(
             approvalRepository, "approvalRepository must not be null");
+        this.instanceRepository = Objects.requireNonNull(
+            instanceRepository, "instanceRepository must not be null");
     }
 
     /**
@@ -110,6 +120,36 @@ public final class RuntimeQueryService {
     public List<RuntimeEvent> events(RunId runId, long afterSequence, int limit) {
         run(runId);
         return eventStore.listRunAfter(runId, afterSequence, limit);
+    }
+
+    /**
+     * 读取属于指定 Run 的单条 Event，防止通过 Event ID 猜测跨 Run 下载。
+     *
+     * @param runId   Run 标识
+     * @param eventId Event 标识
+     * @return 同 Run Event
+     */
+    public RuntimeEvent event(RunId runId, EventId eventId) {
+        run(runId);
+        RuntimeEvent event = eventStore.find(eventId)
+            .orElseThrow(() -> new RuntimeNotFoundException("event is not available"));
+        if (!event.runId().equals(runId)) {
+            throw new RuntimeNotFoundException("event is not available");
+        }
+        return event;
+    }
+
+    /**
+     * 读取有限 Runtime Instance 集合，Controller 只可输出聚合摘要。
+     *
+     * @param limit 最大数量
+     * @return Runtime Instance 列表
+     */
+    public List<RuntimeInstance> instances(int limit) {
+        if (limit < 1 || limit > 1000) {
+            throw new IllegalArgumentException("instance limit must be between 1 and 1000");
+        }
+        return instanceRepository.list(limit);
     }
 
     /**

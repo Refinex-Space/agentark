@@ -22,6 +22,96 @@ security:
   - BearerAuth: []
 # 声明已实现的 Scheduler Public API。
 paths:
+  # 按租户列出 Durable Job 状态。
+  /api/v1/scheduler/jobs:
+    # 查询 Job 游标页。
+    get:
+      # 固定查询操作标识。
+      operationId: listSchedulerJobs
+      # 注册租户、游标和页大小。
+      parameters:
+        # 组织 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/OrganizationId" }
+        # 项目 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/ProjectId" }
+        # 可选 Job UUIDv7 游标。
+        - { name: after, in: query, required: false, schema: { type: string, format: uuid } }
+        # 页大小上限 100。
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      # 声明查询响应。
+      responses:
+        # 返回不含 Payload 的 Job 游标页。
+        "200":
+          # 成功说明。
+          description: Scheduler Job 游标页
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 引用 Job 页结构。
+              schema: { $ref: "#/components/schemas/JobPage" }
+        # 无租户读取权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # 创建和列出租户 Trigger。
+  /api/v1/scheduler/triggers:
+    # 查询 Trigger 游标页。
+    get:
+      # 固定查询操作标识。
+      operationId: listSchedulerTriggers
+      # 注册租户、游标和页大小。
+      parameters:
+        # 组织 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/OrganizationId" }
+        # 项目 UUIDv7 查询参数。
+        - { $ref: "#/components/parameters/ProjectId" }
+        # 可选 Trigger UUIDv7 游标。
+        - { name: after, in: query, required: false, schema: { type: string, format: uuid } }
+        # 页大小上限 100。
+        - { name: limit, in: query, required: false, schema: { type: integer, minimum: 1, maximum: 100, default: 50 } }
+      # 声明查询响应。
+      responses:
+        # 返回 Trigger 游标页。
+        "200":
+          # 成功说明。
+          description: Scheduler Trigger 游标页
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 引用 Trigger 页结构。
+              schema: { $ref: "#/components/schemas/TriggerPage" }
+        # 无租户读取权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+    # 创建或幂等复用 Trigger。
+    post:
+      # 固定创建操作标识。
+      operationId: createSchedulerTrigger
+      # 声明创建请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # JSON 请求。
+        content:
+          # 固定 JSON 媒体类型。
+          application/json:
+            # 引用 Trigger 创建结构。
+            schema: { $ref: "#/components/schemas/CreateTriggerRequest" }
+      # 声明创建响应。
+      responses:
+        # Trigger 已创建或幂等复用。
+        "201":
+          # 成功说明。
+          description: Scheduler Trigger 已创建
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 引用 Trigger 视图。
+              schema: { $ref: "#/components/schemas/TriggerView" }
+        # 无管理权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 稳定 Key 内容冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
   # 读取单个租户 Job 状态。
   /api/v1/scheduler/jobs/{jobId}:
     # 获取 Job 状态。
@@ -220,6 +310,104 @@ components:
   schemas:
     # 定义管理动作审计原因。
     ActionRequest: { type: object, additionalProperties: false, required: [reason], properties: { reason: { type: string, minLength: 1, maxLength: 255 } } }
+    # Durable Job 游标页，不包含执行 Payload。
+    JobPage:
+      # 固定对象结构。
+      type: object
+      # 列表和下一游标不可省略。
+      required: [items, nextCursor]
+      # 定义分页字段。
+      properties:
+        # 当前页 Job 状态。
+        items: { type: array, items: { $ref: "../schemas/scheduler-job/v1.json#/$defs/JobView" } }
+        # 下一页 UUIDv7；末页为空。
+        nextCursor: { type: [string, "null"], format: uuid }
+      # 禁止未声明字段。
+      additionalProperties: false
+    # Trigger 创建请求。
+    CreateTriggerRequest:
+      # 固定对象结构。
+      type: object
+      # 租户、Key、类型、配置和目标不可省略。
+      required: [organizationId, projectId, key, type, config, targetContract, targetJobType]
+      # 定义创建字段。
+      properties:
+        # 所属组织 UUIDv7。
+        organizationId: { type: string, format: uuid }
+        # 所属项目 UUIDv7。
+        projectId: { type: string, format: uuid }
+        # 项目内稳定 Key。
+        key: { type: string, pattern: "^[a-z][a-z0-9-]{1,62}$" }
+        # Trigger 类型：CRON=定时，WEBHOOK=签名外部触发。
+        type: { type: string, enum: [CRON, WEBHOOK] }
+        # CRON 六段表达式；WEBHOOK 为空。
+        cronExpression: { type: [string, "null"], maxLength: 255 }
+        # CRON IANA 时区；WEBHOOK 为空。
+        zoneId: { type: [string, "null"], maxLength: 64 }
+        # 不含 Secret、Token、Password、Credential、API Key 的目标 Job 配置。
+        config: { type: object, maxProperties: 32, propertyNames: { type: string, maxLength: 64 }, additionalProperties: { type: string, maxLength: 16384 } }
+        # WEBHOOK 验签 SecretRef；仅返回引用元数据，不返回值。
+        secretRef: { type: [string, "null"], maxLength: 1024 }
+        # 目标 Payload Contract 稳定名称。
+        targetContract: { type: string, minLength: 1, maxLength: 255 }
+        # 目标 Job 类型完整集合。
+        targetJobType: { type: string, enum: [KNOWLEDGE_INGESTION, RUNTIME_TURN, OUTBOUND_WEBHOOK, CHANNEL_MESSAGE] }
+      # 禁止未声明字段。
+      additionalProperties: false
+    # 不含 Secret 值的 Trigger 视图。
+    TriggerView:
+      # 固定对象结构。
+      type: object
+      # 稳定身份、租户、类型、目标和生命周期字段不可省略。
+      required: [id, organizationId, projectId, key, type, cronExpression, zoneId, config, secretRef, targetContract, targetJobType, status, version, createdAt, updatedAt]
+      # 定义 Trigger 视图字段。
+      properties:
+        # 返回持久 Trigger 的全局唯一 UUIDv7 标识。
+        id: { type: string, format: uuid }
+        # 所属组织 UUIDv7。
+        organizationId: { type: string, format: uuid }
+        # 所属项目 UUIDv7。
+        projectId: { type: string, format: uuid }
+        # 项目内稳定 Key。
+        key: { type: string }
+        # Trigger 类型完整集合。
+        type: { type: string, enum: [CRON, WEBHOOK] }
+        # 可空 Cron 表达式。
+        cronExpression: { type: [string, "null"] }
+        # 可空 IANA 时区。
+        zoneId: { type: [string, "null"] }
+        # 不含敏感值的目标配置。
+        config: { type: object, additionalProperties: { type: string } }
+        # 可空 SecretRef 元数据。
+        secretRef: { type: [string, "null"] }
+        # 目标 Payload Contract。
+        targetContract: { type: string }
+        # 目标 Job 类型完整集合。
+        targetJobType: { type: string, enum: [KNOWLEDGE_INGESTION, RUNTIME_TURN, OUTBOUND_WEBHOOK, CHANNEL_MESSAGE] }
+        # Trigger 状态完整集合。
+        status: { type: string, enum: [ENABLED, DISABLED, ARCHIVED] }
+        # 乐观锁版本。
+        version: { type: integer, minimum: 0 }
+        # 创建时间。
+        createdAt: { type: string, format: date-time }
+        # 更新时间。
+        updatedAt: { type: string, format: date-time }
+      # 禁止未声明字段。
+      additionalProperties: false
+    # Trigger 游标页。
+    TriggerPage:
+      # 固定对象结构。
+      type: object
+      # 列表和下一游标不可省略。
+      required: [items, nextCursor]
+      # 定义分页字段。
+      properties:
+        # 当前页 Trigger。
+        items: { type: array, items: { $ref: "#/components/schemas/TriggerView" } }
+        # 下一页 UUIDv7；末页为空。
+        nextCursor: { type: [string, "null"], format: uuid }
+      # 禁止未声明字段。
+      additionalProperties: false
     # 暴露 AgentArk 公共 Problem Detail 错误结构。
     ProblemDetail: { $ref: "../schemas/problem-detail/v1.json" }
   # 注册公共 HTTP 响应模板。

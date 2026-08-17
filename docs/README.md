@@ -31,6 +31,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 15 执行证据 | [Scheduler 与持久 Job](implementation/phase-15-scheduler.md) | 复核 Trigger、Job/Attempt/Lease、Cron/Webhook、Channel、Retry/Dead Letter 与 Internal Client |
 | Phase 16 执行证据 | [Gateway 公共入口](implementation/phase-16-gateway.md) | 复核路由、OIDC/JWT、API Key、CORS、限流、SSE 代理与安全边界 |
 | Phase 17 执行证据 | [Web 工程基础](implementation/phase-17-web-foundation.md) | 复核独立工程、设计系统、生成式 API Client、SSE Client、CI 与浏览器验收 |
+| Phase 18 执行证据 | [Web 核心产品流程](implementation/phase-18-web-features.md) | 复核真实 API 主链路、Web-readiness Contract、四服务 E2E、安全与验收边界 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |
@@ -48,6 +49,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Web 信息架构 | [Web IA](frontend/information-architecture.md) | 增减控制台导航、路由、Feature 或跨页面上下文 |
 | Web 设计系统 | [Design System](frontend/design-system.md) | 修改 Token、主题、通用组件、可访问性或视觉基线 |
 | Web 上游参考 | [Frontend Source Reference](frontend/source-reference.md) | 借鉴 AgentScope/DeepSeek 前端或评估复制、品牌和许可边界 |
+| Web 交互证据 | [Phase 18 交互与截图](frontend/phase-18-interactions.md) | 复核产品主链路、截图生成、可访问性和安全展示边界 |
 | 安全 | [安全标准](standards/security.md) | 身份、权限、Secret、租户、Sandbox 或供应链 |
 | 术语 | [领域术语](domain/glossary.md) | 命名聚合、接口、表、事件或 UI 文案 |
 | 运维与 Loop | [当前 Runbook](guides/runbook.md) | 本地检查、故障定位、回滚和 Loop 就绪性 |

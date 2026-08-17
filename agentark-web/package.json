@@ -17,6 +17,7 @@
     "typecheck": "tsc -b --pretty false",
     "test": "vitest run",
     "test:e2e": "playwright test",
+    "test:e2e:real": "node tools/run-real-e2e.mjs",
     "api:generate": "node tools/generate-openapi.mjs",
     "api:check": "node tools/generate-openapi.mjs --check"
   },

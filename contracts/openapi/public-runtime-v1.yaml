@@ -22,6 +22,34 @@ security:
   - BearerAuth: []
 # 声明已实现的 Runtime Public API。
 paths:
+  # 返回不暴露实例身份的 Runtime 运维摘要。
+  /api/v1/runtime/status:
+    # 查询 Runtime 状态。
+    get:
+      # 固定操作标识。
+      operationId: getRuntimeStatus
+      # 归入 Runtime 运维分组。
+      tags: [RuntimeOperations]
+      # 注册租户选择参数。
+      parameters:
+        # 已授权组织 UUIDv7。
+        - { name: organizationId, in: query, required: true, schema: { $ref: "#/components/schemas/UuidV7" } }
+        # 已授权项目 UUIDv7。
+        - { name: projectId, in: query, required: true, schema: { $ref: "#/components/schemas/UuidV7" } }
+      # 声明查询响应。
+      responses:
+        # 返回实例计数与 Provider 能力摘要。
+        "200":
+          # 成功说明。
+          description: Runtime 运维摘要
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 引用 Runtime 状态结构。
+              schema: { $ref: "#/components/schemas/RuntimeStatus" }
+        # 调用方无读取权限。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
   # 创建固定 Deployment、Revision 与 Snapshot 的 Session。
   /api/v1/runtime/sessions:
     # 创建 Runtime Session。
@@ -226,6 +254,40 @@ paths:
         "403": { $ref: "#/components/responses/ProblemResponse" }
         # Run 不存在或跨租户不可见。
         "404": { $ref: "#/components/responses/ProblemResponse" }
+  # 下载单个已授权 Event 的外部 Payload。
+  /api/v1/runtime/runs/{runId}/events/{eventId}/payload:
+    # 注册 Run 与 Event 路径参数。
+    parameters:
+      # 复用 Run 标识。
+      - { $ref: "#/components/parameters/RunId" }
+      # 指定与当前 Run 关联的持久 Event UUIDv7，禁止跨 Run 猜测。
+      - { name: eventId, in: path, required: true, schema: { $ref: "#/components/schemas/UuidV7" } }
+    # 流式读取 ObjectRef 对象。
+    get:
+      # 固定操作标识。
+      operationId: downloadRuntimeEventPayload
+      # 归入 Runtime Event 分组。
+      tags: [RuntimeEvent]
+      # 声明下载响应。
+      responses:
+        # 返回对象字节流，不返回授权 URI。
+        "200":
+          # 成功说明。
+          description: Runtime Event 外部 Payload
+          # 完整性响应头。
+          headers:
+            # 返回 ObjectRef 的 SHA-256 完整性摘要，供下载后校验。
+            X-Content-SHA256: { description: ObjectRef SHA-256 完整性摘要, schema: { $ref: "#/components/schemas/Sha256" } }
+          # 二进制响应。
+          content:
+            # 媒体类型由 ObjectRef 决定，此处声明通用字节流。
+            application/octet-stream:
+              # 二进制字符串。
+              schema: { type: string, format: binary }
+        # Event 只有内联 Payload。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+        # Run、Event 或对象不可见。
+        "404": { $ref: "#/components/responses/ProblemResponse" }
   # 回放后切实时的 SSE Event Stream。
   /api/v1/runtime/runs/{runId}/events:stream:
     # 注册 Run 路径参数。
@@ -377,6 +439,30 @@ components:
         # 非敏感渠道元数据。
         channelMetadata: { type: object, maxProperties: 64, propertyNames: { type: string, minLength: 1, maxLength: 128 }, additionalProperties: { type: string, minLength: 1, maxLength: 1024 } }
       # 禁止传入未声明字段。
+      additionalProperties: false
+    # Runtime Instance 与 Provider 聚合摘要。
+    RuntimeStatus:
+      # 固定对象结构。
+      type: object
+      # 计数、Provider 和能力字段不可省略。
+      required: [registered, healthy, draining, lastHeartbeatAt, runtimeProvider, compilerVersion, capabilities]
+      # 定义运维摘要字段。
+      properties:
+        # 已登记 Runtime Instance 数量。
+        registered: { type: integer, minimum: 0 }
+        # 最近一分钟内仍有心跳的实例数量。
+        healthy: { type: integer, minimum: 0 }
+        # 正在排空或已排空实例数量。
+        draining: { type: integer, minimum: 0 }
+        # 最近实例心跳时间；无实例时为空。
+        lastHeartbeatAt: { type: [string, "null"], format: date-time }
+        # 当前 Runtime Provider 稳定标识。
+        runtimeProvider: { type: string, minLength: 1 }
+        # 当前 Snapshot Compiler 版本。
+        compilerVersion: { type: string, minLength: 1 }
+        # 不含实例身份和 Secret 的能力摘要。
+        capabilities: { type: object, additionalProperties: { type: string } }
+      # 禁止未声明字段。
       additionalProperties: false
     # Turn 接单请求。
     CreateTurnRequest:

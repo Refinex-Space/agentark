@@ -92,7 +92,7 @@ export function createRequestInit(
   if (metadata.idempotencyKey) {
     headers.set("Idempotency-Key", metadata.idempotencyKey);
   }
-  return { headers, credentials: "same-origin" };
+  return { headers: Object.fromEntries(headers.entries()), credentials: "same-origin" };
 }
 
 /**

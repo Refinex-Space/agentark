@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phases 07–10 established Control IAM, versioned AI and Knowledge assets, immutable Agent Revision/Snapshot, Deployment and Internal Contracts. Phases 11–13 established the provider-neutral Runtime domain, durable Event/Work/State persistence, AgentScope anti-corruption layer, Snapshot Compiler, managed Runtime API/SSE/HITL and recovery. Phase 14 established safe Knowledge ingestion and fixed-Revision RAG. Phase 15 established the independent Scheduler Plane with durable Trigger/Job/Attempt/Lease, Cron/Webhook/Channel, Retry/Dead Letter and versioned Runtime/Control clients. Phase 16 established the stateless public Gateway. Phase 17 established the independent AgentArk Web foundation, design system, generated Public API clients, and reliable Runtime SSE client; complete product workflows remain owned by Phase 18.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phases 07–10 established Control IAM, versioned AI and Knowledge assets, immutable Agent Revision/Snapshot, Deployment and Internal Contracts. Phases 11–13 established the provider-neutral Runtime domain, durable Event/Work/State persistence, AgentScope anti-corruption layer, Snapshot Compiler, managed Runtime API/SSE/HITL and recovery. Phase 14 established safe Knowledge ingestion and fixed-Revision RAG. Phase 15 established the independent Scheduler Plane with durable Trigger/Job/Attempt/Lease, Cron/Webhook/Channel, Retry/Dead Letter and versioned Runtime/Control clients. Phase 16 established the stateless public Gateway. Phases 17–18 established the independent AgentArk Web foundation, design system, generated Public API/SSE clients, Web-readiness contracts, and the real Build → Publish → Deploy → Run → Approve → Observe product flow. Audit, Usage/Cost, Quota, and Evaluation facts remain owned by Phase 19.
 
 ## Authority
 
@@ -36,6 +36,7 @@ pnpm --dir agentark-web typecheck
 pnpm --dir agentark-web test
 pnpm --dir agentark-web build
 pnpm --dir agentark-web test:e2e
+pnpm --dir agentark-web test:e2e:real
 python3 tools/harness/knowledge_gate.py
 python3 tools/harness/verify_upstreams.py --require-worktrees
 git diff HEAD --check

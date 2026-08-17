@@ -46,7 +46,7 @@ public class AgentPublisher {
     /**
      * 允许进入发布差异摘要的非秘密 Snapshot 顶层区段。
      */
-    private static final List<String> DIFF_SECTIONS = List.of(
+    static final List<String> DIFF_SECTIONS = List.of(
         "runtimeProvider", "agent", "model", "prompts", "mcpServers", "skills",
         "knowledge", "memory", "workspace", "sandbox", "permissions", "limits");
 

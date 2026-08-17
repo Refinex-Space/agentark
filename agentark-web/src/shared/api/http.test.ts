@@ -35,5 +35,6 @@ describe("HTTP 请求安全基线", () => {
     expect(headers.get("If-Match")).toBe('"etag-1"');
     expect(headers.get("Idempotency-Key")).toBe("request-1");
     expect(headers.has("X-AgentArk-Authenticated-Project-Id")).toBe(false);
+    expect(request.headers).not.toBeInstanceOf(Headers);
   });
 });

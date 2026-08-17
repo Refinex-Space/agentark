@@ -69,6 +69,18 @@ public interface TriggerRepository {
     Optional<TriggerDefinition> find(UUID triggerId);
 
     /**
+     * 按 UUIDv7 顺序列出租户 Trigger。
+     *
+     * @param organizationId 组织标识
+     * @param projectId      项目标识
+     * @param afterId        不包含当前值的 Trigger 游标
+     * @param limit          读取上限
+     * @return Trigger 列表
+     */
+    List<TriggerDefinition> list(
+        OrganizationId organizationId, ProjectId projectId, UUID afterId, int limit);
+
+    /**
      * 列出到期且启用的 Cron Trigger 和 Cursor。
      *
      * @param now   当前时间

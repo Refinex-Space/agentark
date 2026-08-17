@@ -32,7 +32,9 @@ import space.refinex.agentark.control.release.application.RuntimeInternalContrac
 import space.refinex.agentark.control.release.application.RuntimeInternalContractService.DeploymentDescriptor;
 import space.refinex.agentark.control.release.domain.ReleaseModels.*;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
+import space.refinex.agentark.foundation.web.CursorPage;
 import space.refinex.agentark.kernel.id.*;
+import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
 import java.util.*;
@@ -62,19 +64,48 @@ public class ReleaseController {
     private final RuntimeInternalContractService internalService;
 
     /**
+     * Public Snapshot JSON 解析器。
+     */
+    private final ObjectMapper objectMapper;
+
+    /**
      * 创建 Release API 适配器。
      *
      * @param service         Release 应用服务
      * @param publisher       Agent 发布器
      * @param internalService Runtime Internal Contract 服务
+     * @param objectMapper    Snapshot JSON 解析器
      */
     public ReleaseController(
         ReleaseApplicationService service,
         AgentPublisher publisher,
-        RuntimeInternalContractService internalService) {
+        RuntimeInternalContractService internalService,
+        ObjectMapper objectMapper) {
         this.service = Objects.requireNonNull(service, "service must not be null");
         this.publisher = Objects.requireNonNull(publisher, "publisher must not be null");
         this.internalService = Objects.requireNonNull(internalService, "internalService must not be null");
+        this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
+    }
+
+    /**
+     * 按不透明游标列出项目内 Agent。
+     *
+     * @param authentication Spring Security 已认证上下文
+     * @param projectId      所属项目 UUIDv7
+     * @param cursor         可选不透明游标
+     * @param limit          页大小，范围 1 到 100
+     * @return Agent 游标页
+     */
+    @GetMapping("/api/v1/projects/{projectId}/agents")
+    public AgentPageResponse listAgents(
+        Authentication authentication,
+        @PathVariable String projectId,
+        @RequestParam(required = false) String cursor,
+        @RequestParam(defaultValue = "50") int limit) {
+        CursorPage<Agent> page = service.listAgents(
+            principal(authentication), ProjectId.parse(projectId), cursor, limit);
+        return new AgentPageResponse(
+            page.items(), page.nextCursor().orElse(null), page.hasMore());
     }
 
     /**
@@ -227,6 +258,84 @@ public class ReleaseController {
         return service.getRevision(
             principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
             RevisionId.parse(revisionId));
+    }
+
+    /**
+     * 返回已授权 Revision 的不可变 Snapshot，并用内容摘要提供 ETag。
+     *
+     * @param authentication Spring Security 已认证上下文
+     * @param projectId      所属项目 UUIDv7
+     * @param agentId        Agent UUIDv7
+     * @param revisionId     Revision UUIDv7
+     * @return 不含明文 Secret 的 Snapshot 视图
+     */
+    @GetMapping("/api/v1/projects/{projectId}/agents/{agentId}/revisions/{revisionId}/snapshot")
+    public ResponseEntity<SnapshotResponse> snapshot(
+        Authentication authentication,
+        @PathVariable String projectId,
+        @PathVariable String agentId,
+        @PathVariable String revisionId) {
+        StoredSnapshot stored = service.getSnapshot(
+            principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
+            RevisionId.parse(revisionId));
+        String etag = "\"" + stored.revision().contentHash().hex() + "\"";
+        try {
+            return ResponseEntity.ok().eTag(etag).body(new SnapshotResponse(
+                revisionId, stored.revision().contentHash().toString(),
+                objectMapper.readTree(stored.canonicalJson())));
+        } catch (tools.jackson.core.JacksonException exception) {
+            throw new IllegalStateException("stored snapshot JSON is invalid", exception);
+        }
+    }
+
+    /**
+     * 比较两个不可变 Agent Revision 的安全顶层区段。
+     *
+     * @param authentication Spring Security 已认证上下文
+     * @param projectId      所属项目 UUIDv7
+     * @param agentId        Agent UUIDv7
+     * @param baseRevisionId 基准 Revision UUIDv7
+     * @param targetRevisionId 目标 Revision UUIDv7
+     * @return 不含资产正文的 Revision 差异摘要
+     */
+    @GetMapping("/api/v1/projects/{projectId}/agents/{agentId}/revisions:diff")
+    public RevisionComparisonResponse compareRevisions(
+        Authentication authentication,
+        @PathVariable String projectId,
+        @PathVariable String agentId,
+        @RequestParam String baseRevisionId,
+        @RequestParam String targetRevisionId) {
+        RevisionComparison comparison = service.compareRevisions(
+            principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
+            RevisionId.parse(baseRevisionId), RevisionId.parse(targetRevisionId));
+        return new RevisionComparisonResponse(
+            comparison.baseRevisionId().asString(), comparison.targetRevisionId().asString(),
+            comparison.baseContentHash().toString(), comparison.targetContentHash().toString(),
+            comparison.changedSections());
+    }
+
+    /**
+     * 按 UUIDv7 游标列出 Environment 内 Deployment。
+     *
+     * @param authentication Spring Security 已认证上下文
+     * @param projectId      所属项目 UUIDv7
+     * @param environmentId  所属环境 UUIDv7
+     * @param cursor         可选不透明游标
+     * @param limit          页大小，范围 1 到 100
+     * @return Deployment 游标页
+     */
+    @GetMapping("/api/v1/projects/{projectId}/environments/{environmentId}/deployments")
+    public DeploymentPageResponse listDeployments(
+        Authentication authentication,
+        @PathVariable String projectId,
+        @PathVariable String environmentId,
+        @RequestParam(required = false) String cursor,
+        @RequestParam(defaultValue = "50") int limit) {
+        CursorPage<Deployment> page = service.listDeployments(
+            principal(authentication), ProjectId.parse(projectId),
+            EnvironmentId.parse(environmentId), cursor, limit);
+        return new DeploymentPageResponse(
+            page.items(), page.nextCursor().orElse(null), page.hasMore());
     }
 
     /**

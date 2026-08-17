@@ -16,6 +16,7 @@
 
 package space.refinex.agentark.runtime.adapter.in.web;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -168,6 +169,7 @@ public final class RuntimeApiModels {
      * @param payloadRef      大载荷受控 ObjectRef
      * @author refinex
      */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public record EventResponse(
         int schemaVersion,
         String eventId,
@@ -236,5 +238,32 @@ public final class RuntimeApiModels {
      * @author refinex
      */
     public record ApprovalPage(List<ApprovalResponse> items, String nextCursor) {
+    }
+
+    /**
+     * @param registered      已登记实例数
+     * @param healthy         最近一分钟内仍有心跳的实例数
+     * @param draining        正在排空或已排空实例数
+     * @param lastHeartbeatAt 最近心跳时刻；无实例时为空
+     * @param runtimeProvider 当前 Runtime Provider 标识
+     * @param compilerVersion 当前 Compiler 版本
+     * @param capabilities    不含实例身份的 Provider 能力摘要
+     * @author refinex
+     */
+    public record RuntimeStatusResponse(
+        int registered,
+        int healthy,
+        int draining,
+        Instant lastHeartbeatAt,
+        String runtimeProvider,
+        String compilerVersion,
+        Map<String, String> capabilities) {
+
+        /**
+         * 防御性复制非敏感 Provider 能力。
+         */
+        public RuntimeStatusResponse {
+            capabilities = Map.copyOf(capabilities);
+        }
     }
 }

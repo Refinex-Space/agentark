@@ -178,14 +178,16 @@ public class ReleaseControlConfiguration {
      * @param service         Release 应用服务
      * @param publisher       Agent Publisher
      * @param internalService Internal Runtime Contract 服务
+     * @param jsonMapper      Snapshot JSON 解析器
      * @return Release Controller
      */
     @Bean
     public ReleaseController releaseController(
         ReleaseApplicationService service,
         AgentPublisher publisher,
-        RuntimeInternalContractService internalService) {
-        return new ReleaseController(service, publisher, internalService);
+        RuntimeInternalContractService internalService,
+        JsonMapper jsonMapper) {
+        return new ReleaseController(service, publisher, internalService, jsonMapper);
     }
 
     /**

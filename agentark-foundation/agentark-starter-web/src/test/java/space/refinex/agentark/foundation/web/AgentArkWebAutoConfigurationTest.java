@@ -34,6 +34,7 @@ import org.springframework.boot.test.context.runner.WebApplicationContextRunner;
 import space.refinex.agentark.kernel.error.DomainErrorCode;
 import space.refinex.agentark.kernel.error.DomainException;
 import space.refinex.agentark.kernel.id.OrganizationId;
+import space.refinex.agentark.kernel.ref.Checksum;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -104,16 +105,20 @@ class AgentArkWebAutoConfigurationTest {
             });
   }
 
-  /** 验证强类型 ID 使用规范字符串往返且未知枚举值不会静默变为 null。 */
+  /** 验证强类型 ID 与 Checksum 使用规范字符串往返。 */
   @Test
   void serializesStrongIdsAsCanonicalStrings() throws Exception {
     JsonMapper mapper = JsonMapper.builder().addModule(new AgentArkJacksonModule()).build();
     OrganizationId id = OrganizationId.generate();
+    Checksum checksum = Checksum.sha256("agentark-web");
 
     String json = mapper.writeValueAsString(id);
 
     assertThat(json).isEqualTo("\"" + id.asString() + "\"");
     assertThat(mapper.readValue(json, OrganizationId.class)).isEqualTo(id);
+    String checksumJson = mapper.writeValueAsString(checksum);
+    assertThat(checksumJson).isEqualTo("\"" + checksum + "\"");
+    assertThat(mapper.readValue(checksumJson, Checksum.class)).isEqualTo(checksum);
   }
 
   /** 验证领域错误映射保留稳定码和关联 ID，未知错误不泄露原始异常消息。 */

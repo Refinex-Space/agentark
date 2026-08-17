@@ -103,6 +103,8 @@ class ContractDocumentLintTest {
                     "/api/v1/projects/{projectId}/agents/{agentId}/publish",
                     "/api/v1/projects/{projectId}/agents/{agentId}/revisions",
                     "/api/v1/projects/{projectId}/agents/{agentId}/revisions/{revisionId}",
+                    "/api/v1/projects/{projectId}/agents/{agentId}/revisions/{revisionId}/snapshot",
+                    "/api/v1/projects/{projectId}/agents/{agentId}/revisions:diff",
                     "/api/v1/projects/{projectId}/environments/{environmentId}/deployments",
                     "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}",
                     "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/promote",
@@ -127,11 +129,13 @@ class ContractDocumentLintTest {
         assertThat(paths)
             .containsExactlyInAnyOrder(
                 "/api/v1/runtime/sessions",
+                "/api/v1/runtime/status",
                 "/api/v1/runtime/sessions/{sessionId}",
                 "/api/v1/runtime/sessions/{sessionId}/turns",
                 "/api/v1/runtime/runs/{runId}",
                 "/api/v1/runtime/runs/{runId}:cancel",
                 "/api/v1/runtime/runs/{runId}/events",
+                "/api/v1/runtime/runs/{runId}/events/{eventId}/payload",
                 "/api/v1/runtime/runs/{runId}/events:stream",
                 "/api/v1/runtime/approvals",
                 "/api/v1/runtime/approvals/{approvalId}:decide");
@@ -142,6 +146,8 @@ class ContractDocumentLintTest {
         assertThat(paths)
             .containsExactlyInAnyOrder(
                 "/api/v1/scheduler/jobs/{jobId}",
+                "/api/v1/scheduler/jobs",
+                "/api/v1/scheduler/triggers",
                 "/api/v1/scheduler/jobs/{jobId}:cancel",
                 "/api/v1/scheduler/dead-letters",
                 "/api/v1/scheduler/jobs/{jobId}:redrive",

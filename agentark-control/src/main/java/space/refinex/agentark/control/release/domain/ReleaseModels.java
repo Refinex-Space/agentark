@@ -258,6 +258,34 @@ public final class ReleaseModels {
     }
 
     /**
+     * @param baseRevisionId   基准 Revision
+     * @param targetRevisionId 目标 Revision
+     * @param baseContentHash  基准 Snapshot 内容摘要
+     * @param targetContentHash 目标 Snapshot 内容摘要
+     * @param changedSections  发生变化的非秘密顶层区段
+     * @author refinex
+     */
+    public record RevisionComparison(
+        RevisionId baseRevisionId,
+        RevisionId targetRevisionId,
+        Checksum baseContentHash,
+        Checksum targetContentHash,
+        List<String> changedSections) {
+
+        /**
+         * 校验比较两端和差异区段均完整有效。
+         */
+        public RevisionComparison {
+            Objects.requireNonNull(baseRevisionId, "baseRevisionId must not be null");
+            Objects.requireNonNull(targetRevisionId, "targetRevisionId must not be null");
+            Objects.requireNonNull(baseContentHash, "baseContentHash must not be null");
+            Objects.requireNonNull(targetContentHash, "targetContentHash must not be null");
+            changedSections = List.copyOf(Objects.requireNonNull(
+                changedSections, "changedSections must not be null"));
+        }
+    }
+
+    /**
      * 定义发布操作终态。
      *
      * @author refinex

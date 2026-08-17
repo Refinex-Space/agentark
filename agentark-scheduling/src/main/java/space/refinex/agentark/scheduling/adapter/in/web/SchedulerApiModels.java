@@ -21,6 +21,7 @@ import jakarta.validation.constraints.Size;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 集中定义 Scheduler 管理与 Webhook API 的语言中立 DTO。
@@ -116,5 +117,111 @@ public final class SchedulerApiModels {
      * @author refinex
      */
     public record WebhookAcceptedResponse(String jobId, String status) {
+    }
+
+    /**
+     * @param organizationId 所属组织 UUIDv7
+     * @param projectId      所属项目 UUIDv7
+     * @param key            项目内稳定 Trigger Key
+     * @param type           CRON 或 WEBHOOK
+     * @param cronExpression CRON 六段表达式
+     * @param zoneId         CRON IANA 时区
+     * @param config         不含敏感值的目标 Job 配置
+     * @param secretRef      WEBHOOK 验签 SecretRef
+     * @param targetContract 目标 Payload Contract
+     * @param targetJobType  目标 Job 类型
+     * @author refinex
+     */
+    public record CreateTriggerRequest(
+        @NotBlank String organizationId,
+        @NotBlank String projectId,
+        @NotBlank @Size(max = 255) String key,
+        @NotBlank String type,
+        @Size(max = 255) String cronExpression,
+        @Size(max = 64) String zoneId,
+        @jakarta.validation.constraints.NotNull @Size(max = 32) Map<String, String> config,
+        @Size(max = 1024) String secretRef,
+        @NotBlank @Size(max = 255) String targetContract,
+        @NotBlank String targetJobType) {
+
+        /**
+         * 防御性复制 Trigger 配置，敏感键和值由应用服务继续校验。
+         */
+        public CreateTriggerRequest {
+            config = config == null ? null : Map.copyOf(config);
+        }
+    }
+
+    /**
+     * @param id             持久 Trigger UUIDv7 标识
+     * @param organizationId 组织 UUIDv7
+     * @param projectId      项目 UUIDv7
+     * @param key            稳定 Key
+     * @param type           CRON 或 WEBHOOK
+     * @param cronExpression Cron 表达式
+     * @param zoneId         IANA 时区
+     * @param config         不含敏感值的配置
+     * @param secretRef      可选 SecretRef 元数据
+     * @param targetContract 目标 Contract
+     * @param targetJobType  目标 Job 类型
+     * @param status         ENABLED、DISABLED 或 ARCHIVED
+     * @param version        乐观锁版本
+     * @param createdAt      创建时间
+     * @param updatedAt      更新时间
+     * @author refinex
+     */
+    public record TriggerResponse(
+        String id,
+        String organizationId,
+        String projectId,
+        String key,
+        String type,
+        String cronExpression,
+        String zoneId,
+        Map<String, String> config,
+        String secretRef,
+        String targetContract,
+        String targetJobType,
+        String status,
+        long version,
+        Instant createdAt,
+        Instant updatedAt) {
+
+        /**
+         * 防御性复制非敏感 Trigger 配置。
+         */
+        public TriggerResponse {
+            config = Map.copyOf(config);
+        }
+    }
+
+    /**
+     * @param items      当前页 Job
+     * @param nextCursor 下一页 UUIDv7 游标；末页为空
+     * @author refinex
+     */
+    public record JobPageResponse(List<JobResponse> items, String nextCursor) {
+
+        /**
+         * 防御性复制 Job 列表。
+         */
+        public JobPageResponse {
+            items = List.copyOf(items);
+        }
+    }
+
+    /**
+     * @param items      当前页 Trigger
+     * @param nextCursor 下一页 UUIDv7 游标；末页为空
+     * @author refinex
+     */
+    public record TriggerPageResponse(List<TriggerResponse> items, String nextCursor) {
+
+        /**
+         * 防御性复制 Trigger 列表。
+         */
+        public TriggerPageResponse {
+            items = List.copyOf(items);
+        }
     }
 }

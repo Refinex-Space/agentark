@@ -17,6 +17,11 @@
 package space.refinex.agentark.runtime.adapter.in.web;
 
 import jakarta.validation.Valid;
+import org.springframework.core.io.buffer.DataBuffer;
+import org.springframework.core.io.buffer.DataBufferUtils;
+import org.springframework.core.io.buffer.DefaultDataBufferFactory;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.ServerSentEvent;
@@ -26,6 +31,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
+import space.refinex.agentark.foundation.storage.ObjectStore;
 import space.refinex.agentark.kernel.id.*;
 import space.refinex.agentark.kernel.ref.Checksum;
 import space.refinex.agentark.runtime.adapter.in.web.RuntimeApiModels.*;
@@ -39,6 +45,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.net.URI;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -95,6 +102,11 @@ public final class RuntimeController {
     private final space.refinex.agentark.runtime.port.RuntimeProviderCatalog providerCatalog;
 
     /**
+     * 可选对象存储；只在 Event 授权通过后读取其持久 ObjectRef。
+     */
+    private final Optional<ObjectStore> objectStore;
+
+    /**
      * 创建 Runtime API Controller。
      *
      * @param admissionService     接单服务
@@ -105,6 +117,7 @@ public final class RuntimeController {
      * @param eventStreamService   Event Stream 服务
      * @param objectMapper         JSON 解析器
      * @param providerCatalog      Provider 能力目录
+     * @param objectStore          可选对象存储
      */
     public RuntimeController(
         RuntimeAdmissionService admissionService,
@@ -114,7 +127,8 @@ public final class RuntimeController {
         RuntimeAuthorizationService authorizationService,
         RuntimeEventStreamService eventStreamService,
         ObjectMapper objectMapper,
-        space.refinex.agentark.runtime.port.RuntimeProviderCatalog providerCatalog) {
+        space.refinex.agentark.runtime.port.RuntimeProviderCatalog providerCatalog,
+        Optional<ObjectStore> objectStore) {
         this.admissionService = Objects.requireNonNull(
             admissionService, "admissionService must not be null");
         this.queryService = Objects.requireNonNull(queryService, "queryService must not be null");
@@ -129,6 +143,7 @@ public final class RuntimeController {
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
         this.providerCatalog = Objects.requireNonNull(
             providerCatalog, "providerCatalog must not be null");
+        this.objectStore = Objects.requireNonNull(objectStore, "objectStore must not be null");
     }
 
     /**
@@ -277,6 +292,77 @@ public final class RuntimeController {
             authorize(principal(authentication), RuntimeAuthorizationService.READ, run);
             return queryService.events(run.id(), after, limit).stream()
                 .map(this::event).toList();
+        });
+    }
+
+    /**
+     * 流式下载已授权 Event 的外部 Payload，不把对象 URI 当作授权凭据。
+     *
+     * @param authentication 已认证主体
+     * @param runId          Run UUIDv7
+     * @param eventId        Event UUIDv7
+     * @return 有界对象流和完整性响应头
+     */
+    @GetMapping("/api/v1/runtime/runs/{runId}/events/{eventId}/payload")
+    public Mono<ResponseEntity<Flux<DataBuffer>>> downloadEventPayload(
+        Authentication authentication,
+        @PathVariable String runId,
+        @PathVariable String eventId) {
+        return blocking(() -> {
+            RunId parsedRunId = RunId.parse(runId);
+            Run run = queryService.run(parsedRunId);
+            authorize(principal(authentication), RuntimeAuthorizationService.READ, run);
+            RuntimeEvent event = queryService.event(parsedRunId, EventId.parse(eventId));
+            space.refinex.agentark.kernel.ref.ObjectRef ref = event.payload().objectRef()
+                .orElseThrow(() -> new space.refinex.agentark.runtime.domain.RuntimeConflictException(
+                    "event payload is inline and has no downloadable artifact"));
+            ObjectStore store = objectStore.orElseThrow(() ->
+                new space.refinex.agentark.runtime.domain.RuntimeNotFoundException(
+                    "artifact store is not available"));
+            Flux<DataBuffer> body = DataBufferUtils.readInputStream(
+                () -> store.get(ref), DefaultDataBufferFactory.sharedInstance, 16_384);
+            return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(ref.mediaType()))
+                .contentLength(ref.size())
+                .header("X-Content-SHA256", ref.checksum().toString())
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                    .filename(event.id().asString()).build().toString())
+                .body(body);
+        });
+    }
+
+    /**
+     * 返回不暴露实例身份的 Runtime 状态摘要。
+     *
+     * @param authentication 已认证主体
+     * @param organizationId 已选择组织 UUIDv7
+     * @param projectId      已选择项目 UUIDv7
+     * @return Runtime Instance 与 Provider 聚合摘要
+     */
+    @GetMapping("/api/v1/runtime/status")
+    public Mono<RuntimeStatusResponse> runtimeStatus(
+        Authentication authentication,
+        @RequestParam String organizationId,
+        @RequestParam String projectId) {
+        return blocking(() -> {
+            AgentArkPrincipal principal = principal(authentication);
+            OrganizationId organization = OrganizationId.parse(organizationId);
+            ProjectId project = ProjectId.parse(projectId);
+            authorizationService.requireProject(
+                principal, RuntimeAuthorizationService.READ, organization, project);
+            List<RuntimeInstance> instances = queryService.instances(1000);
+            Instant healthyAfter = Instant.now().minusSeconds(60);
+            int healthy = Math.toIntExact(instances.stream()
+                .filter(instance -> !instance.heartbeatAt().isBefore(healthyAfter)).count());
+            int draining = Math.toIntExact(instances.stream()
+                .filter(instance -> instance.drainStatus() != DrainStatus.ACTIVE).count());
+            RuntimeProviderMetadata provider = providerCatalog.current();
+            return new RuntimeStatusResponse(
+                instances.size(), healthy, draining,
+                instances.isEmpty() ? null : instances.getFirst().heartbeatAt(),
+                provider.providerId(), provider.compilerVersion(), Map.of(
+                    "snapshotSchemas", provider.supportedSchemas().toString(),
+                    "capabilities", provider.capabilities().toString()));
         });
     }
 

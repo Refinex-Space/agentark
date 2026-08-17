@@ -48,6 +48,7 @@ import space.refinex.agentark.kernel.id.ProjectId;
 import space.refinex.agentark.kernel.id.RevisionId;
 import space.refinex.agentark.kernel.id.SnapshotId;
 import space.refinex.agentark.kernel.ref.Checksum;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 验证 Snapshot Internal API 的 ETag 与 If-None-Match 缓存语义。
@@ -65,7 +66,7 @@ class ReleaseControllerTest {
             .thenReturn(Optional.of(snapshot));
         ReleaseController controller = new ReleaseController(
             mock(ReleaseApplicationService.class), mock(AgentPublisher.class),
-            new RuntimeInternalContractService(repository));
+            new RuntimeInternalContractService(repository), JsonMapper.builder().build());
         Authentication authentication = authentication();
 
         ResponseEntity<String> first = controller.internalSnapshot(

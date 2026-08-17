@@ -8,6 +8,11 @@ import { LoadingState } from "@/shared/ui";
 const DashboardPage = lazy(() => import("@/app/views/dashboard-page"));
 const DesignSystemPage = lazy(() => import("@/app/views/design-system-page"));
 const RuntimeWorkspacePage = lazy(() => import("@/app/views/runtime-workspace-page"));
+const GovernPage = lazy(() => import("@/features/govern/govern-page"));
+const BuildPage = lazy(() => import("@/features/build/build-page"));
+const ReleasePage = lazy(() => import("@/features/release/release-page"));
+const ApprovalPage = lazy(() => import("@/features/approval/approval-page"));
+const OperatePage = lazy(() => import("@/features/operate/operate-page"));
 const SignInPage = lazy(() => import("@/app/views/sign-in-page"));
 const NotFoundPage = lazy(() => import("@/app/views/not-found-page"));
 
@@ -49,10 +54,50 @@ export const router = createBrowserRouter([
             ),
           },
           {
+            path: "/build",
+            element: (
+              <LazyBoundary>
+                <BuildPage />
+              </LazyBoundary>
+            ),
+          },
+          {
+            path: "/release",
+            element: (
+              <LazyBoundary>
+                <ReleasePage />
+              </LazyBoundary>
+            ),
+          },
+          {
             path: "/runtime",
             element: (
               <LazyBoundary>
                 <RuntimeWorkspacePage />
+              </LazyBoundary>
+            ),
+          },
+          {
+            path: "/approvals",
+            element: (
+              <LazyBoundary>
+                <ApprovalPage />
+              </LazyBoundary>
+            ),
+          },
+          {
+            path: "/operate",
+            element: (
+              <LazyBoundary>
+                <OperatePage />
+              </LazyBoundary>
+            ),
+          },
+          {
+            path: "/govern",
+            element: (
+              <LazyBoundary>
+                <GovernPage />
               </LazyBoundary>
             ),
           },

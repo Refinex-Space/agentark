@@ -185,6 +185,23 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
     }
 
     /**
+     * 按 UUIDv7 顺序读取 Environment 内 Deployment。
+     *
+     * @param projectId     项目标识
+     * @param environmentId 环境标识
+     * @param afterId       排除的最后 Deployment
+     * @param limit         读取上限
+     * @return Deployment 列表
+     */
+    @Override
+    public List<Deployment> listDeployments(
+        ProjectId projectId, EnvironmentId environmentId, DeploymentId afterId, int limit) {
+        return mapper.listDeployments(
+                projectId.value(), environmentId.value(), afterId.value(), limit)
+            .stream().map(this::deployment).toList();
+    }
+
+    /**
      * @param deployment Deployment @param history 历史 @param outbox 事件 @param actor 主体
      */
     @Override

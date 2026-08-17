@@ -21,17 +21,22 @@ Overview
 
 Organization、Project、Environment 是全局上下文，但它们只是前端选择。资源归属和权限始终由 Gateway 后的 Owner 服务验证，Header 不能形成授权事实。
 
-## Phase 17 已落地路由
+## 已落地路由
 
 | 路径 | 访问边界 | 目的 |
 |---|---|---|
 | `/` | Route Guard | 产品总览外壳和上下文状态 |
-| `/runtime` | Route Guard | Runtime 工作区布局与连接状态预览 |
+| `/build` | Route Guard | Agent Draft、版本化资产、Profile、Policy 与 Knowledge 构建 |
+| `/release` | Route Guard | Validation、Revision/Snapshot/Diff、Deployment、Promote 与 Rollback |
+| `/runtime` | Route Guard | Session、Turn、Run、SSE、Timeline、调用树、Usage 和 Artifact |
+| `/approvals` | Route Guard | Approval 摘要、风险/策略、决策和关联 Run |
+| `/operate` | Route Guard | Trigger、Job、Dead Letter、Webhook/Channel、Ingestion 与运行摘要 |
+| `/govern` | Route Guard | 租户上下文、Membership、Role、Service Account、API Key 和 Secret 元数据 |
 | `/design-system` | 公开、无业务数据 | 组件、主题和可访问性基线 |
-| `/sign-in` | 公开 | 身份外壳；开发预览只在 Development 暴露 |
+| `/sign-in` | 公开 | 身份外壳；临时 E2E 身份入口只在 E2E 构建模式暴露 |
 | `*` | 公开 | 稳定 Not Found 页面 |
 
-Phase 17 没有虚构未实现的 Agent/资产/发布 CRUD 页面。它们应在 Phase 18 基于真实 Public OpenAPI、权限和状态机逐项实现。
+Phase 18 页面基于真实 Public OpenAPI、权限和状态机实现。统一 Audit、Usage/Cost、Quota 与 Evaluation 仍由 Phase 19 拥有，页面不得用本地 Mock 伪造这些事实。
 
 ## 工程分层
 
@@ -68,9 +73,9 @@ Control、Runtime、Scheduler 的 Public OpenAPI 分别生成隔离 Fetch Client
 
 Runtime SSE Client 使用 Fetch Stream，而不是浏览器 `EventSource`，从而显式携带认证和 `Last-Event-ID`。它先校验 Runtime Event v1，再去重并进入有界内存；页面隐藏时中断网络读取，恢复后从持久 Event ID 回放。关闭页面连接不等于取消 Run。
 
-## 后续实现约束
+## 实现约束
 
-- Phase 18 的页面必须沿 Build → Release → Operate → Govern 主链路落位；
+- 页面必须沿 Govern → Build → Release → Runtime → Approval → Operate 主链路落位；
 - 路由可见性不是权限控制，按钮隐藏也不能替代服务端授权；
 - 发布、部署、审批和重试不做危险乐观更新；
 - Timeline/Inspector 展示稳定 AgentArk Event 投影，禁止暴露隐藏推理链或序列化 Provider Event；

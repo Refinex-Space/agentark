@@ -21,6 +21,11 @@ import jakarta.validation.constraints.*;
 import space.refinex.agentark.control.release.domain.AgentDraftSpec;
 import space.refinex.agentark.control.release.domain.ReleaseModels.TrafficPolicy;
 import space.refinex.agentark.control.release.domain.ReleaseModels.TrafficPolicyType;
+import space.refinex.agentark.control.release.domain.ReleaseModels.Agent;
+import space.refinex.agentark.control.release.domain.ReleaseModels.Deployment;
+import tools.jackson.databind.JsonNode;
+
+import java.util.List;
 
 /**
  * 集中定义 Agent Release 与 Deployment Public API 请求契约。
@@ -105,5 +110,71 @@ public final class ReleaseApiModels {
      * @author refinex
      */
     public record ChangeDeploymentStatusRequest(@PositiveOrZero long expectedVersion) {
+    }
+
+    /**
+     * @param items      当前页 Agent
+     * @param nextCursor 下一页不透明游标；末页为空
+     * @param hasMore    是否存在下一页
+     * @author refinex
+     */
+    public record AgentPageResponse(
+        List<Agent> items, String nextCursor, boolean hasMore) {
+
+        /**
+         * 防御性复制 Agent 列表。
+         */
+        public AgentPageResponse {
+            items = List.copyOf(items);
+        }
+    }
+
+    /**
+     * @param items      当前页 Deployment
+     * @param nextCursor 下一页不透明游标；末页为空
+     * @param hasMore    是否存在下一页
+     * @author refinex
+     */
+    public record DeploymentPageResponse(
+        List<Deployment> items, String nextCursor, boolean hasMore) {
+
+        /**
+         * 防御性复制 Deployment 列表。
+         */
+        public DeploymentPageResponse {
+            items = List.copyOf(items);
+        }
+    }
+
+    /**
+     * @param revisionId 不可变 Revision UUIDv7 标识
+     * @param contentHash Canonical Snapshot SHA-256 完整性摘要
+     * @param snapshot   不含明文 Secret 的 Snapshot JSON
+     * @author refinex
+     */
+    public record SnapshotResponse(String revisionId, String contentHash, JsonNode snapshot) {
+    }
+
+    /**
+     * @param baseRevisionId    基准 Revision UUIDv7
+     * @param targetRevisionId  目标 Revision UUIDv7
+     * @param baseContentHash   基准 Snapshot SHA-256
+     * @param targetContentHash 目标 Snapshot SHA-256
+     * @param changedSections   发生变化的非秘密顶层区段
+     * @author refinex
+     */
+    public record RevisionComparisonResponse(
+        String baseRevisionId,
+        String targetRevisionId,
+        String baseContentHash,
+        String targetContentHash,
+        List<String> changedSections) {
+
+        /**
+         * 防御性复制差异区段。
+         */
+        public RevisionComparisonResponse {
+            changedSections = List.copyOf(changedSections);
+        }
     }
 }

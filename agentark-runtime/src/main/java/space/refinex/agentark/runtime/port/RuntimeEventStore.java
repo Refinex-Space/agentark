@@ -23,6 +23,7 @@ import space.refinex.agentark.runtime.domain.RuntimeModels.RuntimePayload;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 定义追加式 Runtime Event Store；SSE 只能消费这里的事实，不能替代持久化。
@@ -81,4 +82,12 @@ public interface RuntimeEventStore {
      * @return 按 Session Sequence 升序排列的 Event
      */
     List<RuntimeEvent> listRunAfter(RunId runId, long afterSequence, int limit);
+
+    /**
+     * 按全局 Event 标识读取单条持久事实。
+     *
+     * @param eventId Event 标识
+     * @return Event 存在时返回领域事实
+     */
+    Optional<RuntimeEvent> find(EventId eventId);
 }

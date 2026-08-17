@@ -1,11 +1,16 @@
 import {
   Boxes,
+  CheckSquare2,
   ChevronsUpDown,
+  Gauge,
+  Hammer,
   LayoutDashboard,
   Moon,
   Palette,
   RadioTower,
+  Rocket,
   Search,
+  ShieldCheck,
   Sun,
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
@@ -17,6 +22,7 @@ import { useAuthSession } from "@/entities/auth/model/auth-session";
 import { useTenant } from "@/entities/tenant/model/tenant-context";
 import { cn } from "@/shared/lib/cn";
 import { ActionMenu, Button, Popover, StatusBadge } from "@/shared/ui";
+import { TenantBootstrap, TenantSwitcher } from "@/widgets/tenant-switcher/tenant-switcher";
 
 /** 侧边导航项。 */
 interface NavigationItem {
@@ -32,7 +38,12 @@ interface NavigationItem {
 
 const navigation: NavigationItem[] = [
   { to: "/", label: "总览", icon: LayoutDashboard },
+  { to: "/build", label: "构建", icon: Hammer },
+  { to: "/release", label: "发布", icon: Rocket },
   { to: "/runtime", label: "运行工作区", icon: RadioTower, feature: "runtimeWorkspace" },
+  { to: "/approvals", label: "审批中心", icon: CheckSquare2 },
+  { to: "/operate", label: "运行治理", icon: Gauge },
+  { to: "/govern", label: "IAM 与租户", icon: ShieldCheck },
   { to: "/design-system", label: "设计系统", icon: Palette },
 ];
 
@@ -42,7 +53,7 @@ const navigation: NavigationItem[] = [
 export function AppShell() {
   const flags = useFeatureFlags();
   const { session, signOut } = useAuthSession();
-  const { selection, clear } = useTenant();
+  const { selection } = useTenant();
   const { resolved, setMode } = useTheme();
   const navigate = useNavigate();
 
@@ -71,6 +82,7 @@ export function AppShell() {
 
   return (
     <div className="app-shell">
+      <TenantBootstrap />
       <a className="skip-link" href="#main-content">
         跳到主要内容
       </a>
@@ -105,7 +117,7 @@ export function AppShell() {
 
         <div className="sidebar__footer">
           <StatusBadge tone="success">系统基线就绪</StatusBadge>
-          <p>Phase 17 · Web Foundation</p>
+          <p>Phase 18 · Product Flow</p>
         </div>
       </aside>
 
@@ -126,27 +138,44 @@ export function AppShell() {
             <div className="context-popover">
               <p className="eyebrow">TENANT CONTEXT</p>
               <strong>Organization / Project / Environment</strong>
-              <p>选择只作为请求意图，所有权限仍由下游服务验证。</p>
-              <Button size="sm" variant="secondary" onClick={clear}>
-                清除选择
-              </Button>
+              <TenantSwitcher />
             </div>
           </Popover>
 
           <div className="topbar__actions">
             {flags.commandPalette ? (
-              <Button
-                id="global-command-trigger"
-                variant="secondary"
-                className="command-trigger"
-                onClick={() => {
-                  void navigate("/design-system#commands");
-                }}
+              <Popover
+                ariaLabel="命令面板"
+                trigger={
+                  <Button
+                    id="global-command-trigger"
+                    variant="secondary"
+                    className="command-trigger"
+                  >
+                    <Search aria-hidden="true" size={16} />
+                    <span>搜索与命令</span>
+                    <kbd>⌘ K</kbd>
+                  </Button>
+                }
               >
-                <Search aria-hidden="true" size={16} />
-                <span>搜索与命令</span>
-                <kbd>⌘ K</kbd>
-              </Button>
+                <div className="command-palette">
+                  <label>
+                    <span className="sr-only">筛选命令</span>
+                    <input autoFocus placeholder="跳转到产品区域…" />
+                  </label>
+                  <nav aria-label="快速跳转">
+                    {visibleNavigation.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link key={item.to} to={item.to}>
+                          <Icon aria-hidden="true" size={16} />
+                          {item.label}
+                        </Link>
+                      );
+                    })}
+                  </nav>
+                </div>
+              </Popover>
             ) : null}
             <ActionMenu
               ariaLabel="主题设置"

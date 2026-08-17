@@ -134,6 +134,26 @@ public final class TriggerDefinitionService {
     }
 
     /**
+     * 按 UUIDv7 游标列出租户 Trigger。
+     *
+     * @param organizationId 组织标识
+     * @param projectId      项目标识
+     * @param afterId        排除的最后 Trigger
+     * @param limit          页大小
+     * @return Trigger 列表
+     */
+    public List<TriggerDefinition> list(
+        OrganizationId organizationId, ProjectId projectId, UUID afterId, int limit) {
+        Objects.requireNonNull(organizationId, "organizationId must not be null");
+        Objects.requireNonNull(projectId, "projectId must not be null");
+        Objects.requireNonNull(afterId, "afterId must not be null");
+        if (limit < 1 || limit > 101) {
+            throw new IllegalArgumentException("internal read limit must be between 1 and 101");
+        }
+        return repository.list(organizationId, projectId, afterId, limit);
+    }
+
+    /**
      * 校验配置不含敏感字段并形成稳定顺序。
      *
      * @param source 原始配置

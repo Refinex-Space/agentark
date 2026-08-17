@@ -14,15 +14,69 @@ import type {
   CreateTurnRequest,
   DecideApprovalRequest,
   DecideRuntimeApprovalHeaders,
+  GetRuntimeStatusParams,
   ListRuntimeApprovalsParams,
   ListRuntimeRunEventsParams,
   ProblemResponseResponse,
   Run,
   RuntimeEvent,
+  RuntimeStatus,
   Session,
   StreamRuntimeRunEventsHeaders,
   Turn,
+  UuidV7,
 } from "./models";
+
+export type getRuntimeStatusResponse200 = {
+  data: RuntimeStatus;
+  status: 200;
+};
+
+export type getRuntimeStatusResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type getRuntimeStatusResponseSuccess = getRuntimeStatusResponse200 & {
+  headers: Headers;
+};
+export type getRuntimeStatusResponseError = getRuntimeStatusResponse403 & {
+  headers: Headers;
+};
+
+export type getRuntimeStatusResponse =
+  getRuntimeStatusResponseSuccess | getRuntimeStatusResponseError;
+
+export const getGetRuntimeStatusUrl = (params: GetRuntimeStatusParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/runtime/status?${stringifiedParams}`
+    : `/api/v1/runtime/status`;
+};
+
+export const getRuntimeStatus = async (
+  params: GetRuntimeStatusParams,
+  options?: RequestInit,
+): Promise<getRuntimeStatusResponse> => {
+  const res = await fetch(getGetRuntimeStatusUrl(params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getRuntimeStatusResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as getRuntimeStatusResponse;
+};
 
 export type createRuntimeSessionResponse201 = {
   data: Session;
@@ -353,6 +407,53 @@ export const listRuntimeRunEvents = async (
 
   const data: listRuntimeRunEventsResponse["data"] = body ? JSON.parse(body) : {};
   return { data, status: res.status, headers: res.headers } as listRuntimeRunEventsResponse;
+};
+
+export type downloadRuntimeEventPayloadResponse200 = {
+  data: Blob;
+  status: 200;
+};
+
+export type downloadRuntimeEventPayloadResponse404 = {
+  data: ProblemResponseResponse;
+  status: 404;
+};
+
+export type downloadRuntimeEventPayloadResponse409 = {
+  data: ProblemResponseResponse;
+  status: 409;
+};
+
+export type downloadRuntimeEventPayloadResponseSuccess = downloadRuntimeEventPayloadResponse200 & {
+  headers: Headers;
+};
+export type downloadRuntimeEventPayloadResponseError = (
+  downloadRuntimeEventPayloadResponse404 | downloadRuntimeEventPayloadResponse409
+) & {
+  headers: Headers;
+};
+
+export type downloadRuntimeEventPayloadResponse =
+  downloadRuntimeEventPayloadResponseSuccess | downloadRuntimeEventPayloadResponseError;
+
+export const getDownloadRuntimeEventPayloadUrl = (runId: string, eventId: UuidV7) => {
+  return `/api/v1/runtime/runs/${runId}/events/${eventId}/payload`;
+};
+
+export const downloadRuntimeEventPayload = async (
+  runId: string,
+  eventId: UuidV7,
+  options?: RequestInit,
+): Promise<downloadRuntimeEventPayloadResponse> => {
+  const res = await fetch(getDownloadRuntimeEventPayloadUrl(runId, eventId), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.blob();
+  const data: downloadRuntimeEventPayloadResponse["data"] =
+    body as downloadRuntimeEventPayloadResponse["data"];
+  return { data, status: res.status, headers: res.headers } as downloadRuntimeEventPayloadResponse;
 };
 
 export type streamRuntimeRunEventsResponse200 = {

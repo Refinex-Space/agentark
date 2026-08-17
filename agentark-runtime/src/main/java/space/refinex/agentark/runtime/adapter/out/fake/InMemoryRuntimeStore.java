@@ -39,7 +39,8 @@ public final class InMemoryRuntimeStore implements
     ApprovalRepository,
     LeaseManager,
     RuntimeWorkQueue,
-    UsageRecorder {
+    UsageRecorder,
+    RuntimeInstanceRepository {
 
     /**
      * Session 存储。
@@ -65,6 +66,11 @@ public final class InMemoryRuntimeStore implements
      * Event 存储。
      */
     private final Map<EventId, RuntimeEvent> events = new HashMap<>();
+
+    /**
+     * Runtime Instance 存储。
+     */
+    private final Map<String, RuntimeInstance> instances = new HashMap<>();
 
     /**
      * Approval 存储。
@@ -528,6 +534,81 @@ public final class InMemoryRuntimeStore implements
             .filter(event -> event.runId().equals(runId)
                 && event.sessionSequence() > afterSequence)
             .sorted(Comparator.comparingLong(RuntimeEvent::sessionSequence))
+            .limit(limit)
+            .toList();
+    }
+
+    /**
+     * 按 Event 标识读取单条事实。
+     *
+     * @param eventId Event 标识
+     * @return Event
+     */
+    @Override
+    public synchronized Optional<RuntimeEvent> find(EventId eventId) {
+        return Optional.ofNullable(events.get(eventId));
+    }
+
+    /**
+     * 注册或替换同 Key Runtime Instance。
+     *
+     * @param instance Runtime Instance
+     */
+    @Override
+    public synchronized void register(RuntimeInstance instance) {
+        instances.put(instance.instanceKey(), instance);
+    }
+
+    /**
+     * 刷新 Runtime Instance 心跳。
+     *
+     * @param instanceKey 实例稳定 Key
+     * @param heartbeatAt 当前 UTC 时刻
+     * @return 实例存在时为 true
+     */
+    @Override
+    public synchronized boolean heartbeat(String instanceKey, Instant heartbeatAt) {
+        RuntimeInstance current = instances.get(instanceKey);
+        if (current == null) {
+            return false;
+        }
+        instances.put(instanceKey, new RuntimeInstance(
+            current.id(), current.instanceKey(), current.startedAt(), heartbeatAt,
+            current.capabilities(), current.drainStatus()));
+        return true;
+    }
+
+    /**
+     * 更新 Runtime Instance 排空状态和心跳。
+     *
+     * @param instanceKey 实例稳定 Key
+     * @param status      目标排空状态
+     * @param occurredAt  状态变化时刻
+     * @return 实例存在时为 true
+     */
+    @Override
+    public synchronized boolean updateDrainStatus(
+        String instanceKey, DrainStatus status, Instant occurredAt) {
+        RuntimeInstance current = instances.get(instanceKey);
+        if (current == null) {
+            return false;
+        }
+        instances.put(instanceKey, new RuntimeInstance(
+            current.id(), current.instanceKey(), current.startedAt(), occurredAt,
+            current.capabilities(), status));
+        return true;
+    }
+
+    /**
+     * 按最近心跳倒序列出 Runtime Instance。
+     *
+     * @param limit 最大读取数量
+     * @return Runtime Instance 列表
+     */
+    @Override
+    public synchronized List<RuntimeInstance> list(int limit) {
+        return instances.values().stream()
+            .sorted(Comparator.comparing(RuntimeInstance::heartbeatAt).reversed())
             .limit(limit)
             .toList();
     }

@@ -452,7 +452,7 @@ flowchart LR
 | 15 | DONE | 2026-08-16 | `docs/implementation/phase-15-scheduler.md` | 持久 Job、Cron、Webhook、Channel、重试、Fencing、Dead Letter 与跨平面契约已验收 |
 | 16 | DONE | 2026-08-16 | `docs/implementation/phase-16-gateway.md` | 无业务状态 Gateway、公共认证、精确 CORS、限流、SSE 代理与安全门禁已验收 |
 | 17 | DONE | 2026-08-17 | `docs/implementation/phase-17-web-foundation.md` | 独立 Web 工程、设计系统、生成式 API Client、可靠 SSE Client、CI 与浏览器验收已完成 |
-| 18 | NOT_STARTED | — | `docs/implementation/phase-18-web-features.md` | |
+| 18 | DONE | 2026-08-17 | `docs/implementation/phase-18-web-features.md` | 真实 API 核心产品流程、Web-readiness Contract、四服务 E2E 与可访问性验收已完成 |
 | 19 | NOT_STARTED | — | `docs/implementation/phase-19-observability-governance.md` | |
 | 20 | NOT_STARTED | — | `docs/implementation/phase-20-security-hardening.md` | |
 | 21 | NOT_STARTED | — | `docs/implementation/phase-21-aistio-strangler.md` | |
@@ -2892,6 +2892,8 @@ git diff HEAD --check
 **前置条件：** Phase 17 DONE
 **目标：** 基于真实 API 实现 Build → Publish → Deploy → Run → Approve → Observe 的完整产品体验，并覆盖 IAM、资产、Knowledge 和 Scheduler 操作。
 
+**范围校正（2026-08-17）：** Phase 18 允许先补齐页面真实需要且仍由既有 Owner 负责的增量 Public Contract；统一 Audit、Usage/Cost、Quota 与 Evaluation 的事实存储和检索继续由 Phase 19 交付，本阶段只提供 Approval → Run 关联，不虚构 Audit API。
+
 ### 重点源码
 
 ```text
@@ -2925,69 +2927,69 @@ DeepSeek Harness 重点参考体验：
 
 #### Govern / IAM
 
-- [ ] Organization/Project 切换；
-- [ ] Environment；
-- [ ] Members/Membership；
-- [ ] Role/Binding；
-- [ ] Service Account/API Key；
-- [ ] Secret Metadata/Binding；
-- [ ] 权限拒绝和只读状态。
+- [x] Organization/Project 切换；
+- [x] Environment；
+- [x] Members/Membership；
+- [x] Role/Binding；
+- [x] Service Account/API Key；
+- [x] Secret Metadata/Binding；
+- [x] 权限拒绝和只读状态。
 
 #### Build
 
-- [ ] Agent List/Detail；
-- [ ] Agent Draft Editor；
-- [ ] Prompt/Version/Diff；
-- [ ] Model Provider/Profile；
-- [ ] MCP Server/Tool Inspector；
-- [ ] Skill/Version/Artifact；
-- [ ] Memory/Workspace/Sandbox；
-- [ ] Permission Policy；
-- [ ] Knowledge Base/Document/Revision；
-- [ ] 引用选择器只显示可访问且可用版本。
+- [x] Agent List/Detail；
+- [x] Agent Draft Editor；
+- [x] Prompt/Version/Diff；
+- [x] Model Provider/Profile；
+- [x] MCP Server/Tool Inspector；
+- [x] Skill/Version/Artifact；
+- [x] Memory/Workspace/Sandbox；
+- [x] Permission Policy；
+- [x] Knowledge Base/Document/Revision；
+- [x] 引用选择器只显示可访问且可用版本。
 
 #### Release
 
-- [ ] Validation Report；
-- [ ] 发布确认；
-- [ ] Snapshot Inspector；
-- [ ] Revision Diff；
-- [ ] Deployment；
-- [ ] Environment Promote；
-- [ ] Rollback；
-- [ ] Prod 风险确认；
-- [ ] 乐观锁冲突处理。
+- [x] Validation Report；
+- [x] 发布确认；
+- [x] Snapshot Inspector；
+- [x] Revision Diff；
+- [x] Deployment；
+- [x] Environment Promote；
+- [x] Rollback；
+- [x] Prod 风险确认；
+- [x] 乐观锁冲突处理。
 
 #### Run
 
-- [ ] Session 创建；
-- [ ] Turn 输入；
-- [ ] Run 状态；
-- [ ] Event Timeline；
-- [ ] Message Streaming；
-- [ ] Model/Tool/MCP/RAG/Sub-Agent 调用树；
-- [ ] Trace/Usage 链接；
-- [ ] Cancel；
-- [ ] SSE 重连状态；
-- [ ] Artifact 下载。
+- [x] Session 创建；
+- [x] Turn 输入；
+- [x] Run 状态；
+- [x] Event Timeline；
+- [x] Message Streaming；
+- [x] Model/Tool/MCP/RAG/Sub-Agent 调用树；
+- [x] Trace/Usage 链接；
+- [x] Cancel；
+- [x] SSE 重连状态；
+- [x] Artifact 下载。
 
 #### Approval
 
-- [ ] Approval Center；
-- [ ] Tool/参数摘要；
-- [ ] Risk/Policy；
-- [ ] Approve/Reject；
-- [ ] 重复决策冲突；
-- [ ] Expired；
-- [ ] Audit Link。
+- [x] Approval Center；
+- [x] Tool/参数摘要；
+- [x] Risk/Policy；
+- [x] Approve/Reject；
+- [x] 重复决策冲突；
+- [x] Expired；
+- [x] Approval → Run 关联；统一 Audit 检索归 Phase 19。
 
 #### Operate
 
-- [ ] Trigger/Job；
-- [ ] Retry/Dead Letter；
-- [ ] Webhook/Channel；
-- [ ] Knowledge Ingestion 状态；
-- [ ] Runtime Instance/Deployment 状态摘要。
+- [x] Trigger/Job；
+- [x] Retry/Dead Letter；
+- [x] Webhook/Channel；
+- [x] Knowledge Ingestion 状态；
+- [x] Runtime Instance/Deployment 状态摘要。
 
 ### UX 规则
 
@@ -3004,23 +3006,23 @@ DeepSeek Harness 重点参考体验：
 
 ### E2E 场景
 
-- [ ] 创建 Project/Environment；
-- [ ] 配置 Prompt/Model/MCP/Skill/Knowledge；
-- [ ] 创建 Agent Draft；
-- [ ] 验证失败并修复；
-- [ ] Publish；
-- [ ] Deploy；
-- [ ] 创建 Session/Turn；
-- [ ] SSE；
-- [ ] HITL；
-- [ ] 完成；
-- [ ] 发布新 Revision；
-- [ ] Promote；
-- [ ] 老 Session 保持旧 Revision；
-- [ ] Rollback；
-- [ ] 权限拒绝；
-- [ ] API Key 吊销；
-- [ ] Job Dead Letter/Redrive。
+- [x] 创建 Project/Environment；
+- [x] 配置 Prompt/Model/MCP/Skill/Knowledge；
+- [x] 创建 Agent Draft；
+- [x] 验证失败并修复；
+- [x] Publish；
+- [x] Deploy；
+- [x] 创建 Session/Turn；
+- [x] SSE；
+- [x] HITL；
+- [x] 完成；
+- [x] 发布新 Revision；
+- [x] Promote；
+- [x] 老 Session 保持旧 Revision；
+- [x] Rollback；
+- [x] 权限拒绝；
+- [x] API Key 一次展示、摘要存储与吊销状态；认证缓存吊销由 Phase 07/16 专门测试覆盖；
+- [x] Job Dead Letter/Redrive。
 
 ### 产物
 
@@ -3035,17 +3037,17 @@ docs/implementation/phase-18-web-features.md
 
 ### 验收条件
 
-- [ ] 主流程使用真实后端 API；
-- [ ] 没有 Production Mock；
-- [ ] Draft/Revision/Deployment/Session 语义正确；
-- [ ] 老 Session 不随 Promote 漂移；
-- [ ] Event Timeline 可恢复；
-- [ ] Approval 权限和终态正确；
-- [ ] Secret 不回显；
-- [ ] 跨租户 UI/API E2E 被拒绝；
-- [ ] Playwright 主流程通过；
-- [ ] Keyboard/Responsive/Accessibility 关键路径通过；
-- [ ] 前端错误和 Empty/Loading 状态完整。
+- [x] 主流程使用真实后端 API；
+- [x] 没有 Production Mock；
+- [x] Draft/Revision/Deployment/Session 语义正确；
+- [x] 老 Session 不随 Promote 漂移；
+- [x] Event Timeline 可恢复；
+- [x] Approval 权限和终态正确；
+- [x] Secret 不回显；
+- [x] 跨租户 UI/API E2E 被拒绝；
+- [x] Playwright 主流程通过；
+- [x] Keyboard/Responsive/Accessibility 关键路径通过；
+- [x] 前端错误和 Empty/Loading 状态完整。
 
 ### 验收命令
 

@@ -123,6 +123,34 @@ public interface SchedulerMapper {
     Optional<JobRow> findJob(@Param("id") UUID id);
 
     /**
+     * 按 UUIDv7 游标列出租户 Job，Payload 只在持久化适配器内用于领域还原。
+     *
+     * @param organizationId 组织 UUID
+     * @param projectId      项目 UUID
+     * @param afterId        排除的最后 Job UUIDv7
+     * @param limit          读取上限
+     * @return Job 行列表
+     */
+    @Select("""
+        SELECT id, organization_id, project_id, type, business_key, payload_json,
+               payload_object_uri, payload_hash, status, priority, available_at,
+               retry_policy_json, idempotency_capability, current_attempt,
+               current_fencing_token, claimed_by, claim_until, result_ref, error_code,
+               created_at, updated_at
+        FROM job
+        WHERE organization_id = #{organizationId,jdbcType=BINARY}
+          AND project_id = #{projectId,jdbcType=BINARY}
+          AND id > #{afterId,jdbcType=BINARY}
+        ORDER BY id
+        LIMIT #{limit}
+        """)
+    List<JobRow> listJobs(
+        @Param("organizationId") UUID organizationId,
+        @Param("projectId") UUID projectId,
+        @Param("afterId") UUID afterId,
+        @Param("limit") int limit);
+
+    /**
      * 锁定一个可领取或 Lease 已过期的 Job，支持多实例 SKIP LOCKED。
      *
      * @param type Job 类型
@@ -630,6 +658,32 @@ public interface SchedulerMapper {
         @Param("organizationId") UUID organizationId,
         @Param("projectId") UUID projectId,
         @Param("key") String key);
+
+    /**
+     * 按 UUIDv7 游标列出租户 Trigger。
+     *
+     * @param organizationId 组织 UUID
+     * @param projectId      项目 UUID
+     * @param afterId        排除的最后 Trigger UUIDv7
+     * @param limit          读取上限
+     * @return Trigger 行列表
+     */
+    @Select("""
+        SELECT id, organization_id, project_id, trigger_key, type, schedule_expression,
+               time_zone, config_json, secret_ref, target_contract, target_job_type,
+               status, version, created_at, updated_at
+        FROM trigger_definition
+        WHERE organization_id = #{organizationId,jdbcType=BINARY}
+          AND project_id = #{projectId,jdbcType=BINARY}
+          AND id > #{afterId,jdbcType=BINARY}
+        ORDER BY id
+        LIMIT #{limit}
+        """)
+    List<TriggerRow> listTriggers(
+        @Param("organizationId") UUID organizationId,
+        @Param("projectId") UUID projectId,
+        @Param("afterId") UUID afterId,
+        @Param("limit") int limit);
 
     /**
      * 列出到期 Cron Trigger。

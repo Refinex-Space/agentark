@@ -128,6 +128,23 @@ public class SchedulerApplicationService {
     }
 
     /**
+     * 按 UUIDv7 游标列出租户 Job，Public API 映射时不得暴露 Payload。
+     *
+     * @param organizationId 组织标识
+     * @param projectId      项目标识
+     * @param afterId        排除的最后 Job
+     * @param limit          页大小
+     * @return Job 列表
+     */
+    public List<Job> list(
+        OrganizationId organizationId, ProjectId projectId, JobId afterId, int limit) {
+        if (limit < 1 || limit > 101) {
+            throw new IllegalArgumentException("internal read limit must be between 1 and 101");
+        }
+        return repository.list(organizationId, projectId, afterId, limit);
+    }
+
+    /**
      * 取消租户 Job，并要求审计写出成功后才返回。
      *
      * @param organizationId 组织标识
