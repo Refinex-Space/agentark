@@ -57,6 +57,12 @@
             <artifactId>agentark-starter-storage</artifactId>
         </dependency>
 
+        <!-- 提供 Control 发布、部署和治理关键 Span 与低基数指标。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-observability</artifactId>
+        </dependency>
+
         <!-- 提供 Control IAM Controller、Servlet 安全过滤链和 Bean Validation 运行时。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

@@ -63,6 +63,7 @@ public interface RuntimeRepository {
      * @param occurredAt  接受事实发生时刻
      * @param outbox      Runtime Outbox
      * @param idempotency 完成态幂等记录
+     * @param quotaReservationRef Control 并发配额 Reservation 引用；无适用硬配额时为空
      */
     RuntimeEvent insertAcceptedTurn(
         Turn turn,
@@ -71,7 +72,18 @@ public interface RuntimeRepository {
         EventId eventId,
         Instant occurredAt,
         RuntimeOutboxEvent outbox,
-        IdempotencyRecord idempotency);
+        IdempotencyRecord idempotency,
+        Optional<String> quotaReservationRef);
+
+    /**
+     * 读取 Turn 首次接单时绑定的并发配额 Reservation 引用。
+     *
+     * <p>重试与恢复 Run 共享同一 Turn 级 Reservation，因此按 Turn 查询而不是按当前 Run 查询。
+     *
+     * @param turnId Turn 标识
+     * @return 可选 Control Reservation 引用
+     */
+    Optional<String> findQuotaReservation(TurnId turnId);
 
     /**
      * 对 FAILED/TIMED_OUT Turn 追加新 Run Attempt 和 Work Item，不覆盖旧 Run。

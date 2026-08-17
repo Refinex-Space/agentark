@@ -1,0 +1,14 @@
+# Grafana 自动加载仓库内 AgentArk Dashboard。
+apiVersion: 1
+
+# 声明 Dashboard Provider。
+providers:
+  # AgentArk 仓库托管 Dashboard。
+  - name: AgentArk
+    orgId: 1
+    folder: AgentArk
+    type: file
+    disableDeletion: true
+    editable: false
+    options:
+      path: /var/lib/grafana/dashboards

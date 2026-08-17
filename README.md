@@ -442,7 +442,7 @@ The migration sequence is designed to avoid changing package names, modules, JDK
 | **D — Knowledge / RAG** | ingestion, Qdrant, Knowledge Revision, retrieval, citations | ✅ Complete — safe pipeline, fixed-Revision retrieval, citations, and Qdrant isolation verified |
 | **E — Scheduler & Integrations** | cron, webhook, channels, retry/dead-letter | ✅ Complete |
 | **F — AgentArk Web** | design system, Agent builder, runtime console, governance | ✅ Complete — Phase 17 foundation and Phase 18 real product flows verified |
-| **G — Production Hardening** | Kubernetes, HA, security, DR, quotas, cost, evaluation | ⚪ Planned |
+| **G — Production Hardening** | Kubernetes, HA, security, DR, quotas, cost, evaluation | 🟡 In progress — Phase 19 observability/governance baseline complete; security and production deployment remain |
 
 The roadmap describes architectural sequencing rather than release dates.
 
@@ -510,7 +510,18 @@ Start the local Core infrastructure and current service implementations:
 ./tools/dev-down.sh
 ```
 
-All four Server JARs expose sanitized Actuator health and build information. Control, Runtime, and Scheduler contain the versioned business APIs implemented through Phase 18, while local security defaults fail closed. Phase 16 adds the stateless Gateway route table, OIDC/JWK JWT validation, Control-backed API Key pre-authentication, exact-origin CORS, Redis rate limiting, and SSE proxy/replay behavior. Runtime execution and Scheduler Worker remain disabled until the required production Model/Component/Secret, ingestion, outbound endpoint, and channel Provider beans are supplied. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. Scheduler V2 owns durable Trigger, Job, Attempt, Lease, Delivery, Dead Letter, idempotency, and Outbox facts and calls Runtime/Control only through versioned internal contracts. Phases 17–18 add a reproducible `agentark-web` build and a real four-service product-flow E2E, but there is still no Helm chart, configured production identity provider, static production deployment, real external Model/Provider acceptance, or production hardening. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
+Validate the optional local observability stack after creating an ignored `deploy/observability/.env` with a strong Grafana password:
+
+```bash
+docker compose \
+  --env-file deploy/observability/.env \
+  -f deploy/observability/docker-compose.yml \
+  config
+```
+
+See [`docs/guides/observability-operations.md`](./docs/guides/observability-operations.md) before starting or deleting its local volumes.
+
+All four Server JARs expose sanitized Actuator health, build information, and Prometheus metrics. Control, Runtime, and Scheduler contain the versioned business APIs implemented through Phase 19, while local security defaults fail closed. Phase 19 adds W3C OpenTelemetry propagation, bounded OTLP export, append-only Audit, versioned Usage/Cost, concurrency-safe Quota Reservation, deterministic Evaluation/Release Gates, and the Web governance view. Runtime execution and Scheduler Worker remain disabled until the required production Model/Component/Secret, ingestion, outbound endpoint, and channel Provider beans are supplied. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. The separate `deploy/observability/` stack is development-only. There is still no Helm chart, configured production identity provider, static production deployment, real external Model/Provider acceptance, or completed security/production hardening. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
 
 ### Engineering Rules
 

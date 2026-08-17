@@ -1,0 +1,24 @@
+# Grafana 自动装配 Prometheus 与 Tempo 数据源。
+apiVersion: 1
+
+# 声明只读数据源集合。
+datasources:
+  # Prometheus Metric 数据源。
+  - name: AgentArk Prometheus
+    uid: agentark-prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+  # Tempo Trace 数据源。
+  - name: AgentArk Tempo
+    uid: agentark-tempo
+    type: tempo
+    access: proxy
+    url: http://tempo:3200
+    editable: false
+    jsonData:
+      # 允许从 Trace 跳转到服务 Metric。
+      serviceMap:
+        datasourceUid: agentark-prometheus

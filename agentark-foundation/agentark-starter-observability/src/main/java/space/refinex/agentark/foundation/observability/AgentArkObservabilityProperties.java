@@ -38,7 +38,10 @@ public class AgentArkObservabilityProperties {
      * Metric 与 Span Attribute 允许使用的低基数字段。
      */
     private Set<String> allowedTags =
-        new LinkedHashSet<>(Set.of("operation", "outcome", "error.category", "runtime.provider"));
+        new LinkedHashSet<>(Set.of(
+            "service", "environment", "provider", "model.family", "tool.family", "status",
+            "job.type", "operation", "outcome", "error.category", "runtime.provider",
+            "usage.type"));
 
     /**
      * 是否显式允许采集 Prompt 正文，默认关闭。

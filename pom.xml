@@ -59,6 +59,10 @@
         <spring-boot.version>4.1.0</spring-boot.version>
         <spring-cloud.version>2025.1.2</spring-cloud.version>
         <mybatis-plus.version>3.5.17</mybatis-plus.version>
+        <!-- 与 Micrometer 1.17.0 的 Prometheus Registry 传递依赖保持一致。 -->
+        <prometheus-metrics.version>1.7.0</prometheus-metrics.version>
+        <!-- 与 Spring Boot 4.1 Micrometer OTel Bridge 使用的稳定语义约定保持一致。 -->
+        <opentelemetry-semconv.version>1.41.1</opentelemetry-semconv.version>
         <spring-boot-maven-plugin.version>${spring-boot.version}</spring-boot-maven-plugin.version>
         <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
         <extra-enforcer-rules.version>1.12.0</extra-enforcer-rules.version>

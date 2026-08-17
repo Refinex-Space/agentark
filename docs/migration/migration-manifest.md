@@ -283,6 +283,19 @@ Phase 17 新增源码、SVG、文案和 Token 均为 AgentArk 独立实现。上
 
 Phase 18 没有迁入上游源码、资产、品牌或新运行时依赖。新增页面、Token、文案、E2E Harness 和截图均为 AgentArk 独立实现；本地截图属于忽略的测试产物。
 
-## 19. 变更协议
+## 19. Phase 19 实际处置
+
+| 候选能力 | 分类 | AgentArk 落点 | 明确边界 |
+|---|---|---|---|
+| AgentScope Event/Middleware/Model/Tool 指标语义 | `REFERENCE/ADAPT` | AgentArk 稳定 Span、低基数 Timer、Runtime Event Trace 关联 | 不暴露或序列化 AgentScope Telemetry 类型，不采集隐藏推理链、Prompt 或 Tool 参数 |
+| Dataplane Event/Usage | `ADAPT` | Runtime V3 原始 Usage、Control Usage Ledger/聚合与异步汇聚 | 不复制 JPA Entity，不让 Control 读 Runtime Schema，不把 Provider 估算伪装成账单真值 |
+| Aistio Dashboard/Audit/Metric | `REFERENCE` | Control append-only Audit、治理 Public API、Web `/observe` | 不复制 Go Migration/API/UI，不继承默认用户或共享 Secret |
+| AgentScope Frontend Dashboard/Inspect | `REFERENCE` | Trace Link、Audit/Usage/Quota/Evaluation 操作视图 | 不复制页面、Client、品牌或本地 Mock 治理事实 |
+| OpenTelemetry/Micrometer | `DEPENDENCY/ADAPT` | Foundation Observability Starter 与四服务配置 | OTel Backend 不成为业务依赖，Metric 禁止无界租户/会话 Label |
+| Tempo/Prometheus/Grafana | `DEPENDENCY` | `deploy/observability/` 本地开发栈 | 不声明为生产 HA/安全/保留方案，生产部署归 Phase 22 |
+
+Phase 19 没有迁入上游源码或视觉资产。治理 Domain、Flyway、Contracts、Web 页面、Dashboard 和告警均为 AgentArk 独立实现；AgentScope 仍只通过既有 Provider 防腐层提供执行语义。
+
+## 20. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

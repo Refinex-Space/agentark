@@ -17,6 +17,8 @@
 package space.refinex.agentark.server.scheduler;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.observation.ObservationRegistry;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
 import org.mybatis.spring.annotation.MapperScan;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
@@ -96,12 +98,15 @@ public class SchedulerServerConfiguration {
      *
      * @param mapper     Scheduler Mapper
      * @param jsonMapper JSON Mapper
+     * @param controlClient Control Governance 汇聚客户端
      * @return 审计端口
      */
     @Bean
     public SchedulerAuditPort schedulerAuditPort(
-        SchedulerMapper mapper, JsonMapper jsonMapper) {
-        return new MybatisSchedulerAuditAdapter(mapper, jsonMapper);
+        SchedulerMapper mapper,
+        JsonMapper jsonMapper,
+        ControlInternalClient controlClient) {
+        return new MybatisSchedulerAuditAdapter(mapper, jsonMapper, controlClient);
     }
 
     /**
@@ -132,12 +137,19 @@ public class SchedulerServerConfiguration {
      * 创建 Control v1 Internal Client。
      *
      * @param properties Server 配置
+     * @param builders   Spring Boot 可选观测客户端构建器
+     * @param observationRegistry 当前 Micrometer Observation Registry
      * @return Control Client
      */
     @Bean
-    public ControlInternalClient schedulerControlClient(SchedulerServerProperties properties) {
+    public ControlInternalClient schedulerControlClient(
+        SchedulerServerProperties properties,
+        ObjectProvider<RestClient.Builder> builders,
+        ObservationRegistry observationRegistry) {
+        RestClient.Builder builder = builders.getIfAvailable(
+            () -> RestClient.builder().observationRegistry(observationRegistry));
         return new HttpControlInternalClient(
-            RestClient.builder().baseUrl(properties.controlBaseUrl().toString()).build(),
+            builder.baseUrl(properties.controlBaseUrl().toString()).build(),
             properties::internalServiceToken);
     }
 
@@ -145,12 +157,19 @@ public class SchedulerServerConfiguration {
      * 创建 Runtime v1 Internal Client。
      *
      * @param properties Server 配置
+     * @param builders   Spring Boot 可选观测客户端构建器
+     * @param observationRegistry 当前 Micrometer Observation Registry
      * @return Runtime Client
      */
     @Bean
-    public RuntimeInternalClient schedulerRuntimeClient(SchedulerServerProperties properties) {
+    public RuntimeInternalClient schedulerRuntimeClient(
+        SchedulerServerProperties properties,
+        ObjectProvider<RestClient.Builder> builders,
+        ObservationRegistry observationRegistry) {
+        RestClient.Builder builder = builders.getIfAvailable(
+            () -> RestClient.builder().observationRegistry(observationRegistry));
         return new HttpRuntimeInternalClient(
-            RestClient.builder().baseUrl(properties.runtimeBaseUrl().toString()).build(),
+            builder.baseUrl(properties.runtimeBaseUrl().toString()).build(),
             properties::internalServiceToken);
     }
 
@@ -306,6 +325,7 @@ public class SchedulerServerConfiguration {
      * @param store      Trigger Store
      * @param calculator Cron Calculator
      * @param clock      UTC 时钟
+     * @param telemetry  Scheduler Telemetry
      * @param jsonMapper 目标 Job Payload JSON 映射器
      * @return Cron 服务
      */
@@ -346,14 +366,15 @@ public class SchedulerServerConfiguration {
         MybatisSchedulerStore store,
         List<JobHandler> handlers,
         SchedulerServerProperties properties,
-        Clock clock) {
+        Clock clock,
+        AgentArkTelemetry telemetry) {
         EnumMap<JobType, Integer> pools = new EnumMap<>(JobType.class);
         for (JobType type : JobType.values()) {
             pools.put(type, properties.workerPoolSize());
         }
         return new SchedulerWorker(
             store, handlers, pools, clock, RandomGenerator.getDefault(),
-            properties.instanceKey(), properties.leaseTtl());
+            properties.instanceKey(), properties.leaseTtl(), telemetry);
     }
 
     /**

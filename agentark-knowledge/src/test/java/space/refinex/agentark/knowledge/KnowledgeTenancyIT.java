@@ -367,7 +367,7 @@ class KnowledgeTenancyIT {
          */
         @Bean
         KnowledgeAuditPort knowledgeAuditPort(IamAuditPublisher auditPublisher) {
-            return record -> auditPublisher.afterCommit(new IamAuditRecord(
+            return record -> auditPublisher.append(new IamAuditRecord(
                 record.action(), record.actor(), record.resourceType(), record.resourceId(),
                 Optional.of(record.organizationId()), Optional.of(record.projectId()), "SUCCEEDED",
                 record.occurredAt()));

@@ -525,7 +525,7 @@ public class CatalogApplicationService {
         StrongId resourceId,
         Project project,
         Instant now) {
-        auditPublisher.afterCommit(new IamAuditRecord(
+        auditPublisher.append(new IamAuditRecord(
             action, actor(principal), resourceType, resourceId.asString(),
             Optional.of(project.organizationId()), Optional.of(project.id()), "SUCCEEDED", now));
     }

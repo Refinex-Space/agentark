@@ -28,9 +28,13 @@ import space.refinex.agentark.runtime.domain.RuntimeNotFoundException;
 import space.refinex.agentark.runtime.port.DeploymentResolver;
 import space.refinex.agentark.runtime.port.RuntimeProviderCatalog;
 import space.refinex.agentark.runtime.port.SnapshotLoader;
+import space.refinex.agentark.runtime.port.RuntimeQuotaPort;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
+import space.refinex.agentark.foundation.observability.SpanConvention;
 
 import java.util.Map;
 import java.util.Objects;
+import java.time.Duration;
 
 /**
  * 在 Session 创建事务前解析 Deployment、Snapshot 与 Provider Capability，并固定运行身份。
@@ -59,6 +63,12 @@ public final class RuntimeAdmissionService {
      */
     private final RuntimeApplicationService runtimeService;
 
+    /** Runtime 接单前并发 Quota 预留端口。 */
+    private final RuntimeQuotaPort quotaPort;
+
+    /** Runtime 接单关键路径 Telemetry。 */
+    private final AgentArkTelemetry telemetry;
+
     /**
      * 创建 Runtime 接单服务。
      *
@@ -72,6 +82,48 @@ public final class RuntimeAdmissionService {
         SnapshotLoader snapshotLoader,
         RuntimeProviderCatalog providerCatalog,
         RuntimeApplicationService runtimeService) {
+        this(
+            deploymentResolver, snapshotLoader, providerCatalog, runtimeService,
+            RuntimeQuotaPort.noop(), AgentArkTelemetry.noop());
+    }
+
+    /**
+     * 创建带真实 Quota Reservation 的 Runtime 接单服务。
+     *
+     * @param deploymentResolver Deployment Resolver
+     * @param snapshotLoader     Snapshot Loader
+     * @param providerCatalog    Provider 能力目录
+     * @param runtimeService     Runtime 权威应用服务
+     * @param quotaPort          Quota Reservation 端口
+     */
+    public RuntimeAdmissionService(
+        DeploymentResolver deploymentResolver,
+        SnapshotLoader snapshotLoader,
+        RuntimeProviderCatalog providerCatalog,
+        RuntimeApplicationService runtimeService,
+        RuntimeQuotaPort quotaPort) {
+        this(
+            deploymentResolver, snapshotLoader, providerCatalog, runtimeService, quotaPort,
+            AgentArkTelemetry.noop());
+    }
+
+    /**
+     * 创建带真实 Quota 与 Telemetry 的 Runtime 接单服务。
+     *
+     * @param deploymentResolver Deployment Resolver
+     * @param snapshotLoader     Snapshot Loader
+     * @param providerCatalog    Provider 能力目录
+     * @param runtimeService     Runtime 权威应用服务
+     * @param quotaPort          Quota Reservation 端口
+     * @param telemetry          Runtime Telemetry
+     */
+    public RuntimeAdmissionService(
+        DeploymentResolver deploymentResolver,
+        SnapshotLoader snapshotLoader,
+        RuntimeProviderCatalog providerCatalog,
+        RuntimeApplicationService runtimeService,
+        RuntimeQuotaPort quotaPort,
+        AgentArkTelemetry telemetry) {
         this.deploymentResolver = Objects.requireNonNull(
             deploymentResolver, "deploymentResolver must not be null");
         this.snapshotLoader = Objects.requireNonNull(
@@ -80,6 +132,8 @@ public final class RuntimeAdmissionService {
             providerCatalog, "providerCatalog must not be null");
         this.runtimeService = Objects.requireNonNull(
             runtimeService, "runtimeService must not be null");
+        this.quotaPort = Objects.requireNonNull(quotaPort, "quotaPort must not be null");
+        this.telemetry = Objects.requireNonNull(telemetry, "telemetry must not be null");
     }
 
     /**
@@ -126,12 +180,36 @@ public final class RuntimeAdmissionService {
      * @return 已排队 Turn
      */
     public Turn acceptTurn(AcceptTurnCommand command) {
+        return telemetry.inSpan(
+            SpanConvention.RUNTIME, "turn.execute",
+            Map.of("operation", "turn.execute", "runtime.provider", command.runtimeProvider()),
+            () -> acceptTurnTracked(command));
+    }
+
+    /**
+     * 在 {@code runtime.turn.execute} Span 内校验 Provider、预留 Quota 并持久接单。
+     *
+     * @param command Turn 命令
+     * @return 已接收 Turn
+     */
+    private Turn acceptTurnTracked(AcceptTurnCommand command) {
         RuntimeProviderMetadata provider = providerCatalog.current();
         if (!provider.providerId().equals(command.runtimeProvider())
             || !provider.compilerVersion().equals(command.compilerVersion())) {
             throw new RuntimeConflictException("turn runtime provider is not available");
         }
-        return runtimeService.acceptTurn(command);
+        RuntimeQuotaPort.Reservation reservation = quotaPort.reserveConcurrentRun(
+            command.organizationId(), command.projectId(), command.idempotencyKey(),
+            command.sessionId().asString(), Duration.ofMinutes(30));
+        if (!reservation.allowed()) {
+            throw new RuntimeConflictException("hard concurrent run quota exceeded");
+        }
+        try {
+            return runtimeService.acceptTurn(command, reservation.reservationId());
+        } catch (RuntimeException exception) {
+            reservation.reservationId().ifPresent(quotaPort::release);
+            throw exception;
+        }
     }
 
     /**

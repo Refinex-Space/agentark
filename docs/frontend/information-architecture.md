@@ -32,11 +32,12 @@ Organization、Project、Environment 是全局上下文，但它们只是前端�
 | `/approvals` | Route Guard | Approval 摘要、风险/策略、决策和关联 Run |
 | `/operate` | Route Guard | Trigger、Job、Dead Letter、Webhook/Channel、Ingestion 与运行摘要 |
 | `/govern` | Route Guard | 租户上下文、Membership、Role、Service Account、API Key 和 Secret 元数据 |
+| `/observe` | Route Guard | Trace Link、Audit、Usage/Cost、Price、Quota、Evaluation 和 Release Gate |
 | `/design-system` | 公开、无业务数据 | 组件、主题和可访问性基线 |
 | `/sign-in` | 公开 | 身份外壳；临时 E2E 身份入口只在 E2E 构建模式暴露 |
 | `*` | 公开 | 稳定 Not Found 页面 |
 
-Phase 18 页面基于真实 Public OpenAPI、权限和状态机实现。统一 Audit、Usage/Cost、Quota 与 Evaluation 仍由 Phase 19 拥有，页面不得用本地 Mock 伪造这些事实。
+Phase 18 页面基于真实 Public OpenAPI、权限和状态机实现；Phase 19 的 `/observe` 继续只使用真实 Control Governance Public API。Audit、Usage/Cost、Quota 与 Evaluation 不得用浏览器本地状态或 Mock 伪造，Trace Link 只保存受控 URL/ID，不把 Telemetry 正文复制到浏览器缓存。
 
 ## 工程分层
 

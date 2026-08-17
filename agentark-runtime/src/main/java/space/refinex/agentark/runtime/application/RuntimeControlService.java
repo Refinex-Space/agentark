@@ -61,7 +61,20 @@ public final class RuntimeControlService {
      * @return 首次取消为 true，终态重放为 false
      */
     public boolean cancel(RunId runId, String reasonCode) {
-        Optional<CancellationCommand> command = coordinator.cancel(runId, reasonCode);
+        return cancel(runId, reasonCode, "runtime-system");
+    }
+
+    /**
+     * 幂等取消 Run，并把已认证主体引用传给提交后的 Governance Audit。
+     *
+     * @param runId        Run 标识
+     * @param reasonCode   稳定原因
+     * @param principalRef 已认证主体稳定引用
+     * @return 首次取消为 true，终态重放为 false
+     */
+    public boolean cancel(RunId runId, String reasonCode, String principalRef) {
+        Optional<CancellationCommand> command = coordinator.cancel(
+            runId, reasonCode, principalRef);
         command.ifPresent(executionEngine::cancel);
         return command.isPresent();
     }

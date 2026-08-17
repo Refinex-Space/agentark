@@ -187,7 +187,7 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
         apiKeyRepository.insert(apiKey);
         eventPublisher.publishEvent(
             new IamAuthorizationChanged(project.organizationId(), Optional.of(project.id())));
-        auditPublisher.afterCommit(new IamAuditRecord(
+        auditPublisher.append(new IamAuditRecord(
             "api_key.create",
             principal.subject(),
             "api-key",
@@ -249,7 +249,7 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
         }
         eventPublisher.publishEvent(
             new IamAuthorizationChanged(project.organizationId(), Optional.of(project.id())));
-        auditPublisher.afterCommit(new IamAuditRecord(
+        auditPublisher.append(new IamAuditRecord(
             "api_key.revoke",
             principal.subject(),
             "api-key",

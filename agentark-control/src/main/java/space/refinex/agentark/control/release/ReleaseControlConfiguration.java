@@ -17,6 +17,7 @@
 package space.refinex.agentark.control.release;
 
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
@@ -32,8 +33,10 @@ import space.refinex.agentark.control.release.adapter.out.persistence.ReleaseMap
 import space.refinex.agentark.control.release.application.*;
 import space.refinex.agentark.control.release.application.port.KnowledgeSnapshotLookup;
 import space.refinex.agentark.control.release.application.port.ReleaseRepository;
+import space.refinex.agentark.control.release.application.port.ReleaseGatePolicy;
 import space.refinex.agentark.control.secret.application.port.SecretRepository;
 import space.refinex.agentark.foundation.web.RequestContextAccessor;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Clock;
@@ -111,9 +114,10 @@ public class ReleaseControlConfiguration {
      * @param catalogRepository    AI 资产目录端口
      * @param tenantRepository     租户目录端口
      * @param authorizationService IAM 授权服务
-     * @param auditPublisher       事务提交后审计发布器
+     * @param auditPublisher       事务内审计发布器
      * @param clock                UTC 时钟
      * @param jsonMapper           JSON 映射器
+     * @param telemetry            Control Telemetry
      * @return Agent Publisher
      */
     @Bean
@@ -126,10 +130,11 @@ public class ReleaseControlConfiguration {
         IamAuthorizationService authorizationService,
         IamAuditPublisher auditPublisher,
         Clock clock,
-        JsonMapper jsonMapper) {
+        JsonMapper jsonMapper,
+        AgentArkTelemetry telemetry) {
         return new AgentPublisher(
             repository, resolver, serializer, catalogRepository, tenantRepository,
-            authorizationService, auditPublisher, clock, jsonMapper);
+            authorizationService, auditPublisher, clock, jsonMapper, telemetry);
     }
 
     /**
@@ -140,9 +145,11 @@ public class ReleaseControlConfiguration {
      * @param tenantRepository     租户目录端口
      * @param authorizationService IAM 授权服务
      * @param secretRepository     Secret 引用检查端口
-     * @param auditPublisher       事务提交后审计发布器
+     * @param releaseGatePolicies 可选 Release Gate Provider
+     * @param auditPublisher       事务内审计发布器
      * @param clock                UTC 时钟
      * @param jsonMapper           JSON 映射器
+     * @param telemetry            Control Telemetry
      * @return Release 应用服务
      */
     @Bean
@@ -152,12 +159,18 @@ public class ReleaseControlConfiguration {
         TenantCatalogRepository tenantRepository,
         IamAuthorizationService authorizationService,
         SecretRepository secretRepository,
+        ObjectProvider<ReleaseGatePolicy> releaseGatePolicies,
         IamAuditPublisher auditPublisher,
         Clock clock,
-        JsonMapper jsonMapper) {
+        JsonMapper jsonMapper,
+        AgentArkTelemetry telemetry) {
+        ReleaseGatePolicy releaseGatePolicy = releaseGatePolicies.getIfAvailable(
+            () -> (organizationId, scopedProjectId, agentId, environmentId, revisionId) -> {
+                // 显式禁用 Governance 时没有活动 Gate，Release 保持兼容。
+            });
         return new ReleaseApplicationService(
             repository, catalogRepository, tenantRepository, authorizationService,
-            secretRepository, auditPublisher, clock, jsonMapper);
+            secretRepository, releaseGatePolicy, auditPublisher, clock, jsonMapper, telemetry);
     }
 
     /**

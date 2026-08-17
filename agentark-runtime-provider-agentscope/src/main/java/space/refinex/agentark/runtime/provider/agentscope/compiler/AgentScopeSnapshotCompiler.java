@@ -26,6 +26,8 @@ import space.refinex.agentark.kernel.ref.Checksum;
 import space.refinex.agentark.kernel.ref.ObjectRef;
 import space.refinex.agentark.kernel.ref.SecretRef;
 import space.refinex.agentark.runtime.domain.RuntimeModels.SnapshotDescriptor;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
+import space.refinex.agentark.foundation.observability.SpanConvention;
 import space.refinex.agentark.runtime.provider.agentscope.RuntimeProviderDescriptor;
 import space.refinex.agentark.runtime.provider.agentscope.error.AgentScopeProviderException;
 import space.refinex.agentark.runtime.provider.agentscope.error.ProviderErrorCode;
@@ -72,6 +74,9 @@ public final class AgentScopeSnapshotCompiler {
      */
     private final SnapshotCompilationCache cache;
 
+    /** Snapshot 编译 Telemetry。 */
+    private final AgentArkTelemetry telemetry;
+
     /**
      * @param providerDescriptor Provider 能力声明
      * @param objectMapper       Jackson 2 映射器
@@ -81,10 +86,27 @@ public final class AgentScopeSnapshotCompiler {
         RuntimeProviderDescriptor providerDescriptor,
         ObjectMapper objectMapper,
         SnapshotCompilationCache cache) {
+        this(providerDescriptor, objectMapper, cache, AgentArkTelemetry.noop());
+    }
+
+    /**
+     * 创建带真实 Telemetry 的 Snapshot Compiler。
+     *
+     * @param providerDescriptor Provider 能力声明
+     * @param objectMapper       Jackson 2 映射器
+     * @param cache              无敏感编译计划缓存
+     * @param telemetry          编译 Telemetry
+     */
+    public AgentScopeSnapshotCompiler(
+        RuntimeProviderDescriptor providerDescriptor,
+        ObjectMapper objectMapper,
+        SnapshotCompilationCache cache,
+        AgentArkTelemetry telemetry) {
         this.providerDescriptor = Objects.requireNonNull(
             providerDescriptor, "providerDescriptor must not be null");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
         this.cache = Objects.requireNonNull(cache, "cache must not be null");
+        this.telemetry = Objects.requireNonNull(telemetry, "telemetry must not be null");
     }
 
     /**
@@ -94,6 +116,19 @@ public final class AgentScopeSnapshotCompiler {
      * @return 无 Secret 和 Session 状态的编译计划
      */
     public AgentScopeCompilationPlan compile(SnapshotDescriptor snapshot) {
+        return telemetry.inSpan(
+            SpanConvention.RUNTIME, "agent.compile",
+            Map.of("operation", "compile", "runtime.provider", snapshot.runtimeProvider()),
+            () -> compileTracked(snapshot));
+    }
+
+    /**
+     * 在 {@code runtime.agent.compile} Span 内验证并编译 Snapshot。
+     *
+     * @param snapshot 固定 Snapshot
+     * @return 编译计划
+     */
+    private AgentScopeCompilationPlan compileTracked(SnapshotDescriptor snapshot) {
         Objects.requireNonNull(snapshot, "snapshot must not be null");
         verifyEnvelope(snapshot);
         SnapshotCompilationCache.CacheKey key = new SnapshotCompilationCache.CacheKey(

@@ -13,6 +13,7 @@ const BuildPage = lazy(() => import("@/features/build/build-page"));
 const ReleasePage = lazy(() => import("@/features/release/release-page"));
 const ApprovalPage = lazy(() => import("@/features/approval/approval-page"));
 const OperatePage = lazy(() => import("@/features/operate/operate-page"));
+const ObservePage = lazy(() => import("@/features/observe/observe-page"));
 const SignInPage = lazy(() => import("@/app/views/sign-in-page"));
 const NotFoundPage = lazy(() => import("@/app/views/not-found-page"));
 
@@ -98,6 +99,14 @@ export const router = createBrowserRouter([
             element: (
               <LazyBoundary>
                 <GovernPage />
+              </LazyBoundary>
+            ),
+          },
+          {
+            path: "/observe",
+            element: (
+              <LazyBoundary>
+                <ObservePage />
               </LazyBoundary>
             ),
           },

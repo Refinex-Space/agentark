@@ -266,8 +266,9 @@ public final class RuntimeController {
         Authentication authentication, @PathVariable String runId) {
         return blocking(() -> {
             Run run = queryService.run(RunId.parse(runId));
-            authorize(principal(authentication), RuntimeAuthorizationService.CANCEL, run);
-            controlService.cancel(run.id(), "USER_REQUESTED");
+            AgentArkPrincipal principal = principal(authentication);
+            authorize(principal, RuntimeAuthorizationService.CANCEL, run);
+            controlService.cancel(run.id(), "USER_REQUESTED", principal.getName());
             return ResponseEntity.accepted().build();
         });
     }

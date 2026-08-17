@@ -1,0 +1,49 @@
+# AgentArk 用户影响和积压告警规则。
+groups:
+  # 平台可用性告警组。
+  - name: agentark-platform
+    # 按服务整体状态和 HTTP 错误率告警。
+    rules:
+      # 任一四服务连续两分钟不可抓取。
+      - alert: AgentArkServiceDown
+        expr: up{job=~"agentark-.*"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: AgentArk 服务不可抓取
+          description: "{{ $labels.service }} 连续两分钟不可用"
+      # HTTP 5xx 比例持续超过 5%。
+      - alert: AgentArkHttpErrorRateHigh
+        expr: sum by (service) (rate(http_server_requests_seconds_count{status=~"5.."}[5m])) / clamp_min(sum by (service) (rate(http_server_requests_seconds_count[5m])), 1) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: AgentArk HTTP 5xx 比例过高
+          description: "{{ $labels.service }} 五分钟 5xx 比例超过 5%"
+  # Runtime 和 Scheduler 权威积压告警组。
+  - name: agentark-work
+    rules:
+      # Runtime Outbox 最老事件超过五分钟。
+      - alert: AgentArkRuntimeOutboxLag
+        expr: agentark_runtime_outbox_lag_seconds > 300
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: Runtime Outbox 持续积压
+          description: Runtime 最老 PENDING Outbox 超过五分钟
+      # Scheduler 最老 Job 等待超过十分钟。
+      - alert: AgentArkSchedulerJobOld
+        expr: max(agentark_scheduler_queue_oldest_age_seconds) > 600
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: Scheduler Job 等待过久
+          description: 至少一个 Job Type 的最老任务等待超过十分钟
+      # OPEN Dead Letter 持续存在。
+      - alert: AgentArkSchedulerDeadLetterOpen
+        expr: agentark_scheduler_dead_letter_open > 0
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: Scheduler 存在 OPEN Dead Letter
+          description: 需要授权人员复核并决定 Redrive

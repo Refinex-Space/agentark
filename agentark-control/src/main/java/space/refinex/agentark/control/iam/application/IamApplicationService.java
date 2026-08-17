@@ -638,7 +638,7 @@ public class IamApplicationService {
         String resourceId,
         Optional<OrganizationId> organizationId,
         Optional<ProjectId> projectId) {
-        auditPublisher.afterCommit(new IamAuditRecord(
+        auditPublisher.append(new IamAuditRecord(
             action,
             principal.subject(),
             resourceType,

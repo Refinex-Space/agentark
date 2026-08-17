@@ -30,7 +30,11 @@ import space.refinex.agentark.runtime.domain.RuntimeModels.RuntimeProviderMetada
 import space.refinex.agentark.runtime.domain.RuntimeModels.SnapshotDescriptor;
 import space.refinex.agentark.runtime.domain.RuntimeNotFoundException;
 import space.refinex.agentark.runtime.port.DeploymentResolver;
+import space.refinex.agentark.runtime.port.GovernanceAuditClient;
 import space.refinex.agentark.runtime.port.RuntimeProviderCatalog;
+import space.refinex.agentark.runtime.port.RuntimeQuotaPort;
+import space.refinex.agentark.runtime.port.UsageGovernanceClient;
+import space.refinex.agentark.runtime.port.UsageGovernanceStore.UsageExportRecord;
 import space.refinex.agentark.runtime.port.SnapshotLoader;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -45,7 +49,9 @@ import java.util.function.Supplier;
  *
  * @author refinex
  */
-public final class ControlPlaneRuntimeClient implements DeploymentResolver, SnapshotLoader {
+public final class ControlPlaneRuntimeClient
+    implements DeploymentResolver, SnapshotLoader, RuntimeQuotaPort, UsageGovernanceClient,
+    GovernanceAuditClient {
 
     /**
      * 内部请求最大等待时间。
@@ -204,6 +210,162 @@ public final class ControlPlaneRuntimeClient implements DeploymentResolver, Snap
     }
 
     /**
+     * 通过 Control Internal API 幂等申请项目并发 Run Reservation；Control 不可用时失败关闭新接单。
+     *
+     * @param organizationId 组织
+     * @param projectId      项目
+     * @param idempotencyKey Turn 接单幂等键
+     * @param subjectRef     Session 引用
+     * @param ttl            Reservation TTL
+     * @return 中立 Reservation 结果
+     */
+    @Override
+    public Reservation reserveConcurrentRun(
+        OrganizationId organizationId,
+        ProjectId projectId,
+        String idempotencyKey,
+        String subjectRef,
+        Duration ttl) {
+        try {
+            String json = webClient.post()
+                .uri("/internal/v1/governance/quota-reservations")
+                .headers(this::authorize)
+                .bodyValue(Map.of(
+                    "organizationId", organizationId.asString(),
+                    "projectId", projectId.asString(),
+                    "scopeType", "PROJECT",
+                    "scopeRef", projectId.asString(),
+                    "metric", "CONCURRENT_RUN",
+                    "idempotencyKey", idempotencyKey,
+                    "subjectRef", subjectRef,
+                    "amount", 1,
+                    "ttlSeconds", ttl.toSeconds()))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(REQUEST_TIMEOUT);
+            JsonNode root = read(json);
+            boolean allowed = bool(root, "allowed");
+            return new Reservation(
+                allowed, nullableText(root, "reservationId"), nullableText(root, "action"));
+        } catch (WebClientResponseException exception) {
+            throw new RuntimeConflictException(
+                "control rejected quota reservation with status "
+                    + exception.getStatusCode().value());
+        } catch (WebClientRequestException exception) {
+            throw new RuntimeConflictException("control is unavailable for quota reservation");
+        }
+    }
+
+    /**
+     * 本地接单失败后幂等释放 Control Reservation。
+     *
+     * @param reservationId Reservation UUIDv7 字符串
+     */
+    @Override
+    public void release(String reservationId) {
+        try {
+            webClient.post()
+                .uri(
+                    "/internal/v1/governance/quota-reservations/{reservationId}:transition",
+                    reservationId)
+                .headers(this::authorize)
+                .bodyValue(Map.of("target", "RELEASED"))
+                .retrieve()
+                .toBodilessEntity()
+                .block(REQUEST_TIMEOUT);
+        } catch (WebClientResponseException | WebClientRequestException exception) {
+            // Control TTL 是最终回收边界；释放失败不能覆盖原始接单异常。
+        }
+    }
+
+    /**
+     * 将 Runtime 原始 Usage 以来源 UUID 幂等提交到 Control Governance。
+     *
+     * @param record Usage 投影
+     */
+    @Override
+    public void export(UsageExportRecord record) {
+        Objects.requireNonNull(record, "record must not be null");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("sourcePlane", "RUNTIME");
+        body.put("sourceRecordId", record.id().asString());
+        body.put("organizationId", record.organizationId().asString());
+        body.put("projectId", record.projectId().asString());
+        body.put("revisionId", record.revisionId().asString());
+        body.put("deploymentId", record.deploymentId().asString());
+        body.put("sessionId", record.sessionId().asString());
+        body.put("turnId", record.turnId().asString());
+        body.put("runId", record.runId().asString());
+        body.put("usageType", record.usageType());
+        body.put("provider", record.provider());
+        record.model().ifPresent(value -> body.put("model", value));
+        record.tool().ifPresent(value -> body.put("tool", value));
+        body.put("inputTokens", record.inputTokens());
+        body.put("outputTokens", record.outputTokens());
+        body.put("cachedTokens", record.cachedTokens());
+        body.put("embeddingTokens", record.embeddingTokens());
+        body.put("toolCalls", record.toolCalls());
+        body.put("sandboxDurationMs", record.sandboxDurationMs());
+        body.put("estimated", record.estimated());
+        body.put("costAmount", record.costAmount());
+        body.put("occurredAt", record.occurredAt().toString());
+        record.currency().ifPresent(value -> body.put("currency", value));
+        try {
+            webClient.post()
+                .uri("/internal/v1/governance/usage-records")
+                .headers(this::authorize)
+                .bodyValue(body)
+                .retrieve()
+                .toBodilessEntity()
+                .block(REQUEST_TIMEOUT);
+        } catch (WebClientResponseException exception) {
+            throw new RuntimeConflictException(
+                "control rejected usage governance with status "
+                    + exception.getStatusCode().value());
+        } catch (WebClientRequestException exception) {
+            throw new RuntimeConflictException("control is unavailable for usage governance");
+        }
+    }
+
+    /**
+     * 在 Runtime 本地事实提交后幂等汇聚高风险操作 Audit；Control 不可用时保留本地事实并等待运维重放。
+     *
+     * @param record 不含正文、参数或凭据的审计投影
+     */
+    @Override
+    public void append(AuditRecord record) {
+        Objects.requireNonNull(record, "record must not be null");
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("sourceEventId", record.sourceEventId());
+        body.put("sourcePlane", "RUNTIME");
+        body.put("organizationId", record.organizationId().asString());
+        body.put("projectId", record.projectId().asString());
+        body.put("principalType",
+            record.principalRef().equals("runtime-system") ? "SERVICE" : "USER");
+        body.put("principalRef", record.principalRef());
+        body.put("scopeType", "PROJECT");
+        body.put("scopeRef", record.projectId().asString());
+        body.put("action", record.action());
+        body.put("result", record.result());
+        body.put("resourceType", record.resourceType());
+        body.put("resourceRef", record.resourceRef());
+        body.put("diffSummary", record.diffSummary());
+        record.traceId().ifPresent(value -> body.put("traceId", value));
+        body.put("occurredAt", record.occurredAt().toString());
+        try {
+            webClient.post()
+                .uri("/internal/v1/governance/audit-events")
+                .headers(this::authorize)
+                .bodyValue(body)
+                .retrieve()
+                .toBodilessEntity()
+                .block(REQUEST_TIMEOUT);
+        } catch (WebClientResponseException | WebClientRequestException exception) {
+            // Runtime Event/Outbox 保留可重放事实；Control 暂时不可用不得覆盖已提交运行终态。
+        }
+    }
+
+    /**
      * 将服务身份写入请求头；禁止记录或缓存 Token。
      *
      * @param headers HTTP Headers
@@ -262,6 +424,39 @@ public final class ControlPlaneRuntimeClient implements DeploymentResolver, Snap
             throw new RuntimeConflictException("control response field is invalid: " + name);
         }
         return value.stringValue();
+    }
+
+    /**
+     * 读取必需布尔字段。
+     *
+     * @param root JSON 根节点
+     * @param name 字段名
+     * @return 布尔值
+     */
+    private boolean bool(JsonNode root, String name) {
+        JsonNode value = root.get(name);
+        if (value == null || !value.isBoolean()) {
+            throw new RuntimeConflictException("control response field is invalid: " + name);
+        }
+        return value.booleanValue();
+    }
+
+    /**
+     * 读取可选文本字段；JSON null 返回空。
+     *
+     * @param root JSON 根节点
+     * @param name 字段名
+     * @return 可选文本
+     */
+    private Optional<String> nullableText(JsonNode root, String name) {
+        JsonNode value = root.get(name);
+        if (value == null || value.isNull()) {
+            return Optional.empty();
+        }
+        if (!value.isString() || value.stringValue().isBlank()) {
+            throw new RuntimeConflictException("control response field is invalid: " + name);
+        }
+        return Optional.of(value.stringValue());
     }
 
     /**

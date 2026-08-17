@@ -194,4 +194,26 @@ public interface SchedulerRepository {
      * @return 最老年龄，无到期 Job 时为空
      */
     Optional<Duration> oldestAge(JobType type, Instant now);
+
+    /**
+     * 返回等待重试 Job 数量。
+     *
+     * @return RETRY_WAIT Job 数量
+     */
+    long retryWaitingCount();
+
+    /**
+     * 返回 OPEN Dead Letter 数量。
+     *
+     * @return OPEN Dead Letter 数量
+     */
+    long openDeadLetterCount();
+
+    /**
+     * 返回最老 PENDING Outbox 年龄。
+     *
+     * @param now 当前时间
+     * @return 无积压时为 0 秒
+     */
+    long outboxLagSeconds(Instant now);
 }

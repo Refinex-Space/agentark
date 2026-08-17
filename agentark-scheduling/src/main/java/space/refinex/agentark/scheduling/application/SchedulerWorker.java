@@ -23,6 +23,8 @@ import space.refinex.agentark.scheduling.domain.SchedulerUuidV7;
 import space.refinex.agentark.scheduling.port.JobHandler;
 import space.refinex.agentark.scheduling.port.JobHandler.HandlerResult;
 import space.refinex.agentark.scheduling.port.SchedulerRepository;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
+import space.refinex.agentark.foundation.observability.SpanConvention;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -83,6 +85,9 @@ public final class SchedulerWorker implements AutoCloseable {
      */
     private final Duration leaseTtl;
 
+    /** 调度任务遥测记录器。 */
+    private final AgentArkTelemetry telemetry;
+
     /**
      * 创建类型隔离的 Scheduler Worker。
      *
@@ -102,6 +107,32 @@ public final class SchedulerWorker implements AutoCloseable {
         RandomGenerator random,
         String owner,
         Duration leaseTtl) {
+        this(
+            repository, handlers, poolSizes, clock, random, owner, leaseTtl,
+            AgentArkTelemetry.noop());
+    }
+
+    /**
+     * 创建带真实 Job Telemetry 的类型隔离 Worker。
+     *
+     * @param repository Scheduler 仓储
+     * @param handlers   Job Handler 集合
+     * @param poolSizes  各 Job Type Worker 数量
+     * @param clock      UTC 时钟
+     * @param random     Jitter 随机来源
+     * @param owner      Worker 实例 Key
+     * @param leaseTtl   Lease 有效期
+     * @param telemetry  Scheduler Telemetry
+     */
+    public SchedulerWorker(
+        SchedulerRepository repository,
+        List<JobHandler> handlers,
+        Map<JobType, Integer> poolSizes,
+        Clock clock,
+        RandomGenerator random,
+        String owner,
+        Duration leaseTtl,
+        AgentArkTelemetry telemetry) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
         this.random = Objects.requireNonNull(random, "random must not be null");
@@ -119,6 +150,7 @@ public final class SchedulerWorker implements AutoCloseable {
         this.executors = executorMap(poolSizes);
         this.heartbeatExecutor = Executors.newSingleThreadScheduledExecutor(
             Thread.ofPlatform().name("scheduler-lease-heartbeat-", 0).factory());
+        this.telemetry = Objects.requireNonNull(telemetry, "telemetry must not be null");
     }
 
     /**
@@ -155,6 +187,21 @@ public final class SchedulerWorker implements AutoCloseable {
      * @param claim 当前 Claim
      */
     private void execute(ClaimedJob claim) {
+        telemetry.inSpan(
+            SpanConvention.SCHEDULER, "job.execute",
+            Map.of("operation", "execute", "job.type", claim.job().type().name()),
+            () -> {
+                executeTracked(claim);
+                return null;
+            });
+    }
+
+    /**
+     * 在 {@code scheduler.job.execute} Span 内运行 Handler 与终态提交。
+     *
+     * @param claim 当前 Claim
+     */
+    private void executeTracked(ClaimedJob claim) {
         JobHandler handler = handlers.get(claim.job().type());
         if (handler == null) {
             fail(claim, HandlerResult.failure("HANDLER_UNAVAILABLE", false), false);

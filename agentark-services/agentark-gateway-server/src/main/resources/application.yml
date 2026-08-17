@@ -125,8 +125,40 @@ management:
     web:
       # 显式限制可访问端点，禁止环境与 Bean 信息泄露。
       exposure:
-        # 只允许健康与构建信息，其他管理端点不注册 HTTP 暴露。
-        include: health,info
+        # 暴露健康、构建和 Prometheus；Gateway 路由永不代理管理端点。
+        include: health,info,prometheus
+  # Micrometer Tracing 只生产和消费 W3C Trace Context。
+  tracing:
+    # 未配置 Collector 时关闭 Export，认证和路由不依赖 Telemetry Backend。
+    export:
+      # 生产由部署配置显式开启。
+      enabled: ${AGENTARK_OTEL_EXPORT_ENABLED:false}
+    # 统一传播格式。
+    propagation:
+      # 仅使用 W3C Trace Context。
+      type: W3C
+    # Trace 采样策略。
+    sampling:
+      # 默认采样 10%，安全拒绝仍由日志与 Audit 记录。
+      probability: ${AGENTARK_OTEL_SAMPLING_PROBABILITY:0.1}
+  # Spring Boot OpenTelemetry SDK 与 OTLP Exporter 配置。
+  opentelemetry:
+    # OTel Trace 设置。
+    tracing:
+      # 有界批处理 Export 配置。
+      export:
+        # 队列满时丢弃 Span，不阻断公共请求。
+        max-queue-size: 2048
+        # 每批最多 512 个 Span。
+        max-batch-size: 512
+        # OTLP/HTTP Collector 配置。
+        otlp:
+          # Collector Trace 接口；仅在 Export 开启时使用。
+          endpoint: ${AGENTARK_OTEL_TRACES_ENDPOINT:http://localhost:4318/v1/traces}
+          # 连接超时。
+          connect-timeout: 3s
+          # 单批提交总超时。
+          timeout: 5s
   # 单个管理端点的安全行为。
   endpoint:
     # 健康端点必须支持编排器探针且不暴露内部细节。

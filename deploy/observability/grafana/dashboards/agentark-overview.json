@@ -1,0 +1,62 @@
+{
+  "title": "AgentArk Platform Overview",
+  "uid": "agentark-overview",
+  "description": "展示四服务可用性、Runtime 活跃事实、Scheduler 积压与 Outbox Lag；不使用 Session、User 或 Project 作为 Metric Label。",
+  "schemaVersion": 41,
+  "version": 1,
+  "refresh": "15s",
+  "time": { "from": "now-6h", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Service Up",
+      "type": "stat",
+      "datasource": { "type": "prometheus", "uid": "agentark-prometheus" },
+      "targets": [{ "expr": "up{job=~\"agentark-.*\"}", "legendFormat": "{{service}}" }],
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 6 }
+    },
+    {
+      "id": 2,
+      "title": "Runtime Active Runs",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "agentark-prometheus" },
+      "targets": [{ "expr": "agentark_runtime_active_runs", "legendFormat": "active runs" }],
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 6 }
+    },
+    {
+      "id": 3,
+      "title": "Runtime Pending Approvals",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "agentark-prometheus" },
+      "targets": [{ "expr": "agentark_runtime_pending_approvals", "legendFormat": "pending" }],
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 6 }
+    },
+    {
+      "id": 4,
+      "title": "Scheduler Queue Depth",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "agentark-prometheus" },
+      "targets": [{ "expr": "agentark_scheduler_queue_depth", "legendFormat": "{{job_type}}" }],
+      "gridPos": { "x": 0, "y": 6, "w": 12, "h": 7 }
+    },
+    {
+      "id": 5,
+      "title": "Outbox Lag Seconds",
+      "type": "timeseries",
+      "datasource": { "type": "prometheus", "uid": "agentark-prometheus" },
+      "targets": [
+        { "expr": "agentark_runtime_outbox_lag_seconds", "legendFormat": "runtime" },
+        { "expr": "agentark_scheduler_outbox_lag_seconds", "legendFormat": "scheduler" }
+      ],
+      "gridPos": { "x": 12, "y": 6, "w": 12, "h": 7 }
+    },
+    {
+      "id": 6,
+      "title": "Trace Search",
+      "type": "traces",
+      "datasource": { "type": "tempo", "uid": "agentark-tempo" },
+      "targets": [{ "queryType": "traceql", "query": "{ resource.service.name =~ `agentark-.*` }" }],
+      "gridPos": { "x": 0, "y": 13, "w": 24, "h": 8 }
+    }
+  ]
+}

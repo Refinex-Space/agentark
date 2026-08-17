@@ -34,6 +34,8 @@ import space.refinex.agentark.runtime.provider.agentscope.error.ProviderErrorCod
 import space.refinex.agentark.runtime.provider.agentscope.event.AgentScopeEventMapper;
 import space.refinex.agentark.runtime.provider.agentscope.model.RuntimeHandle;
 import space.refinex.agentark.runtime.provider.agentscope.model.RuntimeInputMapper;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
+import space.refinex.agentark.foundation.observability.SpanConvention;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -76,6 +78,9 @@ public final class AgentScopeExecutionEngine implements AgentExecutionEngine {
      */
     private final ExecutionSignalSink signalSink;
 
+    /** Agent 执行 Telemetry。 */
+    private final AgentArkTelemetry telemetry;
+
     /**
      * 仅保留执行中或已暂停 Run 的 RuntimeHandle。
      */
@@ -92,10 +97,29 @@ public final class AgentScopeExecutionEngine implements AgentExecutionEngine {
         AgentScopeEventMapper eventMapper,
         RuntimeInputMapper inputMapper,
         ExecutionSignalSink signalSink) {
+        this(materializer, eventMapper, inputMapper, signalSink, AgentArkTelemetry.noop());
+    }
+
+    /**
+     * 创建带真实 Agent Run Telemetry 的执行引擎。
+     *
+     * @param materializer Snapshot 编译与 RuntimeHandle 实例化器
+     * @param eventMapper  AgentScope Event 映射器
+     * @param inputMapper  Runtime 输入映射器
+     * @param signalSink   Runtime 应用层信号端口
+     * @param telemetry    Agent Run Telemetry
+     */
+    public AgentScopeExecutionEngine(
+        AgentScopeRuntimeMaterializer materializer,
+        AgentScopeEventMapper eventMapper,
+        RuntimeInputMapper inputMapper,
+        ExecutionSignalSink signalSink,
+        AgentArkTelemetry telemetry) {
         this.materializer = Objects.requireNonNull(materializer, "materializer must not be null");
         this.eventMapper = Objects.requireNonNull(eventMapper, "eventMapper must not be null");
         this.inputMapper = Objects.requireNonNull(inputMapper, "inputMapper must not be null");
         this.signalSink = Objects.requireNonNull(signalSink, "signalSink must not be null");
+        this.telemetry = Objects.requireNonNull(telemetry, "telemetry must not be null");
     }
 
     /**
@@ -109,6 +133,23 @@ public final class AgentScopeExecutionEngine implements AgentExecutionEngine {
      */
     @Override
     public ExecutionResult execute(
+        Session session, Run run, SnapshotDescriptor snapshot, RuntimePayload input) {
+        return telemetry.inSpan(
+            SpanConvention.AGENT, "run",
+            java.util.Map.of("operation", "execute", "runtime.provider", run.runtimeProvider()),
+            () -> executeTracked(session, run, snapshot, input));
+    }
+
+    /**
+     * 在 {@code agent.run} Span 内物化并执行 AgentScope Event 流。
+     *
+     * @param session  固定 Session
+     * @param run      Run Attempt
+     * @param snapshot 固定 Snapshot
+     * @param input    Turn 输入
+     * @return 中立执行结果
+     */
+    private ExecutionResult executeTracked(
         Session session, Run run, SnapshotDescriptor snapshot, RuntimePayload input) {
         RuntimeHandle handle = null;
         try {

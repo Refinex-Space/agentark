@@ -65,6 +65,18 @@ public final class SchedulerMetrics {
                 .tag("job.type", type.name())
                 .register(registry);
         }
+        Gauge.builder("agentark.scheduler.retry.waiting", this,
+                metrics -> metrics.repository.retryWaitingCount())
+            .description("Scheduler 当前 RETRY_WAIT Job 数量")
+            .register(registry);
+        Gauge.builder("agentark.scheduler.dead.letter.open", this,
+                metrics -> metrics.repository.openDeadLetterCount())
+            .description("Scheduler 当前 OPEN Dead Letter 数量")
+            .register(registry);
+        Gauge.builder("agentark.scheduler.outbox.lag.seconds", this,
+                metrics -> metrics.repository.outboxLagSeconds(metrics.clock.instant()))
+            .description("Scheduler 最老 PENDING Outbox 年龄秒数")
+            .register(registry);
     }
 
     /**

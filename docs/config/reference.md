@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-16
+updated: 2026-08-17
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -9,7 +9,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07–10 已建立 Control IAM、版本化资产、Knowledge 元数据、不可变 Agent Revision/Snapshot 与 Deployment；Phase 11–13 已建立 Runtime 权威表、AgentScope 防腐层、托管 API、SSE、HITL 和恢复；Phase 14 已接入 Control V6 摄取结果、Qdrant Adapter、安全异步摄取管线、固定 Revision 检索和 AgentScope Tool 防腐层。Phase 15 已接入 Scheduler V2、Durable Job/Attempt/Lease、Cron/Webhook、Channel/Delivery、Retry/Dead Letter、Knowledge Handler 与 Runtime/Control 版本化 Client。Phase 16 已建立 Gateway 固定公共路由、OIDC/JWT、API Key 前置认证、精确 CORS、Redis 限流和 SSE 代理。生产 Object Store、恶意文件扫描、Embedding/Reranker、云 Secret、Outbound Endpoint Resolver、Channel Bridge 和真实 AgentScope Model/Component Provider 仍必须由部署方提供受支持 Adapter。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07–18 已建立 IAM、资产、Knowledge、不可变发布、托管 Runtime、Scheduler、Gateway 和真实 Web 产品流程。Phase 19 新增四服务 OTel/Prometheus、Control V7 Governance、Runtime V3 Usage/Quota 关联、观测部署和 Web 治理视图。生产 Object Store、恶意文件扫描、Embedding/Reranker、云 Secret、Outbound Endpoint Resolver、Channel Bridge、真实 AgentScope Model/Component Provider 与生产 Observability Backend 仍必须由部署方提供受支持 Adapter。
 
 ## Server 与本地 Profile
 
@@ -20,7 +20,7 @@ Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSo
 | Runtime | `8082` | Spring WebFlux/Reactor | `agentark-runtime-server` | `AGENTARK_CONTROL_BASE_URL` |
 | Scheduler | `8083` | Worker + 最小 Spring MVC 管理端点 | `agentark-scheduler-server` | `AGENTARK_CONTROL_BASE_URL`、`AGENTARK_RUNTIME_BASE_URL` |
 
-四个 Server 的 `application.yml` 共同执行以下安全默认：优雅停机；每个关闭阶段最多 `20s`；只暴露 `health,info`；开启 Liveness/Readiness；`health.show-details=never`；Info 只允许 Maven Build Info，禁止环境与 Java 运行时细节。Gateway 的 Health 匿名可用，Info 仅在 Security 启用后对已认证主体开放；Security 未配置时所有普通 Public API 失败关闭。
+四个 Server 的 `application.yml` 共同执行以下安全默认：优雅停机；每个关闭阶段最多 `20s`；只暴露 `health,info,prometheus`；开启 Liveness/Readiness；`health.show-details=never`；Info 只允许 Maven Build Info，禁止环境与 Java 运行时细节。生产网络策略必须限制管理端点，Gateway 永不代理下游 Actuator。Gateway 的 Health 匿名可用，Info/Prometheus 仅在 Security 与管理网络策略允许时访问；Security 未配置时所有普通 Public API 失败关闭。
 
 ## Compose Profile
 
@@ -137,10 +137,24 @@ Trigger 通过 `/internal/v1/scheduler/triggers` 登记。Cron 必须提供 Spri
 | `agentark.foundation.storage.max-object-size` | `67108864` | Storage 启用 | 单对象最大字节数；写入时同时验证声明大小和实际大小 |
 | `agentark.foundation.storage.max-sign-ttl` | `15m` | Storage 启用 | Local 临时 URI 上限，硬上限 24 小时；重启后旧签名失效 |
 | `agentark.foundation.observability.enabled` | `true` | 引入 Observability Starter | 只复用调用方已有 Micrometer/OpenTelemetry 实例，不创建孤立 Registry |
-| `agentark.foundation.observability.allowed-tags` | `operation,outcome,error.category,runtime.provider` | Observability 启用 | Metric Tag 与 Span Attribute 低基数白名单 |
+| `agentark.foundation.observability.allowed-tags` | `service,environment,provider,model.family,tool.family,status,job.type,operation,outcome,error.category,runtime.provider,usage.type` | Observability 启用 | Metric Tag 与 Span Attribute 低基数白名单；禁止 Session/User/Project/Run 等无界 ID |
 | `agentark.foundation.observability.collect-prompt-text` | `false` | 仅显式风险评审后开启 | Prompt 正文默认不采集；Secret 始终脱敏 |
 | `agentark.foundation.observability.collect-tool-arguments` | `false` | 仅显式风险评审后开启 | Tool 参数默认不采集；Secret 始终脱敏 |
 | `agentark.foundation.observability.collect-document-text` | `false` | 仅显式风险评审后开启 | 文档正文默认不采集；Secret 始终脱敏 |
+| `management.tracing.export.enabled` / `AGENTARK_OTEL_EXPORT_ENABLED` | `false` | 生产接入 Collector 时显式开启 | Exporter 队列有界，Backend 不可用不能阻断业务 |
+| `management.tracing.sampling.probability` / `AGENTARK_OTEL_SAMPLING_PROBABILITY` | `0.1` | 四服务 | 取值 0–1；Audit、Usage 和 Runtime Event 不依赖采样 |
+| `management.opentelemetry.tracing.export.otlp.endpoint` / `AGENTARK_OTEL_TRACES_ENDPOINT` | `http://localhost:4318/v1/traces` | Trace Export 开启 | 生产使用受控 TLS Collector；连接超时 3 秒、批次超时 5 秒 |
+
+本地 Collector、Tempo、Prometheus、Grafana 的固定配置位于 `deploy/observability/`。Grafana 必须通过未提交的 `.env` 提供 `AGENTARK_GRAFANA_ADMIN_PASSWORD`；所有 UI/接收端只绑定 `127.0.0.1`。完整启停和故障处理见 [Observability 运维](../guides/observability-operations.md)。
+
+## Control Governance 配置
+
+| 属性/环境变量 | 默认值 | 启用/必填条件 | 安全与所有权说明 |
+|---|---|---|---|
+| `agentark.control.governance.enabled` | `true` | Control 正常运行 | 装配 V7 Audit/Usage/Cost/Quota/Evaluation 与 Public/Internal API；关闭不能用于绕过 Release Gate |
+| Control Internal Service Identity | 无静态默认 | Runtime/Scheduler 汇聚 Audit/Usage 或申请 Quota | JWT 必须面向 `agentark-control` Audience；禁止共享 HMAC Token |
+
+Control Governance 没有第二 DataSource，只访问 `agentark_control`。Audit 只追加，Price/Dataset/Evaluator Version 不可变；Hard Quota 以 MySQL 行锁和 Reservation 为一致性边界，Redis 只能用于后续短 TTL 加速。
 
 ## Control IAM 配置
 
@@ -208,6 +222,8 @@ Runtime 调用 Snapshot Internal API 时必须携带受信 Service Identity，�
 | `agentark.runtime.worker-enabled` / `AGENTARK_RUNTIME_WORKER_ENABLED` | `false` | 真实 Model/Component/Secret Provider 均已装配 | 默认安全关闭；缺少生产 SPI 时显式启用会启动失败，不回退 Fake Engine |
 | `agentark.runtime.worker-poll-delay` / `AGENTARK_RUNTIME_WORKER_POLL_DELAY` | `250ms` | Worker 启用 | 每次最多领取一个持久 Work Item，排空后停止轮询 |
 | `agentark.runtime.instance-heartbeat-delay` / `AGENTARK_RUNTIME_HEARTBEAT_DELAY` | `10s` | Runtime 实例启动 | 只更新 Runtime MySQL Instance 心跳，不把 Redis 当作实例事实源 |
+| `agentark.runtime.usage-governance-enabled` / `AGENTARK_RUNTIME_USAGE_GOVERNANCE_ENABLED` | `false` | Control Internal Service Identity 已配置 | 批量汇聚 Runtime 原始 Usage；关闭不删除或跳过 Runtime 权威记录 |
+| `agentark.runtime.usage-governance-delay` / `AGENTARK_RUNTIME_USAGE_GOVERNANCE_DELAY` | `5s` | Usage Worker 启用 | 正 Duration；单批最多 50 条，失败最多 8 次后保留失败状态供运维处理 |
 | `spring.data.redis.host` / `AGENTARK_REDIS_HOST` | `localhost` | 非测试 Runtime | Redis 只承载 Lease 与可丢失加速状态；全量丢失后从 MySQL/Object Storage 恢复 |
 | `spring.data.redis.port` / `AGENTARK_REDIS_PORT` | `6379` | 非测试 Runtime | 固定 Redis TCP 端口；生产网络与 TLS 由部署环境显式配置 |
 | `spring.data.redis.password` / `AGENTARK_REDIS_PASSWORD` | 空 | Redis 启用且服务要求认证 | 敏感值只由 Secret 注入，禁止写入版本库或日志 |

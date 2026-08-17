@@ -1863,10 +1863,451 @@ paths:
         # 变更成功。
         "200": { $ref: "#/components/responses/DeploymentResponse" }
 
+  # 项目治理概览。
+  /api/v1/projects/{projectId}/governance/overview:
+    # 注册当前端点的路径或查询参数。
+    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: getGovernanceOverview
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Governance]
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: 项目过去 24 小时治理概览
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/GovernanceOverview" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # append-only Audit Event 查询。
+  /api/v1/projects/{projectId}/governance/audit-events:
+    # 注册当前端点的路径或查询参数。
+    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: listGovernanceAuditEvents
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Governance]
+      # 注册当前端点的路径或查询参数。
+      parameters:
+        # 说明 { name 属性在当前治理契约中的用途。
+        - { name: before, in: query, required: false, description: 可选发生时间上界, schema: { type: string, format: date-time } }
+        # 说明 { name 属性在当前治理契约中的用途。
+        - { name: beforeId, in: query, required: false, description: 与 before 同时提供的 UUIDv7 上界, schema: { $ref: "#/components/schemas/UuidV7" } }
+        # 说明 { $ref 属性在当前治理契约中的用途。
+        - { $ref: "#/components/parameters/Limit" }
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: 严格授权的 Audit Event 列表
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/AuditEvent" } } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # Usage 治理明细查询。
+  /api/v1/projects/{projectId}/governance/usage:
+    # 注册当前端点的路径或查询参数。
+    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: listGovernanceUsage
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Governance]
+      # 注册当前端点的路径或查询参数。
+      parameters:
+        # 说明 { name 属性在当前治理契约中的用途。
+        - { name: before, in: query, required: false, description: 可选发生时间上界, schema: { type: string, format: date-time } }
+        # 说明 { $ref 属性在当前治理契约中的用途。
+        - { $ref: "#/components/parameters/Limit" }
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Usage 治理明细
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/UsageLedgerEntry" } } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # Usage 与 Cost 聚合查询。
+  /api/v1/projects/{projectId}/governance/usage:aggregate:
+    # 注册当前端点的路径或查询参数。
+    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: listGovernanceUsageAggregates
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Governance]
+      # 注册当前端点的路径或查询参数。
+      parameters:
+        # 说明 { name 属性在当前治理契约中的用途。
+        - { name: from, in: query, required: true, description: UTC 开始时间，含边界, schema: { type: string, format: date-time } }
+        # 说明 { name 属性在当前治理契约中的用途。
+        - { name: to, in: query, required: true, description: UTC 结束时间，不含边界, schema: { type: string, format: date-time } }
+        # 说明 { $ref 属性在当前治理契约中的用途。
+        - { $ref: "#/components/parameters/Limit" }
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Usage 与 Cost 聚合
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/UsageAggregate" } } } }
+        # 声明 HTTP 400 状态对应的响应。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # Price Table 集合。
+  /api/v1/projects/{projectId}/governance/price-tables:
+    # 注册当前端点的路径或查询参数。
+    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: listGovernancePriceTables
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Governance]
+      # 注册当前端点的路径或查询参数。
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Price Table 列表
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PriceTable" } } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+    # 声明当前资源的创建或命令操作。
+    post:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: createGovernancePriceTable
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Governance]
+      # 声明当前写操作的 JSON 请求体。
+      requestBody:
+        # 声明当前参数或请求体是否必需。
+        required: true
+        # 声明当前请求或响应的媒体类型映射。
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreatePriceTableRequest" } } }
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 201 状态对应的响应。
+        "201":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Price Table V1 已创建
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/PriceTableVersion" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 声明 HTTP 409 状态对应的响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Price Table 不可变版本。
+  /api/v1/projects/{projectId}/governance/price-tables/{priceTableId}/versions:
+    # 注册当前端点的路径或查询参数。
+    parameters:
+      # 说明 { $ref 属性在当前治理契约中的用途。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # 说明 { name 属性在当前治理契约中的用途。
+      - { name: priceTableId, in: path, required: true, description: Price Table UUIDv7, schema: { $ref: "#/components/schemas/UuidV7" } }
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: listGovernancePriceTableVersions
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Governance]
+      # 注册当前端点的路径或查询参数。
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Price Table Version 列表
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/PriceTableVersion" } } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # Quota Policy 集合。
+  /api/v1/projects/{projectId}/governance/quota-policies:
+    # 注册当前端点的路径或查询参数。
+    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: listGovernanceQuotaPolicies
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Governance]
+      # 注册当前端点的路径或查询参数。
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Quota Policy 列表
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/QuotaPolicy" } } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+    # 声明当前资源的创建或命令操作。
+    post:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: createGovernanceQuotaPolicy
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Governance]
+      # 声明当前写操作的 JSON 请求体。
+      requestBody:
+        # 声明当前参数或请求体是否必需。
+        required: true
+        # 声明当前请求或响应的媒体类型映射。
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateQuotaPolicyRequest" } } }
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 201 状态对应的响应。
+        "201":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Quota Policy 已创建
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/QuotaPolicy" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 声明 HTTP 409 状态对应的响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Evaluation Dataset 集合。
+  /api/v1/projects/{projectId}/governance/evaluation/datasets:
+    # 注册当前端点的路径或查询参数。
+    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: listGovernanceEvaluationDatasets
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Evaluation]
+      # 注册当前端点的路径或查询参数。
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Evaluation Dataset 列表
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/EvaluationDataset" } } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+    # 声明当前资源的创建或命令操作。
+    post:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: createGovernanceEvaluationDataset
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Evaluation]
+      # 声明当前写操作的 JSON 请求体。
+      requestBody:
+        # 声明当前参数或请求体是否必需。
+        required: true
+        # 声明当前请求或响应的媒体类型映射。
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateDatasetRequest" } } }
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 201 状态对应的响应。
+        "201":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Dataset V1 已创建
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/DatasetVersion" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # Evaluation Evaluator 集合。
+  /api/v1/projects/{projectId}/governance/evaluation/evaluators:
+    # 注册当前端点的路径或查询参数。
+    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: listGovernanceEvaluators
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Evaluation]
+      # 注册当前端点的路径或查询参数。
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Evaluator 列表
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/Evaluator" } } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+    # 声明当前资源的创建或命令操作。
+    post:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: createGovernanceEvaluator
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Evaluation]
+      # 声明当前写操作的 JSON 请求体。
+      requestBody:
+        # 声明当前参数或请求体是否必需。
+        required: true
+        # 声明当前请求或响应的媒体类型映射。
+        content: { application/json: { schema: { $ref: "#/components/schemas/CreateEvaluatorRequest" } } }
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 201 状态对应的响应。
+        "201":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Evaluator V1 已创建
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/EvaluatorVersion" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # Evaluation Run 集合。
+  /api/v1/projects/{projectId}/governance/evaluation/runs:
+    # 注册当前端点的路径或查询参数。
+    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: listGovernanceEvaluationRuns
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Evaluation]
+      # 注册当前端点的路径或查询参数。
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Evaluation Run 列表
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/EvaluationRun" } } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+    # 声明当前资源的创建或命令操作。
+    post:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: runGovernanceEvaluation
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Evaluation]
+      # 声明当前写操作的 JSON 请求体。
+      requestBody:
+        # 声明当前参数或请求体是否必需。
+        required: true
+        # 声明当前请求或响应的媒体类型映射。
+        content: { application/json: { schema: { $ref: "#/components/schemas/RunEvaluationRequest" } } }
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 201 状态对应的响应。
+        "201":
+          # 说明当前请求、参数或响应的业务语义。
+          description: 确定性 Evaluation 已完成
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/EvaluationRun" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 声明 HTTP 409 状态对应的响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Release Gate 集合。
+  /api/v1/projects/{projectId}/governance/evaluation/release-gates:
+    # 注册当前端点的路径或查询参数。
+    parameters: [{ $ref: "#/components/parameters/ProjectId" }]
+    # 声明当前资源的只读查询操作。
+    get:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: listGovernanceReleaseGates
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Evaluation]
+      # 注册当前端点的路径或查询参数。
+      parameters: [{ $ref: "#/components/parameters/Limit" }]
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Release Gate 列表
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { type: array, items: { $ref: "#/components/schemas/ReleaseGate" } } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+    # 声明当前资源的幂等保存操作。
+    put:
+      # 固定生成客户端使用的稳定操作标识。
+      operationId: saveGovernanceReleaseGate
+      # 归入对应的 Governance 或 Evaluation 功能分组。
+      tags: [Evaluation]
+      # 声明当前写操作的 JSON 请求体。
+      requestBody:
+        # 声明当前参数或请求体是否必需。
+        required: true
+        # 声明当前请求或响应的媒体类型映射。
+        content: { application/json: { schema: { $ref: "#/components/schemas/SaveReleaseGateRequest" } } }
+      # 声明成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前请求、参数或响应的业务语义。
+          description: Release Gate 已保存
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/ReleaseGate" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 声明 HTTP 409 状态对应的响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+
 # 汇总可复用的 Schema 与响应组件。
 components:
   # 注册公共 Schema 引用。
   schemas:
+    # 治理概览。
+    GovernanceOverview: { $ref: ../schemas/governance-public/v1.json#/$defs/Overview }
+    # append-only 审计事件。
+    AuditEvent: { $ref: ../schemas/governance-public/v1.json#/$defs/AuditEvent }
+    # 稳定 Price Table。
+    PriceTable: { $ref: ../schemas/governance-public/v1.json#/$defs/PriceTable }
+    # 不可变 Price Table Version。
+    PriceTableVersion: { $ref: ../schemas/governance-public/v1.json#/$defs/PriceTableVersion }
+    # 创建 Price Table 请求。
+    CreatePriceTableRequest: { $ref: ../schemas/governance-public/v1.json#/$defs/CreatePriceTableRequest }
+    # Usage 治理明细。
+    UsageLedgerEntry: { $ref: ../schemas/governance-public/v1.json#/$defs/UsageLedgerEntry }
+    # Usage/Cost 聚合。
+    UsageAggregate: { $ref: ../schemas/governance-public/v1.json#/$defs/UsageAggregate }
+    # 配额策略 Quota Policy。
+    QuotaPolicy: { $ref: ../schemas/governance-public/v1.json#/$defs/QuotaPolicy }
+    # 创建 Quota Policy 请求。
+    CreateQuotaPolicyRequest: { $ref: ../schemas/governance-public/v1.json#/$defs/CreateQuotaPolicyRequest }
+    # 评估数据集 Evaluation Dataset。
+    EvaluationDataset: { $ref: ../schemas/governance-public/v1.json#/$defs/EvaluationDataset }
+    # 数据集版本 Dataset Version。
+    DatasetVersion: { $ref: ../schemas/governance-public/v1.json#/$defs/DatasetVersion }
+    # 创建 Dataset 请求。
+    CreateDatasetRequest: { $ref: ../schemas/governance-public/v1.json#/$defs/CreateDatasetRequest }
+    # 评估器 Evaluator。
+    Evaluator: { $ref: ../schemas/governance-public/v1.json#/$defs/Evaluator }
+    # 评估器版本 Evaluator Version。
+    EvaluatorVersion: { $ref: ../schemas/governance-public/v1.json#/$defs/EvaluatorVersion }
+    # 创建 Evaluator 请求。
+    CreateEvaluatorRequest: { $ref: ../schemas/governance-public/v1.json#/$defs/CreateEvaluatorRequest }
+    # 评估执行 Evaluation Run。
+    EvaluationRun: { $ref: ../schemas/governance-public/v1.json#/$defs/EvaluationRun }
+    # 执行 Evaluation 请求。
+    RunEvaluationRequest: { $ref: ../schemas/governance-public/v1.json#/$defs/RunEvaluationRequest }
+    # 发布门禁 Release Gate。
+    ReleaseGate: { $ref: ../schemas/governance-public/v1.json#/$defs/ReleaseGate }
+    # 保存 Release Gate 请求。
+    SaveReleaseGateRequest: { $ref: ../schemas/governance-public/v1.json#/$defs/SaveReleaseGateRequest }
     # 暴露 AgentArk 公共 Problem Detail 错误结构。
     ProblemDetail:
       # 引用版本化的公共错误 JSON Schema。

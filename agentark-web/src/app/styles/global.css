@@ -1666,6 +1666,12 @@ a {
   align-items: start;
 }
 
+.resource-grid > *,
+.resource-form,
+.resource-form label {
+  min-width: 0;
+}
+
 .resource-grid--single {
   grid-template-columns: 1fr;
 }
@@ -1676,6 +1682,13 @@ a {
   background: var(--surface-raised);
   padding: var(--space-4);
   align-content: start;
+}
+
+.resource-form input,
+.resource-form select,
+.resource-form textarea {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .resource-form h3,

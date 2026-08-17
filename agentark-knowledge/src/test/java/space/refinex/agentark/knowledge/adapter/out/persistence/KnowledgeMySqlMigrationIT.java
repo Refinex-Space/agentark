@@ -52,13 +52,13 @@ class KnowledgeMySqlMigrationIT extends AbstractMySqlMigrationIT {
     /** 返回 Knowledge 迁移测试使用的固定配置。 */
     @Override
     protected String expectedVersion() {
-        return "6";
+        return "7";
     }
 
     /** 返回 Knowledge 迁移测试使用的固定配置。 */
     @Override
     protected String previousVersion() {
-        return "5";
+        return "6";
     }
 
     /**
@@ -82,6 +82,10 @@ class KnowledgeMySqlMigrationIT extends AbstractMySqlMigrationIT {
             "knowledge_ingestion_result",
             "agent_draft", "agent_draft_component", "validation_report", "agent_revision",
             "agent_revision_snapshot", "publish_operation", "deployment", "deployment_revision",
-            "control_outbox");
+            "control_outbox", "audit_event", "price_table", "price_table_version",
+            "usage_ledger", "usage_aggregate", "quota_policy", "quota_reservation",
+            "evaluation_dataset", "evaluation_dataset_version", "evaluation_test_case",
+            "evaluator", "evaluator_version", "evaluation_run", "evaluation_score",
+            "release_gate");
     }
 }

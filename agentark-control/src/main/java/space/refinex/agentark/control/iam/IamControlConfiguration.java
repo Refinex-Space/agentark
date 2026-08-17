@@ -17,6 +17,7 @@
 package space.refinex.agentark.control.iam;
 
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.ApplicationEventPublisher;
@@ -144,6 +145,7 @@ public class IamControlConfiguration {
      * @return 真实审计端口实现
      */
     @Bean
+    @ConditionalOnMissingBean(IamAuditPort.class)
     public IamAuditPort iamAuditPort() {
         return new StructuredLogIamAuditAdapter();
     }

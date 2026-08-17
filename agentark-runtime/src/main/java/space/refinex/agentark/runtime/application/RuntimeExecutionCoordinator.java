@@ -19,6 +19,7 @@ package space.refinex.agentark.runtime.application;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
 import space.refinex.agentark.kernel.id.EventId;
 import space.refinex.agentark.kernel.id.JobId;
 import space.refinex.agentark.kernel.id.RunId;
@@ -89,6 +90,21 @@ public class RuntimeExecutionCoordinator {
     private final RuntimeEventNotifier eventNotifier;
 
     /**
+     * Control 并发配额 Reservation 生命周期端口。
+     */
+    private final RuntimeQuotaPort quotaPort;
+
+    /**
+     * Control append-only Audit 汇聚端口。
+     */
+    private final GovernanceAuditClient governanceAuditClient;
+
+    /**
+     * 当前 Trace 关联访问器。
+     */
+    private final AgentArkTelemetry telemetry;
+
+    /**
      * UTC 时钟。
      */
     private final Clock clock;
@@ -114,6 +130,68 @@ public class RuntimeExecutionCoordinator {
         LeaseManager leaseManager,
         RuntimeEventNotifier eventNotifier,
         Clock clock) {
+        this(
+            repository, eventStore, workQueue, approvalRepository, checkpointStore,
+            leaseManager, eventNotifier, RuntimeQuotaPort.noop(),
+            GovernanceAuditClient.noop(), AgentArkTelemetry.noop(), clock);
+    }
+
+    /**
+     * 创建带 Control 并发配额生命周期的短事务执行协调器。
+     *
+     * @param repository         Runtime 聚合仓储
+     * @param eventStore         Event Store
+     * @param workQueue          持久 Work Queue
+     * @param approvalRepository Approval 仓储
+     * @param checkpointStore    Checkpoint 仓储
+     * @param leaseManager       MySQL Lease 校验端口
+     * @param eventNotifier      事务后 Event 提示端口
+     * @param quotaPort          Control 并发配额 Reservation 端口
+     * @param clock              UTC 时钟
+     */
+    public RuntimeExecutionCoordinator(
+        RuntimeRepository repository,
+        RuntimeEventStore eventStore,
+        RuntimeWorkQueue workQueue,
+        ApprovalRepository approvalRepository,
+        CheckpointStore checkpointStore,
+        LeaseManager leaseManager,
+        RuntimeEventNotifier eventNotifier,
+        RuntimeQuotaPort quotaPort,
+        Clock clock) {
+        this(
+            repository, eventStore, workQueue, approvalRepository, checkpointStore,
+            leaseManager, eventNotifier, quotaPort, GovernanceAuditClient.noop(),
+            AgentArkTelemetry.noop(), clock);
+    }
+
+    /**
+     * 创建带 Control 配额、审计汇聚和 Trace 关联的短事务执行协调器。
+     *
+     * @param repository         Runtime 聚合仓储
+     * @param eventStore         Event Store
+     * @param workQueue          持久 Work Queue
+     * @param approvalRepository Approval 仓储
+     * @param checkpointStore    Checkpoint 仓储
+     * @param leaseManager       MySQL Lease 校验端口
+     * @param eventNotifier      事务后 Event 提示端口
+     * @param quotaPort          Control 并发配额 Reservation 端口
+     * @param governanceAuditClient Control append-only Audit 汇聚端口
+     * @param telemetry          Trace 关联访问器
+     * @param clock              UTC 时钟
+     */
+    public RuntimeExecutionCoordinator(
+        RuntimeRepository repository,
+        RuntimeEventStore eventStore,
+        RuntimeWorkQueue workQueue,
+        ApprovalRepository approvalRepository,
+        CheckpointStore checkpointStore,
+        LeaseManager leaseManager,
+        RuntimeEventNotifier eventNotifier,
+        RuntimeQuotaPort quotaPort,
+        GovernanceAuditClient governanceAuditClient,
+        AgentArkTelemetry telemetry,
+        Clock clock) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
         this.eventStore = Objects.requireNonNull(eventStore, "eventStore must not be null");
         this.workQueue = Objects.requireNonNull(workQueue, "workQueue must not be null");
@@ -124,6 +202,10 @@ public class RuntimeExecutionCoordinator {
         this.leaseManager = Objects.requireNonNull(leaseManager, "leaseManager must not be null");
         this.eventNotifier = Objects.requireNonNull(
             eventNotifier, "eventNotifier must not be null");
+        this.quotaPort = Objects.requireNonNull(quotaPort, "quotaPort must not be null");
+        this.governanceAuditClient = Objects.requireNonNull(
+            governanceAuditClient, "governanceAuditClient must not be null");
+        this.telemetry = Objects.requireNonNull(telemetry, "telemetry must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
@@ -196,6 +278,10 @@ public class RuntimeExecutionCoordinator {
         repository.insertOutbox(outbox(
             "run", run.id().asString(), projection.eventType(),
             "{\"outcome\":\"" + checked.outcome().name() + "\"}", now));
+        if (space.refinex.agentark.runtime.domain.RuntimeStateMachine.isTerminal(
+            projection.runStatus())) {
+            releaseQuotaAfterCommit(turn.id());
+        }
     }
 
     /**
@@ -255,8 +341,25 @@ public class RuntimeExecutionCoordinator {
      */
     @Transactional
     public Optional<CancellationCommand> cancel(RunId runId, String reasonCode) {
+        return cancel(runId, reasonCode, "runtime-system");
+    }
+
+    /**
+     * 幂等持久化带已认证主体的取消事实，并在提交后汇聚 Audit。
+     *
+     * @param runId       Run 标识
+     * @param reasonCode  稳定取消原因
+     * @param principalRef 已认证主体稳定引用
+     * @return 首次取消时返回 Provider 命令；已处于终态时为空
+     */
+    @Transactional
+    public Optional<CancellationCommand> cancel(
+        RunId runId, String reasonCode, String principalRef) {
         if (reasonCode == null || reasonCode.isBlank()) {
             throw new IllegalArgumentException("reasonCode must not be blank");
+        }
+        if (principalRef == null || principalRef.isBlank()) {
+            throw new IllegalArgumentException("principalRef must not be blank");
         }
         Run run = requireRun(runId);
         if (space.refinex.agentark.runtime.domain.RuntimeStateMachine.isTerminal(run.status())) {
@@ -280,6 +383,11 @@ public class RuntimeExecutionCoordinator {
         repository.insertOutbox(outbox(
             "run", run.id().asString(), "run.cancelled",
             "{\"reasonCode\":\"" + reasonCode + "\"}", now));
+        auditAfterCommit(
+            run.id().asString() + ":cancelled", session, principalRef,
+            "runtime.run.cancel", "run", run.id().asString(),
+            java.util.Map.of("reasonCode", reasonCode), now);
+        releaseQuotaAfterCommit(turn.id());
         return Optional.of(new CancellationCommand(
             turn.id(), run.id(), run.fencingToken(), reasonCode));
     }
@@ -439,6 +547,16 @@ public class RuntimeExecutionCoordinator {
             "approval", approval.id().asString(), eventType,
             "{\"approvalId\":\"" + approval.id().asString()
                 + "\",\"status\":\"" + approval.status().name() + "\"}", now));
+        auditAfterCommit(
+            approval.id().asString() + ":" + approval.status().name()
+                + ":" + approval.expectedVersion(),
+            session,
+            approval.decisionBy().orElse("runtime-system"),
+            "runtime.approval." + approval.status().name().toLowerCase(java.util.Locale.ROOT),
+            "approval",
+            approval.id().asString(),
+            java.util.Map.of("status", approval.status().name()),
+            now);
     }
 
     /**
@@ -538,6 +656,45 @@ public class RuntimeExecutionCoordinator {
             RuntimePayload.inline("{\"type\":\"" + type + "\"}"), now,
             run.fencingToken());
         afterCommit(() -> eventNotifier.publish(event.sessionId(), event.sessionSequence()));
+    }
+
+    /**
+     * 在本地终态事务提交后幂等释放 Turn 绑定的 Control 并发配额 Reservation。
+     *
+     * <p>远端释放失败由 Control TTL 最终回收，且不能回滚已经持久化的 Runtime 终态。
+     *
+     * @param turnId Turn 标识
+     */
+    private void releaseQuotaAfterCommit(space.refinex.agentark.kernel.id.TurnId turnId) {
+        repository.findQuotaReservation(turnId)
+            .ifPresent(reservationId -> afterCommit(() -> quotaPort.release(reservationId)));
+    }
+
+    /**
+     * 在 Runtime 本地事务提交后提交安全 Audit 投影，远端失败不得覆盖本地权威事实。
+     *
+     * @param sourceEventId 来源幂等标识
+     * @param session       固定租户 Session
+     * @param principalRef  主体稳定引用
+     * @param action        稳定动作
+     * @param resourceType  资源类型
+     * @param resourceRef   资源引用
+     * @param diff          不含正文的差异摘要
+     * @param now           发生时间
+     */
+    private void auditAfterCommit(
+        String sourceEventId,
+        Session session,
+        String principalRef,
+        String action,
+        String resourceType,
+        String resourceRef,
+        java.util.Map<String, Object> diff,
+        Instant now) {
+        Optional<String> traceId = telemetry.currentTraceId();
+        afterCommit(() -> governanceAuditClient.append(new GovernanceAuditClient.AuditRecord(
+            sourceEventId, session.organizationId(), session.projectId(), principalRef,
+            action, "SUCCEEDED", resourceType, resourceRef, diff, traceId, now)));
     }
 
     /**

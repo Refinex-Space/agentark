@@ -21,7 +21,7 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 | 09 | `V4__phase_09_knowledge_metadata.sql`：Knowledge Metadata、Document Revision、Knowledge Revision、Profile 与 Ingestion Request | 只描述摄取工作，不执行 Embedding 或向量写入；V4 由 `agentark-knowledge` 所有 |
 | 10 | `V5__phase_10_revision_deployment.sql`：Agent Draft、Validation、Revision、Snapshot、Publish Operation、Control Outbox、Deployment 与 Deployment Revision | 发布事务原子提交，Deployment 固定目标 Revision；独立 `agentark-control` 迁移测试按 V1/V2/V3/V5 运行，Control Server 组合迁移按 V1–V5 运行 |
 | 14 | `V6__phase_14_knowledge_ingestion_result.sql`：Knowledge Ingestion Result，并扩展 Control Outbox 的 Knowledge Revision 聚合类型 | Scheduler 只经幂等 Internal Command 提交结果，不写 Control 表；Parser/Embedding/Vector Adapter 不拥有表 |
-| 19 | Secret 轮换治理、Quota、Audit、Usage/Cost、Evaluation、可靠性补齐 | 延续 Phase 08 Secret Owner，不保存 Secret 明文 |
+| 19 | `V7__phase_19_governance.sql`：Audit、Price/Usage/Cost、Quota Reservation、Evaluation 与 Release Gate | Runtime 保留原始用量，Control 只接收幂等治理投影；不保存 Secret、Prompt、文档或 Tool 参数正文 |
 
 任何表提前、延后或转移 Owner 都必须先修改本模型；影响平台边界或发布一致性时同步提交 ADR。
 
@@ -113,11 +113,48 @@ Scheduler 不写这些表。Phase 14 由 Scheduler 调用幂等完成命令；Co
 
 ## Governance
 
-| 表族 | 关键表与约束 |
-|---|---|
-| Secret | Phase 08 已建立 `secret_metadata`、`secret_binding`；Phase 19 只补轮换和过期治理；始终只保存 Provider Path/Version/Scope，不保存值 |
-| Quota | `quota_policy`, `quota_reservation`；Scope + metric + effective version 唯一，并发预留可回收 |
-| Audit | `audit_event`；全局 event_id 唯一、按 organization/time 查询、只追加、Payload 可外置 |
-| Usage/Cost | `usage_aggregate`, `price_table`, `price_table_version`；聚合维度和价格版本固定 |
-| Evaluation | `evaluation_dataset`, `evaluation_dataset_version`, `evaluation_test_case`, `evaluator`, `evaluator_version`, `evaluation_run`, `evaluation_score`, `release_gate`；所有 Run 固定 Snapshot/Dataset/Evaluator Version |
-| Reliability | `control_outbox`, `control_idempotency_record`；使用 MySQL 规范中的 Claim 和幂等约束 |
+### Audit
+
+| 表 | 关键内容 | 关键约束与索引 |
+|---|---|---|
+| `audit_event` | source event、plane、principal、scope、action/result、resource、diff summary、policy/role version、trace/request、archive ref | `(source_plane, source_event_id)` 幂等；按 organization/project/time 和 trace 查询；触发器拒绝 UPDATE/DELETE；正文和 Secret 禁止内联 |
+
+Audit 由 Control/Governance 统一查询。Control 本地业务在事务边界写入，Runtime/Scheduler 只能通过版本化 Internal Command 提交自己的幂等投影；各平面原始 Runtime Event、技术日志和 Audit Event 不得互相替代。归档 Port 只接收规范事件 Hash/ObjectRef，不允许删除 MySQL 中仍处于在线保留期的事实。
+
+### Usage、Cost 与 Price
+
+| 表 | 关键内容 | 关键约束与索引 |
+|---|---|---|
+| `price_table` | 项目内稳定价格表 Key、名称、状态和乐观锁 | `(project_id, price_key)` 唯一 |
+| `price_table_version` | 不可变币种、起效时间、价格项 JSON、SHA-256 | `(price_table_id, version_number)` 与内容 Hash 唯一；触发器拒绝 UPDATE/DELETE |
+| `usage_ledger` | 幂等来源记录、Agent/Revision/Session/Turn/Run、Provider/Model、计量类型、Token/Tool/Sandbox、Cost、Price Version、Estimate | `(source_plane, source_record_id)` 唯一；只保存计量维度，不保存 Prompt、输出或 Tool 参数 |
+| `usage_aggregate` | HOUR/DAY/MONTH 窗口、PROJECT/AGENT/REVISION/MODEL 维度、Token/Tool/Embedding/Sandbox 和 Cost 汇总 | 固定窗口与维度唯一；每次 Ledger 写入同事务增量更新 |
+
+Runtime `usage_record` 是原始权威明细，Control `usage_ledger` 是经过版本化命令接收的治理明细。Provider Usage 优先；缺失时 `estimated=1`。所有金额使用 `DECIMAL(20,8)` 与 ISO 4217 三字符币种，任何 Cost 必须固定 `price_table_version_id`，不能用当前价格回写历史记录。
+
+### Quota
+
+| 表 | 关键内容 | 关键约束与索引 |
+|---|---|---|
+| `quota_policy` | ORGANIZATION/PROJECT/DEPLOYMENT/MODEL Scope，REQUEST_RATE/INPUT_TOKEN/OUTPUT_TOKEN/COST/CONCURRENT_RUN Metric，SOFT/HARD Enforcement，预算动作、窗口和有效期 | `(project_id, scope_type, scope_ref, metric, effective_from)` 唯一；乐观锁和状态约束 |
+| `quota_reservation` | Policy、幂等 Key、预留量、HELD/COMMITTED/RELEASED/EXPIRED 状态、到期与版本 | `(policy_id, idempotency_key)` 唯一；Policy 行锁内检查已用量与活跃预留，硬限额并发不可超卖；TTL 可回收 |
+
+Runtime 在创建新 Turn/Run 前经 Internal Contract 申请 Reservation；本地接单失败必须释放，进程失联由 TTL/Reconciliation 回收。SOFT 只产生告警，HARD 拒绝；运行中预算动作只能是 `WARN/REQUIRE_APPROVAL/STOP`，不能静默扩大额度。缓存只加速读取，MySQL 锁与 Reservation 才是并发权威。
+
+### Evaluation 与 Release Gate
+
+| 表 | 关键内容 | 关键约束与索引 |
+|---|---|---|
+| `evaluation_dataset` | 稳定 Dataset Key、名称、状态、乐观锁 | `(project_id, dataset_key)` 唯一 |
+| `evaluation_dataset_version` | 不可变版本、Schema、内容 Hash | `(dataset_id, version_number)` 和内容 Hash 唯一；触发器拒绝 UPDATE/DELETE |
+| `evaluation_test_case` | 固定 Dataset Version 下的 Case Key、输入 ObjectRef/Hash、期望 JSON/Hash、权重 | `(dataset_version_id, case_key)` 唯一；禁止 Secret 与明文凭据 |
+| `evaluator` / `evaluator_version` | 稳定 Evaluator 与不可变类型、配置、Hash | 版本只追加；初始支持 `DETERMINISTIC`，Provider 扩展不得进入 Domain |
+| `evaluation_run` | Candidate Revision/Snapshot、Dataset/Evaluator Version、Model/Provider Metadata、Threshold、Baseline、状态和总分 | 创建后固定所有版本引用；只允许状态与结果从 QUEUED/RUNNING 进入终态 |
+| `evaluation_score` | Run + Test Case + Metric 的分数、通过标记和安全详情 | `(evaluation_run_id, test_case_id, metric_key)` 唯一；只追加 |
+| `release_gate` | Agent/Environment 可选 Scope、固定 Dataset/Evaluator Version、Threshold、Enforcement 和乐观锁 | Scope 内唯一；启用后 Deployment Promote 必须存在目标 Revision 的通过 Evaluation Run |
+
+Deterministic Evaluator 只比较已固定 Case 的期望与调用方提供的规范输出 Hash，不执行 Agent 或读取可编辑 Draft。真实离线执行由后续 Scheduler Handler 扩展，但仍必须固定 Revision、Snapshot、Dataset Version、Evaluator Version 和 Model/Provider Metadata。
+
+### Reliability
+
+现有 `control_outbox` 继续承载本地业务事实。跨平面 Audit/Usage/Quota 命令各自必须带来源幂等标识；Control 事务写入 Ledger/Event/Reservation 与 Aggregate，不依赖 Redis 或 OTel Backend。Phase 19 不新增第二套 Secret 模型，Secret 轮换审计仍只引用 `secret_metadata` 标识与外部版本，不保存值。

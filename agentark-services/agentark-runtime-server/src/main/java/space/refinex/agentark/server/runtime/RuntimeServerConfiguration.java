@@ -17,12 +17,17 @@
 package space.refinex.agentark.server.runtime;
 
 import org.mybatis.spring.annotation.MapperScan;
+import io.micrometer.observation.ObservationRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.*;
 import org.springframework.scheduling.annotation.EnableScheduling;
+import org.springframework.web.reactive.function.client.WebClient;
+import io.micrometer.core.instrument.MeterRegistry;
 import space.refinex.agentark.foundation.redis.DistributedLeaseManager;
 import space.refinex.agentark.foundation.storage.ObjectStore;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
 import space.refinex.agentark.runtime.adapter.in.web.RuntimeController;
 import space.refinex.agentark.runtime.adapter.in.web.RuntimeInternalController;
 import space.refinex.agentark.runtime.adapter.in.web.RuntimeProblemDetailAdvice;
@@ -123,18 +128,24 @@ public class RuntimeServerConfiguration {
      * @param properties      Runtime Server 配置
      * @param objectMapper    Jackson 3 Mapper
      * @param providerCatalog Provider 能力目录
+     * @param builders        Spring Boot 可选观测客户端构建器
+     * @param observationRegistry 当前 Micrometer Observation Registry
      * @return Control Client
      */
     @Bean
     public ControlPlaneRuntimeClient controlPlaneRuntimeClient(
         RuntimeServerProperties properties,
         ObjectMapper objectMapper,
-        RuntimeProviderCatalog providerCatalog) {
+        RuntimeProviderCatalog providerCatalog,
+        ObjectProvider<WebClient.Builder> builders,
+        ObservationRegistry observationRegistry) {
         if (properties.getControlBaseUrl() == null) {
             throw new IllegalStateException("agentark.runtime.control-base-url is required");
         }
+        WebClient.Builder builder = builders.getIfAvailable(
+            () -> WebClient.builder().observationRegistry(observationRegistry));
         return new ControlPlaneRuntimeClient(
-            org.springframework.web.reactive.function.client.WebClient.builder()
+            builder
                 .baseUrl(properties.getControlBaseUrl().toString())
                 .build(),
             objectMapper,
@@ -147,14 +158,23 @@ public class RuntimeServerConfiguration {
      *
      * @param store    Runtime Store
      * @param notifier Event 通知器
+     * @param quotaPort Control 并发配额 Reservation 端口
+     * @param governanceAuditClient Control Audit 汇聚端口
+     * @param telemetry Runtime Telemetry
      * @param clock    UTC 时钟
      * @return 执行协调器
      */
     @Bean
     public RuntimeExecutionCoordinator runtimeExecutionCoordinator(
-        MybatisRuntimeStore store, RuntimeEventNotifier notifier, Clock clock) {
+        MybatisRuntimeStore store,
+        RuntimeEventNotifier notifier,
+        RuntimeQuotaPort quotaPort,
+        GovernanceAuditClient governanceAuditClient,
+        AgentArkTelemetry telemetry,
+        Clock clock) {
         return new RuntimeExecutionCoordinator(
-            store, store, store, store, store, store, notifier, clock);
+            store, store, store, store, store, store, notifier, quotaPort,
+            governanceAuditClient, telemetry, clock);
     }
 
     /**
@@ -166,6 +186,7 @@ public class RuntimeServerConfiguration {
      * @param notifier            Event 通知器
      * @param objectMapper        Jackson 3 Mapper
      * @param clock               UTC 时钟
+     * @param telemetry           Provider Event Telemetry
      * @return 执行信号接收器
      */
     @Bean
@@ -175,10 +196,11 @@ public class RuntimeServerConfiguration {
         RuntimePayloadExternalizer payloadExternalizer,
         RuntimeEventNotifier notifier,
         ObjectMapper objectMapper,
-        Clock clock) {
+        Clock clock,
+        AgentArkTelemetry telemetry) {
         return new PersistentExecutionSignalSink(
             store, store, store, runtimeService, payloadExternalizer,
-            notifier, objectMapper, clock);
+            notifier, objectMapper, clock, telemetry);
     }
 
     /**
@@ -188,6 +210,8 @@ public class RuntimeServerConfiguration {
      * @param snapshotLoader     Snapshot Loader
      * @param providerCatalog    Provider 目录
      * @param runtimeService     Runtime 应用服务
+     * @param quotaPort          Control Quota 端口
+     * @param telemetry          Runtime Telemetry
      * @return Admission Service
      */
     @Bean
@@ -195,9 +219,44 @@ public class RuntimeServerConfiguration {
         DeploymentResolver deploymentResolver,
         SnapshotLoader snapshotLoader,
         RuntimeProviderCatalog providerCatalog,
-        RuntimeApplicationService runtimeService) {
+        RuntimeApplicationService runtimeService,
+        RuntimeQuotaPort quotaPort,
+        AgentArkTelemetry telemetry) {
         return new RuntimeAdmissionService(
-            deploymentResolver, snapshotLoader, providerCatalog, runtimeService);
+            deploymentResolver, snapshotLoader, providerCatalog, runtimeService, quotaPort,
+            telemetry);
+    }
+
+    /**
+     * 创建 Runtime Usage 治理汇聚 Worker。
+     *
+     * @param store  Runtime Usage Store
+     * @param client Control Governance Client
+     * @param clock  UTC 时钟
+     * @return Usage Governance Worker
+     */
+    @Bean
+    @ConditionalOnProperty(
+        prefix = "agentark.runtime",
+        name = "usage-governance-enabled",
+        havingValue = "true")
+    public RuntimeUsageGovernanceWorker runtimeUsageGovernanceWorker(
+        UsageGovernanceStore store, UsageGovernanceClient client, Clock clock) {
+        return new RuntimeUsageGovernanceWorker(store, client, clock);
+    }
+
+    /**
+     * 注册 Runtime 低基数权威状态指标。
+     *
+     * @param store    Runtime Store
+     * @param registry Meter Registry
+     * @param clock    UTC 时钟
+     * @return Runtime 指标注册句柄
+     */
+    @Bean
+    public RuntimeMetrics runtimeMetrics(
+        MybatisRuntimeStore store, MeterRegistry registry, Clock clock) {
+        return new RuntimeMetrics(store, registry, clock);
     }
 
     /**

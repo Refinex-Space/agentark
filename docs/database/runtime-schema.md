@@ -21,6 +21,7 @@ Phase 11 创建逻辑模型对应的 Flyway、Repository 和事务测试；Phase
 | 11 | Session、Turn、Run、Work Item、Instance、Event、Approval、Agent State、Checkpoint、Usage、Idempotency、Outbox | 完整 Runtime 持久模型与仓储事务 |
 | 12 | 无新增 Provider 私有表 | AgentScope Adapter 通过 Runtime 端口读写权威模型 |
 | 13 | 只允许经本模型评审后的兼容增量 | API、SSE、Worker 装配不得绕过 Runtime Owner |
+| 19 | `V3__phase_19_usage_governance.sql`：扩展 Usage 维度、治理汇聚状态和并发 Quota Reservation 引用 | 不写 Control Schema；原始 Usage 仍由 Runtime 保存，治理投影通过 Internal Contract 异步提交 |
 
 Provider 适配便利不能改变表 Owner 或引入 AgentScope 自动建表；任何逻辑模型变化必须先更新本文档。
 
@@ -36,7 +37,7 @@ Provider 适配便利不能改变表 Owner 或引入 AgentScope 自动建表；�
 | `approval` | id, run_id, action/tool identity, argument_hash, policy_version, status, expected_version, expires_at, decision metadata | PENDING 查询索引；同一决策幂等；参数不可替换 |
 | `runtime_agent_state` | id, session_id, run_id, agent_key, state_key, item_index, state_version, state_json/object_ref, content_hash, committed, fencing_token, created_at | `(session_id, agent_key, state_key, item_index, state_version)` 唯一；过期 Fencing Token 拒绝写入；未引用版本可回收 |
 | `runtime_checkpoint` | id, run_id, sequence, agent_state_id/version/ref, event_sequence, content_hash, recoverable, fencing_token, created_at | `(run_id, sequence)` 唯一；只引用已提交 State Version；过期 Fencing Token 拒绝写入 |
-| `usage_record` | id, run_id, event_id, provider/model/tool, usage dimensions, estimate, price_version, occurred_at | Provider request ID 去重；run/time 查询 |
+| `usage_record` | id, owner chain, session/turn/run/event、agent/revision/deployment、usage_type、provider/model/tool、Token/Tool/Sandbox dimensions、estimate、price_table_version、currency/cost、governance_status/attempt | Provider request ID 去重；Run/时间与待汇聚 Claim 索引；不保存 Prompt、输出或 Tool 参数 |
 | `runtime_idempotency_record` | scope type/id, idempotency_key, request_hash, result_ref, status, expires_at | Scope 内 key 唯一；同 key 不同 hash 冲突 |
 | `runtime_outbox` | event_id, aggregate type/id, type, payload/ref, status, available_at, attempts | event_id 唯一；Claim 索引 |
 
@@ -51,3 +52,12 @@ Provider 适配便利不能改变表 Owner 或引入 AgentScope 自动建表；�
 `runtime_agent_state` 是 AgentScope Provider 的持久适配表，不采用上游自动创建的 `agentscope_sessions`。Provider 写入新版本后，Runtime 事务提交指向该版本的 Checkpoint 和 Event；恢复只能选择已提交 Checkpoint。AgentState 不直接替代 Session/Run/Event 权威状态。
 
 大 State 使用 Object Storage；数据库仍保存 Scope、Version、Hash、Commit 可见性和 ObjectRef。Redis 中的缓存或副本可以全部丢失并从 MySQL/Object 重建。
+
+## Usage 与 Quota 边界
+
+- Runtime 先在所属事务追加原始 `usage_record`，再由有界 Worker 通过 Control Internal API 幂等汇聚；Control 不可用时记录保持 `PENDING/RETRY`，不得丢失或阻断已在运行的模型结果持久化；
+- Provider 明确返回 Token/Duration 时优先使用；缺失值必须标记 `estimated=1`，不能伪造成精确计费；
+- Session/Turn/Run/Revision 等高基数标识可以存在于明细和 Trace 关联，但禁止成为 Metric Label；
+- 新 Turn 接单前通过 Control Quota API 预留 `CONCURRENT_RUN` 或预算；Reservation ID 只作为逻辑引用保存在 Runtime，不建立跨 Schema 外键；
+- 本地接单失败释放 Reservation，成功终态提交，异常退出由 Control TTL 回收；运行中超过预算按 Snapshot/Quota Policy 产生 Approval 或明确终止 Event；
+- OTel、Redis 或 Control 短暂不可用不能篡改已持久化 Usage、Run、Event 与 Reservation 本地关联事实。

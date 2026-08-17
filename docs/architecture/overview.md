@@ -2844,6 +2844,20 @@ Evaluation 必须固定 Snapshot、Dataset Version、Evaluator Version、Model/P
 
 告警以用户影响和错误预算为中心，避免对每个瞬时技术错误告警。
 
+### 15.8 Phase 19 落地边界
+
+Phase 19 按既有四平面落地，不新增 Governance 微服务：
+
+- Control V7 是 Audit、Usage/Cost 聚合、Quota Policy/Reservation、Evaluation 和 Release Gate 的唯一权威库；
+- Runtime V3 保留原始 Usage 与治理投递状态，并把并发 Reservation 引用与首次 Run 同事务绑定；
+- Scheduler 与 Runtime 的高风险操作先提交所属 Event/Outbox，再按 `sourceEventId` 向 Control 幂等汇聚 Audit；
+- 四服务使用 W3C Trace Context，内部 `WebClient`/`RestClient` 必须来自 Spring Boot 观测 Builder，禁止静态 Builder 绕开传播；
+- `AgentArkTelemetry` 只接受白名单属性，并为稳定 Span 同步产生低基数 Duration Timer；
+- 本地 Collector/Tempo/Prometheus/Grafana 位于 `deploy/observability/`，不构成生产部署或业务事实源；
+- Web `/observe` 只访问 Control Public API，浏览器不访问 Internal API、数据库或 Telemetry Backend 凭据。
+
+详细表、Contract、配置和验收证据见 [Phase 19 执行报告](../implementation/phase-19-observability-governance.md) 与 [Observability 运维](../guides/observability-operations.md)。
+
 ---
 
 ## 16. 部署拓扑、扩缩容与容灾
@@ -3226,8 +3240,9 @@ Phase 17 建立独立 Web Foundation，Phase 18 建立真实产品主链路；�
 - [Phase 17 执行证据](../implementation/phase-17-web-foundation.md)：工具链、生成 Client、SSE、测试和已知边界。
 - [Phase 18 执行证据](../implementation/phase-18-web-features.md)：Web-readiness Contract、核心 Feature、真实四服务 E2E 和已知边界；
 - [Phase 18 交互证据](../frontend/phase-18-interactions.md)：主链路、截图生成、响应式、可访问性与安全展示约束。
+- [Phase 19 执行证据](../implementation/phase-19-observability-governance.md)：OTel、Audit、Usage/Cost、Quota、Evaluation、Web 与部署事实。
 
-`agentark-web` 仍是独立 pnpm 构建，不进入 Maven Reactor，也不直接访问任何平面的数据库或 Internal API。浏览器只通过 Gateway Public API/SSE 工作，Tenant Context 只表达选择意图。统一 Audit、Usage/Cost、Quota 与 Evaluation 由 Phase 19 提供，Phase 18 不用前端本地状态伪造治理事实。
+`agentark-web` 仍是独立 pnpm 构建，不进入 Maven Reactor，也不直接访问任何平面的数据库或 Internal API。浏览器只通过 Gateway Public API/SSE 工作，Tenant Context 只表达选择意图。Phase 19 的 `/observe` 从 Control Governance Public API 读取统一 Audit、Usage/Cost、Quota 与 Evaluation，不用前端本地状态伪造治理事实。
 
 ---
 

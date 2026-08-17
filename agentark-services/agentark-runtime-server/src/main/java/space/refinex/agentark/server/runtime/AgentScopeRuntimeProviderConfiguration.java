@@ -34,6 +34,7 @@ import space.refinex.agentark.runtime.provider.agentscope.model.AgentScopeModelF
 import space.refinex.agentark.runtime.provider.agentscope.model.RuntimeInputMapper;
 import space.refinex.agentark.runtime.provider.agentscope.prompt.PromptMapper;
 import space.refinex.agentark.runtime.provider.agentscope.secret.SecretResolver;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
 
 import java.time.Clock;
 
@@ -95,14 +96,16 @@ public class AgentScopeRuntimeProviderConfiguration {
      * @param descriptor   Provider Descriptor
      * @param objectMapper Jackson 2 Mapper
      * @param cache        Single Flight 缓存
+     * @param telemetry    Provider Telemetry
      * @return Snapshot Compiler
      */
     @Bean
     public AgentScopeSnapshotCompiler agentScopeSnapshotCompiler(
         RuntimeProviderDescriptor descriptor,
         com.fasterxml.jackson.databind.ObjectMapper objectMapper,
-        SnapshotCompilationCache cache) {
-        return new AgentScopeSnapshotCompiler(descriptor, objectMapper, cache);
+        SnapshotCompilationCache cache,
+        AgentArkTelemetry telemetry) {
+        return new AgentScopeSnapshotCompiler(descriptor, objectMapper, cache, telemetry);
     }
 
     /**
@@ -176,6 +179,7 @@ public class AgentScopeRuntimeProviderConfiguration {
      * @param eventMapper  Event Mapper
      * @param inputMapper  输入 Mapper
      * @param signalSink   持久信号接收器
+     * @param telemetry    Agent Run Telemetry
      * @return AgentScope 执行引擎
      */
     @Bean
@@ -184,8 +188,10 @@ public class AgentScopeRuntimeProviderConfiguration {
         AgentScopeRuntimeMaterializer materializer,
         AgentScopeEventMapper eventMapper,
         RuntimeInputMapper inputMapper,
-        ExecutionSignalSink signalSink) {
-        return new AgentScopeExecutionEngine(materializer, eventMapper, inputMapper, signalSink);
+        ExecutionSignalSink signalSink,
+        AgentArkTelemetry telemetry) {
+        return new AgentScopeExecutionEngine(
+            materializer, eventMapper, inputMapper, signalSink, telemetry);
     }
 
     /**

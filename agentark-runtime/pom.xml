@@ -75,6 +75,13 @@
             <optional>true</optional>
         </dependency>
 
+        <!-- 提供 Runtime 接单、Event、Model 和 Tool 的安全 Telemetry 约定；保持可选。 -->
+        <dependency>
+            <groupId>${project.groupId}</groupId>
+            <artifactId>agentark-starter-observability</artifactId>
+            <optional>true</optional>
+        </dependency>
+
         <!-- 提供 Runtime Server 连接 MySQL 8.4 的运行时 JDBC 驱动。 -->
         <dependency>
             <groupId>com.mysql</groupId>

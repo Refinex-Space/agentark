@@ -16,6 +16,8 @@
 
 package space.refinex.agentark.server.gateway;
 
+import io.micrometer.observation.ObservationRegistry;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -86,11 +88,18 @@ public class GatewaySecurityConfiguration {
      * 创建绑定 Control 基础地址的非阻塞 API Key 内部客户端。
      *
      * @param properties Gateway 地址配置
+     * @param builders   Spring Boot 可选观测客户端构建器
+     * @param observationRegistry 当前 Micrometer Observation Registry
      * @return 无缓存 Control 客户端
      */
     @Bean
-    public ControlApiKeyClient controlApiKeyClient(GatewayProperties properties) {
-        WebClient webClient = WebClient.builder()
+    public ControlApiKeyClient controlApiKeyClient(
+        GatewayProperties properties,
+        ObjectProvider<WebClient.Builder> builders,
+        ObservationRegistry observationRegistry) {
+        WebClient.Builder builder = builders.getIfAvailable(
+            () -> WebClient.builder().observationRegistry(observationRegistry));
+        WebClient webClient = builder
             .baseUrl(properties.getControlBaseUrl().toString())
             .build();
         return new HttpControlApiKeyClient(webClient);

@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phases 07–10 established Control IAM, versioned AI and Knowledge assets, immutable Agent Revision/Snapshot, Deployment and Internal Contracts. Phases 11–13 established the provider-neutral Runtime domain, durable Event/Work/State persistence, AgentScope anti-corruption layer, Snapshot Compiler, managed Runtime API/SSE/HITL and recovery. Phase 14 established safe Knowledge ingestion and fixed-Revision RAG. Phase 15 established the independent Scheduler Plane with durable Trigger/Job/Attempt/Lease, Cron/Webhook/Channel, Retry/Dead Letter and versioned Runtime/Control clients. Phase 16 established the stateless public Gateway. Phases 17–18 established the independent AgentArk Web foundation, design system, generated Public API/SSE clients, Web-readiness contracts, and the real Build → Publish → Deploy → Run → Approve → Observe product flow. Audit, Usage/Cost, Quota, and Evaluation facts remain owned by Phase 19.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phases 07–10 established Control IAM, versioned AI and Knowledge assets, immutable Agent Revision/Snapshot, Deployment and Internal Contracts. Phases 11–13 established the provider-neutral Runtime domain, durable Event/Work/State persistence, AgentScope anti-corruption layer, Snapshot Compiler, managed Runtime API/SSE/HITL and recovery. Phase 14 established safe Knowledge ingestion and fixed-Revision RAG. Phase 15 established the independent Scheduler Plane with durable Trigger/Job/Attempt/Lease, Cron/Webhook/Channel, Retry/Dead Letter and versioned Runtime/Control clients. Phase 16 established the stateless public Gateway. Phases 17–18 established the independent AgentArk Web foundation and real product flow. Phase 19 established W3C OpenTelemetry, low-cardinality metrics, append-only Audit, versioned Usage/Cost, concurrency-safe Quota, deterministic Evaluation/Release Gates, the Web governance view, and a local observability stack. Production security hardening remains owned by Phase 20 and deployment/HA/DR by Phase 22.
 
 ## Authority
 
@@ -100,6 +100,7 @@ Do not commit, push, publish, delete branches, or modify upstream repositories w
 - Coding/API/security standards: `docs/standards/`
 - Domain terms: `docs/domain/glossary.md`
 - Current runbook: `docs/guides/runbook.md`
+- Observability/Governance runbook: `docs/guides/observability-operations.md`
 - Web information architecture: `docs/frontend/information-architecture.md`
 - Web design system: `docs/frontend/design-system.md`
 - Web upstream reference boundary: `docs/frontend/source-reference.md`

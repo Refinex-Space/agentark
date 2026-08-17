@@ -27,6 +27,8 @@ import space.refinex.agentark.control.release.application.CanonicalSnapshotSeria
 import space.refinex.agentark.control.release.application.port.ReleaseRepository;
 import space.refinex.agentark.control.release.domain.ReleaseModels.*;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
+import space.refinex.agentark.foundation.observability.SpanConvention;
 import space.refinex.agentark.kernel.id.*;
 import space.refinex.agentark.kernel.snapshot.AgentRevisionSnapshot;
 import tools.jackson.core.JacksonException;
@@ -95,6 +97,9 @@ public class AgentPublisher {
      */
     private final JsonMapper jsonMapper;
 
+    /** 发布关键路径 Telemetry。 */
+    private final AgentArkTelemetry telemetry;
+
     /**
      * @param repository           Release 持久化端口
      * @param assetResolver        资产解析器
@@ -116,6 +121,36 @@ public class AgentPublisher {
         IamAuditPublisher auditPublisher,
         Clock clock,
         JsonMapper jsonMapper) {
+        this(
+            repository, assetResolver, serializer, catalogRepository, tenantRepository,
+            authorizationService, auditPublisher, clock, jsonMapper, AgentArkTelemetry.noop());
+    }
+
+    /**
+     * 创建带真实 Telemetry 的 Agent Publisher。
+     *
+     * @param repository           Release 持久化端口
+     * @param assetResolver        资产解析器
+     * @param serializer           Canonical Snapshot 序列化器
+     * @param catalogRepository    Catalog 端口
+     * @param tenantRepository     租户目录
+     * @param authorizationService IAM 授权服务
+     * @param auditPublisher       审计发布器
+     * @param clock                UTC 时钟
+     * @param jsonMapper           JSON 映射器
+     * @param telemetry            发布 Telemetry
+     */
+    public AgentPublisher(
+        ReleaseRepository repository,
+        SnapshotAssetResolver assetResolver,
+        CanonicalSnapshotSerializer serializer,
+        CatalogRepository catalogRepository,
+        TenantCatalogRepository tenantRepository,
+        IamAuthorizationService authorizationService,
+        IamAuditPublisher auditPublisher,
+        Clock clock,
+        JsonMapper jsonMapper,
+        AgentArkTelemetry telemetry) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
         this.assetResolver = Objects.requireNonNull(assetResolver, "assetResolver must not be null");
         this.serializer = Objects.requireNonNull(serializer, "serializer must not be null");
@@ -125,6 +160,7 @@ public class AgentPublisher {
         this.auditPublisher = Objects.requireNonNull(auditPublisher, "auditPublisher must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
         this.jsonMapper = Objects.requireNonNull(jsonMapper, "jsonMapper must not be null");
+        this.telemetry = Objects.requireNonNull(telemetry, "telemetry must not be null");
     }
 
     /**
@@ -175,6 +211,29 @@ public class AgentPublisher {
         AgentId agentId,
         String idempotencyKey,
         long expectedDraftVersion) {
+        return telemetry.inSpan(
+            SpanConvention.CONTROL, "agent.publish",
+            Map.of("operation", "publish"),
+            () -> publishTracked(
+                principal, projectId, agentId, idempotencyKey, expectedDraftVersion));
+    }
+
+    /**
+     * 在外层 {@code control.agent.publish} Span 与事务内执行发布。
+     *
+     * @param principal            已认证主体
+     * @param projectId            项目
+     * @param agentId              Agent
+     * @param idempotencyKey       幂等键
+     * @param expectedDraftVersion 预期 Draft 版本
+     * @return 不可变 Revision
+     */
+    private AgentRevision publishTracked(
+        AgentArkPrincipal principal,
+        ProjectId projectId,
+        AgentId agentId,
+        String idempotencyKey,
+        long expectedDraftVersion) {
         Project project = authorize(principal, projectId, PermissionRegistry.AGENT_PUBLISH);
         AgentDraft draft = repository.lockDraft(projectId, agentId)
             .orElseThrow(() -> new IamNotFoundException("agent draft is not visible"));
@@ -216,7 +275,7 @@ public class AgentPublisher {
             "agent.revision.published",
             outboxPayload(revision, draft.version(), diffSummary), now);
         repository.insertPublished(stored, operation, report, outbox, actor(principal));
-        auditPublisher.afterCommit(new IamAuditRecord(
+        auditPublisher.append(new IamAuditRecord(
             "agent.publish", actor(principal), "agent_revision", revisionId.asString(),
             Optional.of(project.organizationId()), Optional.of(projectId), "SUCCEEDED", now));
         return revision;

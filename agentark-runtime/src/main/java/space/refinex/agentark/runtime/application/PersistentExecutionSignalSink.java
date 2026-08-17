@@ -24,6 +24,8 @@ import space.refinex.agentark.kernel.ref.Checksum;
 import space.refinex.agentark.runtime.domain.RuntimeModels.*;
 import space.refinex.agentark.runtime.domain.RuntimeNotFoundException;
 import space.refinex.agentark.runtime.port.*;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
+import space.refinex.agentark.foundation.observability.SpanConvention;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
@@ -32,6 +34,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.Map;
 
 /**
  * 将 Provider 中立信号先持久化为 Event，并把 Approval Requested 同事务转换为 HITL 事实。
@@ -85,6 +88,9 @@ public class PersistentExecutionSignalSink implements ExecutionSignalSink {
      */
     private final Clock clock;
 
+    /** 供应方事件与用量遥测记录器。 */
+    private final AgentArkTelemetry telemetry;
+
     /**
      * 创建持久执行信号接收器。
      *
@@ -106,6 +112,34 @@ public class PersistentExecutionSignalSink implements ExecutionSignalSink {
         RuntimeEventNotifier eventNotifier,
         ObjectMapper objectMapper,
         Clock clock) {
+        this(
+            repository, eventStore, usageRecorder, runtimeService, payloadExternalizer,
+            eventNotifier, objectMapper, clock, AgentArkTelemetry.noop());
+    }
+
+    /**
+     * 创建带真实 Provider Event Telemetry 的持久信号接收器。
+     *
+     * @param repository          Runtime 聚合仓储
+     * @param eventStore          Event Store
+     * @param usageRecorder       原始用量记录端口
+     * @param runtimeService      Runtime 应用服务
+     * @param payloadExternalizer 大载荷外置端口
+     * @param eventNotifier       Event 通知端口
+     * @param objectMapper        JSON 解析器
+     * @param clock               UTC 时钟
+     * @param telemetry           Provider Event Telemetry
+     */
+    public PersistentExecutionSignalSink(
+        RuntimeRepository repository,
+        RuntimeEventStore eventStore,
+        UsageRecorder usageRecorder,
+        RuntimeApplicationService runtimeService,
+        RuntimePayloadExternalizer payloadExternalizer,
+        RuntimeEventNotifier eventNotifier,
+        ObjectMapper objectMapper,
+        Clock clock,
+        AgentArkTelemetry telemetry) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
         this.eventStore = Objects.requireNonNull(eventStore, "eventStore must not be null");
         this.usageRecorder = Objects.requireNonNull(
@@ -118,6 +152,7 @@ public class PersistentExecutionSignalSink implements ExecutionSignalSink {
             eventNotifier, "eventNotifier must not be null");
         this.objectMapper = Objects.requireNonNull(objectMapper, "objectMapper must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
+        this.telemetry = Objects.requireNonNull(telemetry, "telemetry must not be null");
     }
 
     /**
@@ -130,6 +165,31 @@ public class PersistentExecutionSignalSink implements ExecutionSignalSink {
     @Override
     @Transactional
     public void emit(Session session, Run run, ExecutionSignal signal) {
+        Optional<SpanConvention> convention = convention(signal.type());
+        if (convention.isEmpty()) {
+            emitTracked(session, run, signal);
+            return;
+        }
+        telemetry.inSpan(
+            convention.orElseThrow(), operation(signal.type()),
+            Map.of(
+                "operation", operation(signal.type()),
+                "outcome", signal.type().endsWith("failed") ? "failed" : "completed",
+                "runtime.provider", run.runtimeProvider()),
+            () -> {
+                emitTracked(session, run, signal);
+                return null;
+            });
+    }
+
+    /**
+     * 在可选 Provider 子 Span 内持久化 Event、Approval 和 Usage。
+     *
+     * @param session 当前 Session
+     * @param run     当前 Run
+     * @param signal  Provider 中立信号
+     */
+    private void emitTracked(Session session, Run run, ExecutionSignal signal) {
         Turn turn = repository.findTurn(run.turnId())
             .orElseThrow(() -> new RuntimeNotFoundException("turn is not available"));
         Instant now = Instant.now(clock);
@@ -137,7 +197,8 @@ public class PersistentExecutionSignalSink implements ExecutionSignalSink {
             new IllegalArgumentException("provider signal must use inline JSON before persistence"));
         RuntimeEvent event = eventStore.append(
             EventId.generate(), session.organizationId(), session.projectId(), session.id(),
-            turn.id(), run.id(), signal.type(), 1, run.id().asString().replace("-", ""),
+            turn.id(), run.id(), signal.type(), 1,
+            telemetry.currentTraceId().orElseGet(() -> run.id().asString().replace("-", "")),
             payloadExternalizer.externalize(json), now, run.fencingToken());
         if ("approval.requested".equals(signal.type())) {
             persistApprovals(run, session, json);
@@ -146,6 +207,50 @@ public class PersistentExecutionSignalSink implements ExecutionSignalSink {
             persistUsage(run, event, json, now);
         }
         afterCommit(() -> eventNotifier.publish(event.sessionId(), event.sessionSequence()));
+    }
+
+    /**
+     * 将稳定 Signal 类型映射到 Telemetry Span 约定。
+     *
+     * @param type Signal 类型
+     * @return 只为完成或失败事件创建子 Span
+     */
+    private Optional<SpanConvention> convention(String type) {
+        if (!(type.endsWith("completed") || type.endsWith("failed"))) {
+            return Optional.empty();
+        }
+        if (type.startsWith("model.call.")) {
+            return Optional.of(SpanConvention.MODEL);
+        }
+        if (type.startsWith("tool.call.")) {
+            return Optional.of(SpanConvention.TOOL);
+        }
+        if (type.startsWith("mcp.call.")) {
+            return Optional.of(SpanConvention.MCP);
+        }
+        if (type.startsWith("knowledge.retrieve.")) {
+            return Optional.of(SpanConvention.RAG);
+        }
+        if (type.startsWith("sandbox.execute.")) {
+            return Optional.of(SpanConvention.SANDBOX);
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * 从完整 Signal 类型提取 Span 操作后缀。
+     *
+     * @param type Signal 类型
+     * @return 固定为 call、retrieve 或 execute
+     */
+    private String operation(String type) {
+        if (type.startsWith("knowledge.retrieve.")) {
+            return "retrieve";
+        }
+        if (type.startsWith("sandbox.execute.")) {
+            return "execute";
+        }
+        return "call";
     }
 
     /**

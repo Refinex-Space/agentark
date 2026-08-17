@@ -32,6 +32,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 16 执行证据 | [Gateway 公共入口](implementation/phase-16-gateway.md) | 复核路由、OIDC/JWT、API Key、CORS、限流、SSE 代理与安全边界 |
 | Phase 17 执行证据 | [Web 工程基础](implementation/phase-17-web-foundation.md) | 复核独立工程、设计系统、生成式 API Client、SSE Client、CI 与浏览器验收 |
 | Phase 18 执行证据 | [Web 核心产品流程](implementation/phase-18-web-features.md) | 复核真实 API 主链路、Web-readiness Contract、四服务 E2E、安全与验收边界 |
+| Phase 19 执行证据 | [可观测与治理基线](implementation/phase-19-observability-governance.md) | 复核 OTel、Audit、Usage/Cost、Quota、Evaluation、Web 与部署验收 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |
@@ -56,6 +57,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Runtime 运维 | [Runtime Runbook](guides/runtime-operations.md) | 排查 Runtime 接单、Lease、SSE、HITL、孤儿恢复、排空和回滚 |
 | Knowledge/RAG 运维 | [Knowledge Runbook](guides/knowledge-operations.md) | 排查摄取、Qdrant、Revision 校验、检索、Snapshot、删除与回滚 |
 | Scheduler 运维 | [Scheduler Runbook](guides/scheduler-operations.md) | 排查 Trigger、Job Claim、Lease/Fencing、Retry、Dead Letter、Webhook、Channel 与回滚 |
+| Observability/Governance 运维 | [Observability Runbook](guides/observability-operations.md) | 启停 OTel/Prometheus/Tempo/Grafana，排查 Trace、Metric、Audit、Usage 与 Quota |
 | 上游来源 | [上游基线](migration/upstream-baseline.md) | 读取参考源码或执行迁移审计 |
 | 上游迁移审计 | [源码清单](migration/source-inventory.md) | 定位 Service/Core/Harness/Extensions/Frontend 的具体来源 |
 | 迁移分类 | [迁移清单](migration/migration-manifest.md) | 决定候选路径的取用类型、目标模块和明确拒绝项 |

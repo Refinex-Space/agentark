@@ -25,6 +25,7 @@ import space.refinex.agentark.runtime.domain.RuntimeConflictException;
 import space.refinex.agentark.runtime.domain.RuntimeModels.*;
 import space.refinex.agentark.runtime.domain.RuntimeStateMachine;
 import space.refinex.agentark.runtime.port.*;
+import space.refinex.agentark.runtime.port.UsageGovernanceStore.UsageExportRecord;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -47,6 +48,8 @@ public class MybatisRuntimeStore implements
     LeaseManager,
     RuntimeWorkQueue,
     UsageRecorder,
+    UsageGovernanceStore,
+    RuntimeMetricsRepository,
     RuntimeInstanceRepository {
 
     /**
@@ -119,6 +122,7 @@ public class MybatisRuntimeStore implements
      * @param occurredAt  接受时刻
      * @param outbox      Outbox
      * @param idempotency 幂等结果
+     * @param quotaReservationRef Control 并发配额 Reservation 引用
      * @return 持久接受 Event
      */
     @Override
@@ -130,9 +134,10 @@ public class MybatisRuntimeStore implements
         EventId eventId,
         Instant occurredAt,
         RuntimeOutboxEvent outbox,
-        IdempotencyRecord idempotency) {
+        IdempotencyRecord idempotency,
+        Optional<String> quotaReservationRef) {
         mapper.insertTurn(turnRow(turn));
-        mapper.insertRun(runRow(run));
+        mapper.insertRun(runRow(run), quotaReservationRef.orElse(null));
         mapper.insertWorkItem(workItemRow(workItem));
         RuntimeEvent accepted = append(
             eventId, turn.organizationId(), turn.projectId(), turn.sessionId(), turn.id(), run.id(),
@@ -142,6 +147,18 @@ public class MybatisRuntimeStore implements
         insertOutbox(outbox);
         mapper.insertIdempotency(idempotencyRow(idempotency));
         return accepted;
+    }
+
+    /**
+     * 读取 Turn 级 Control 并发配额 Reservation 引用。
+     *
+     * @param turnId Turn 标识
+     * @return 可选 Reservation 引用
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<String> findQuotaReservation(TurnId turnId) {
+        return mapper.findQuotaReservation(turnId.value());
     }
 
     /**
@@ -157,7 +174,7 @@ public class MybatisRuntimeStore implements
     public void insertRetryRun(
         Turn turn, Run run, RuntimeWorkItem workItem, RuntimeOutboxEvent outbox) {
         RuntimeStateMachine.requireRetryable(turn.status());
-        mapper.insertRun(runRow(run));
+        mapper.insertRun(runRow(run), null);
         mapper.insertWorkItem(workItemRow(workItem));
         requireOne(mapper.attachRetryRun(turn.id().value(), run.id().value(), run.createdAt()),
             "retry turn pointer conflicted");
@@ -328,7 +345,7 @@ public class MybatisRuntimeStore implements
                 abandoned.id().value(), abandoned.fencingToken().value(),
                 WorkItemStatus.FAILED.name(), occurredAt),
             "orphan work item completion conflicted");
-        mapper.insertRun(runRow(retry));
+        mapper.insertRun(runRow(retry), null);
         mapper.insertWorkItem(workItemRow(workItem));
         requireOne(mapper.attachRecoveryRun(
                 turn.id().value(), abandoned.id().value(), retry.id().value(),
@@ -770,6 +787,92 @@ public class MybatisRuntimeStore implements
             usageRecord.inputUnits(), usageRecord.outputUnits(), usageRecord.durationMillis(),
             usageRecord.estimated(), usageRecord.priceVersion().orElse(null),
             usageRecord.occurredAt());
+    }
+
+    /**
+     * 短事务 Claim 待汇聚 Usage，并把下一次重试时间推进三十秒。
+     *
+     * @param now   当前时间
+     * @param limit 最大数量
+     * @return 已 Claim Usage 投影
+     */
+    @Override
+    @Transactional
+    public List<UsageExportRecord> claimUsageForGovernance(Instant now, int limit) {
+        if (limit < 1 || limit > 100) {
+            throw new IllegalArgumentException("usage governance limit must be between 1 and 100");
+        }
+        List<RuntimeMapper.UsageGovernanceRow> rows = mapper.lockUsageForGovernance(now, limit);
+        Instant retryAt = now.plusSeconds(30);
+        List<UsageExportRecord> result = new ArrayList<>(rows.size());
+        for (RuntimeMapper.UsageGovernanceRow row : rows) {
+            if (mapper.claimUsageForGovernance(row.id(), retryAt) != 1) {
+                throw new RuntimeConflictException("usage governance claim conflicted");
+            }
+            result.add(new UsageExportRecord(
+                new EventId(row.id()), new OrganizationId(row.organizationId()),
+                new ProjectId(row.projectId()), new SessionId(row.sessionId()),
+                new TurnId(row.turnId()), new RunId(row.runId()),
+                new RevisionId(row.revisionId()), new DeploymentId(row.deploymentId()),
+                row.usageType(), row.provider(), Optional.ofNullable(row.model()),
+                Optional.ofNullable(row.tool()), row.inputUnits(), row.outputUnits(),
+                row.cachedTokens(), row.embeddingTokens(), row.toolCalls(),
+                row.sandboxDurationMillis(), row.estimated(),
+                Optional.ofNullable(row.priceVersion()), Optional.ofNullable(row.currency()),
+                row.costAmount(), row.occurredAt(), row.governanceAttempts() + 1));
+        }
+        return List.copyOf(result);
+    }
+
+    /**
+     * 确认 Usage 已由 Control 接收。
+     *
+     * @param id  Usage UUIDv7
+     * @param now 确认时间
+     */
+    @Override
+    public void markUsageExported(EventId id, Instant now) {
+        if (mapper.markUsageExported(id.value(), now) != 1) {
+            throw new RuntimeConflictException("usage governance confirmation conflicted");
+        }
+    }
+
+    /**
+     * 标记 Usage 汇聚达到重试终态。
+     *
+     * @param id Usage UUIDv7
+     */
+    @Override
+    public void markUsageExportFailed(EventId id) {
+        if (mapper.markUsageExportFailed(id.value()) != 1) {
+            throw new RuntimeConflictException("usage governance failure transition conflicted");
+        }
+    }
+
+    /** 返回活跃 Session 数量。 */
+    @Override
+    public long activeSessions() {
+        return mapper.countActiveSessions();
+    }
+
+    /** 返回活跃 Run 数量。 */
+    @Override
+    public long activeRuns() {
+        return mapper.countActiveRuns();
+    }
+
+    /** 返回待审批数量。 */
+    @Override
+    public long pendingApprovals() {
+        return mapper.countPendingApprovals();
+    }
+
+    /** 返回最老 Runtime Outbox 积压秒数。 */
+    @Override
+    public long outboxLagSeconds(Instant now) {
+        return mapper.oldestPendingOutbox()
+            .map(value -> Math.max(0L, Duration.between(value, now).toSeconds()))
+            .orElse(0L);
     }
 
     /**

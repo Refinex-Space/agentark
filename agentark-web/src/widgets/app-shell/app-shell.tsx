@@ -10,6 +10,7 @@ import {
   RadioTower,
   Rocket,
   Search,
+  ScanSearch,
   ShieldCheck,
   Sun,
 } from "lucide-react";
@@ -44,6 +45,7 @@ const navigation: NavigationItem[] = [
   { to: "/approvals", label: "审批中心", icon: CheckSquare2 },
   { to: "/operate", label: "运行治理", icon: Gauge },
   { to: "/govern", label: "IAM 与租户", icon: ShieldCheck },
+  { to: "/observe", label: "治理与观测", icon: ScanSearch },
   { to: "/design-system", label: "设计系统", icon: Palette },
 ];
 
@@ -117,7 +119,7 @@ export function AppShell() {
 
         <div className="sidebar__footer">
           <StatusBadge tone="success">系统基线就绪</StatusBadge>
-          <p>Phase 18 · Product Flow</p>
+          <p>Phase 19 · Governance</p>
         </div>
       </aside>
 

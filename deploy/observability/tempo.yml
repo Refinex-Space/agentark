@@ -1,0 +1,41 @@
+# Tempo 单二进制本地开发配置。
+server:
+  # 查询与健康 HTTP 端口。
+  http_listen_port: 3200
+
+# Distributor 接收 Collector 转发的 OTLP Trace。
+distributor:
+  # 启用标准 OTLP Receiver。
+  receivers:
+    # OTLP 同时支持 gRPC 与 HTTP。
+    otlp:
+      protocols:
+        # 容器内部 gRPC 接收端。
+        grpc:
+          endpoint: 0.0.0.0:4317
+        # 容器内部 HTTP 接收端。
+        http:
+          endpoint: 0.0.0.0:4318
+
+# Trace 只保存到本地卷，不能替代 Audit 或 Runtime Event。
+storage:
+  # Trace Storage 设置。
+  trace:
+    # 本地 Profile 使用 filesystem Backend。
+    backend: local
+    # WAL 目录位于持久卷。
+    wal:
+      path: /var/tempo/wal
+    # Block 目录位于持久卷。
+    local:
+      path: /var/tempo/blocks
+
+# Compactor 控制本地 Trace 保留期。
+compactor:
+  # 只保留 24 小时本地 Trace，长期责任追溯使用 Audit。
+  compaction:
+    block_retention: 24h
+
+# 禁止向 Grafana Labs 发送使用情况报告。
+usage_report:
+  reporting_enabled: false

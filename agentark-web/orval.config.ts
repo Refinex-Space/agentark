@@ -41,6 +41,7 @@ export default defineConfig({
     "../schemas/catalog-public/v1.json",
     "../schemas/knowledge-public/v1.json",
     "../schemas/release-public/v1.json",
+    "../schemas/governance-public/v1.json",
   ]),
   runtime: publicApi("runtime", "../contracts/openapi/public-runtime-v1.yaml", [
     "../schemas/problem-detail/v1.json",

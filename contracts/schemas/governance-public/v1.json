@@ -1,0 +1,367 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/governance-public/v1.json",
+  "title": "AgentArk Governance Public Contract v1",
+  "description": "定义审计、Usage/Cost、Quota 和固定版本 Evaluation 的公共投影，不包含 Secret、Prompt、文档或 Tool 参数正文。",
+  "$comment": "Telemetry、Runtime Event 与 Audit Event 是互相独立的事实类型；高基数资源标识只用于查询关联，不得成为 Metric Label。",
+  "$defs": {
+    "UuidV7": {
+      "title": "UUIDv7",
+      "description": "RFC 9562 UUIDv7 小写规范文本。",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "Checksum": {
+      "title": "SHA-256 校验和",
+      "description": "带 sha256 前缀的规范小写摘要。",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "Overview": {
+      "title": "治理概览",
+      "description": "当前项目过去 24 小时的治理计数和成本摘要。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["auditCount", "activeQuotaCount", "evaluationRunCount", "costAmount", "tokenCount"],
+      "properties": {
+        "auditCount": { "type": "integer", "minimum": 0, "description": "审计事件数量。" },
+        "activeQuotaCount": { "type": "integer", "minimum": 0, "description": "活动配额策略数量。" },
+        "evaluationRunCount": { "type": "integer", "minimum": 0, "description": "Evaluation Run 数量。" },
+        "costAmount": { "type": "number", "minimum": 0, "description": "治理 Ledger 成本合计。" },
+        "tokenCount": { "type": "integer", "minimum": 0, "description": "输入、输出和 Embedding Token 合计。" }
+      }
+    },
+    "AuditEvent": {
+      "title": "审计事件",
+      "description": "长期保留且只追加的安全审计投影。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "sourceEventId", "sourcePlane", "organizationId", "projectId", "principalType", "principalRef", "scopeType", "scopeRef", "action", "result", "resourceType", "resourceRef", "diffSummary", "policyVersion", "roleVersion", "traceId", "requestId", "occurredAt", "ingestedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "sourceEventId": { "type": "string", "maxLength": 128, "description": "来源幂等事件标识。" },
+        "sourcePlane": { "type": "string", "enum": ["GATEWAY", "CONTROL", "RUNTIME", "SCHEDULER"], "description": "事件来源平面。" },
+        "organizationId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }], "description": "可选组织。" },
+        "projectId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }], "description": "可选项目。" },
+        "principalType": { "type": "string", "enum": ["USER", "SERVICE_ACCOUNT", "API_KEY", "SERVICE", "SYSTEM"], "description": "主体类型。" },
+        "principalRef": { "type": "string", "maxLength": 255, "description": "非秘密主体引用。" },
+        "scopeType": { "type": "string", "enum": ["PLATFORM", "ORGANIZATION", "PROJECT", "ENVIRONMENT", "RUN", "JOB"], "description": "作用域类型。" },
+        "scopeRef": { "type": "string", "maxLength": 128, "description": "作用域引用。" },
+        "action": { "type": "string", "maxLength": 128, "description": "稳定动作代码。" },
+        "result": { "type": "string", "enum": ["SUCCEEDED", "DENIED", "FAILED"], "description": "操作结果。" },
+        "resourceType": { "type": "string", "maxLength": 64, "description": "资源类型。" },
+        "resourceRef": { "type": "string", "maxLength": 128, "description": "资源引用。" },
+        "diffSummary": { "type": "object", "description": "不含正文的差异摘要。", "additionalProperties": true },
+        "policyVersion": { "type": ["string", "null"], "maxLength": 128, "description": "可选策略版本。" },
+        "roleVersion": { "type": ["integer", "null"], "minimum": 0, "description": "可选角色版本。" },
+        "traceId": { "type": ["string", "null"], "pattern": "^[0-9a-f]{32}$", "description": "可选 W3C Trace ID。" },
+        "requestId": { "type": ["string", "null"], "maxLength": 128, "description": "可选请求 ID。" },
+        "occurredAt": { "type": "string", "format": "date-time", "description": "操作发生时间。" },
+        "ingestedAt": { "type": "string", "format": "date-time", "description": "Control 接收时间。" }
+      }
+    },
+    "PriceTable": {
+      "title": "价格表",
+      "description": "项目内稳定价格表身份。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "organizationId", "projectId", "key", "name", "status", "version", "createdAt", "updatedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$", "description": "项目内 Key。" },
+        "name": { "type": "string", "maxLength": 128, "description": "显示名称。" },
+        "status": { "type": "string", "enum": ["ACTIVE", "ARCHIVED"], "description": "生命周期状态。" },
+        "version": { "type": "integer", "minimum": 0, "description": "乐观锁版本。" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "创建时间。" },
+        "updatedAt": { "type": "string", "format": "date-time", "description": "更新时间。" }
+      }
+    },
+    "PriceTableVersion": {
+      "title": "价格表版本",
+      "description": "不可变 Price Table Version。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "organizationId", "projectId", "priceTableId", "versionNumber", "currency", "effectiveFrom", "entries", "contentHash", "createdAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "priceTableId": { "$ref": "#/$defs/UuidV7" },
+        "versionNumber": { "type": "integer", "minimum": 1, "description": "不可变版本号。" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "ISO 4217 币种。" },
+        "effectiveFrom": { "type": "string", "format": "date-time", "description": "起效时间。" },
+        "entries": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "number", "minimum": 0 }, "description": "单位价格项。" },
+        "contentHash": { "$ref": "#/$defs/Checksum" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "创建时间。" }
+      }
+    },
+    "CreatePriceTableRequest": {
+      "title": "创建价格表请求",
+      "description": "原子创建 Price Table 与不可变 V1。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "currency", "effectiveFrom", "entries"],
+      "properties": {
+        "key": { "type": "string", "pattern": "^[a-z][a-z0-9-]{0,62}$", "description": "项目内 Key。" },
+        "name": { "type": "string", "maxLength": 128, "description": "名称。" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "ISO 4217 币种。" },
+        "effectiveFrom": { "type": "string", "format": "date-time", "description": "V1 起效时间。" },
+        "entries": { "type": "object", "minProperties": 1, "additionalProperties": { "type": "number", "minimum": 0 }, "description": "单位价格项。" }
+      }
+    },
+    "UsageLedgerEntry": {
+      "title": "Usage 明细",
+      "description": "不含业务正文的治理计量明细。",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "sourcePlane", "sourceRecordId", "organizationId", "projectId", "usageType", "provider", "inputTokens", "outputTokens", "cachedTokens", "embeddingTokens", "toolCalls", "sandboxDurationMs", "estimated", "costAmount", "occurredAt", "ingestedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "sourcePlane": { "type": "string", "enum": ["RUNTIME", "SCHEDULER", "CONTROL"], "description": "来源平面。" },
+        "sourceRecordId": { "type": "string", "maxLength": 128, "description": "来源幂等标识。" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "usageType": { "type": "string", "enum": ["MODEL", "EMBEDDING", "TOOL", "SANDBOX"], "description": "计量类型。" },
+        "provider": { "type": "string", "maxLength": 128, "description": "Provider。" },
+        "inputTokens": { "type": "integer", "minimum": 0, "description": "输入 Token。" },
+        "outputTokens": { "type": "integer", "minimum": 0, "description": "输出 Token。" },
+        "cachedTokens": { "type": "integer", "minimum": 0, "description": "缓存 Token。" },
+        "embeddingTokens": { "type": "integer", "minimum": 0, "description": "Embedding Token。" },
+        "toolCalls": { "type": "integer", "minimum": 0, "description": "Tool 调用次数。" },
+        "sandboxDurationMs": { "type": "integer", "minimum": 0, "description": "Sandbox 毫秒数。" },
+        "estimated": { "type": "boolean", "description": "是否为平台估算。" },
+        "costAmount": { "type": "number", "minimum": 0, "description": "成本。" },
+        "occurredAt": { "type": "string", "format": "date-time", "description": "发生时间。" },
+        "ingestedAt": { "type": "string", "format": "date-time", "description": "接收时间。" }
+      }
+    },
+    "UsageAggregate": {
+      "title": "Usage Cost 聚合",
+      "description": "固定 UTC 日窗口治理聚合。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["periodStart", "periodEnd", "dimensionType", "dimensionRef", "provider", "model", "inputTokens", "outputTokens", "cachedTokens", "embeddingTokens", "toolCalls", "sandboxDurationMs", "estimatedRecords", "sourceRecords", "costAmount", "currency"],
+      "properties": {
+        "periodStart": { "type": "string", "format": "date-time", "description": "窗口开始。" },
+        "periodEnd": { "type": "string", "format": "date-time", "description": "窗口结束。" },
+        "dimensionType": { "type": "string", "enum": ["PROJECT", "AGENT", "REVISION", "MODEL"], "description": "维度类型。" },
+        "dimensionRef": { "type": "string", "description": "维度引用。" },
+        "provider": { "type": "string", "description": "Provider。" },
+        "model": { "type": "string", "description": "模型或 none。" },
+        "inputTokens": { "type": "integer", "minimum": 0, "description": "输入 Token。" },
+        "outputTokens": { "type": "integer", "minimum": 0, "description": "输出 Token。" },
+        "cachedTokens": { "type": "integer", "minimum": 0, "description": "缓存 Token。" },
+        "embeddingTokens": { "type": "integer", "minimum": 0, "description": "Embedding Token。" },
+        "toolCalls": { "type": "integer", "minimum": 0, "description": "Tool 次数。" },
+        "sandboxDurationMs": { "type": "integer", "minimum": 0, "description": "Sandbox 毫秒。" },
+        "estimatedRecords": { "type": "integer", "minimum": 0, "description": "估算明细数。" },
+        "sourceRecords": { "type": "integer", "minimum": 0, "description": "来源明细数。" },
+        "costAmount": { "type": "number", "minimum": 0, "description": "成本合计。" },
+        "currency": { "type": "string", "pattern": "^[A-Z]{3}$", "description": "币种。" }
+      }
+    },
+    "QuotaPolicy": {
+      "title": "Quota Policy",
+      "description": "组织、项目、Deployment 或 Model Scope 的软硬配额。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "organizationId", "projectId", "scopeType", "scopeRef", "metric", "enforcement", "limitValue", "windowSeconds", "budgetAction", "effectiveFrom", "effectiveUntil", "status", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "scopeType": { "type": "string", "enum": ["ORGANIZATION", "PROJECT", "DEPLOYMENT", "MODEL"], "description": "Scope 类型。" },
+        "scopeRef": { "type": "string", "maxLength": 255, "description": "Scope 引用。" },
+        "metric": { "type": "string", "enum": ["REQUEST_RATE", "INPUT_TOKEN", "OUTPUT_TOKEN", "COST", "CONCURRENT_RUN"], "description": "计量指标。" },
+        "enforcement": { "type": "string", "enum": ["SOFT", "HARD"], "description": "软硬执行。" },
+        "limitValue": { "type": "number", "minimum": 0, "description": "上限。" },
+        "windowSeconds": { "type": ["integer", "null"], "minimum": 1, "description": "非并发指标窗口秒数。" },
+        "budgetAction": { "type": "string", "enum": ["WARN", "REQUIRE_APPROVAL", "STOP"], "description": "运行中预算动作。" },
+        "effectiveFrom": { "type": "string", "format": "date-time", "description": "起效时间。" },
+        "effectiveUntil": { "type": ["string", "null"], "format": "date-time", "description": "可选失效时间。" },
+        "status": { "type": "string", "enum": ["ACTIVE", "DISABLED"], "description": "状态。" },
+        "version": { "type": "integer", "minimum": 0, "description": "乐观锁版本。" }
+      }
+    },
+    "CreateQuotaPolicyRequest": {
+      "title": "创建 Quota Policy 请求",
+      "description": "创建具有固定 Scope、Metric 和预算动作的 Policy。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["scopeType", "scopeRef", "metric", "enforcement", "limitValue", "budgetAction", "effectiveFrom"],
+      "properties": {
+        "scopeType": { "type": "string", "enum": ["ORGANIZATION", "PROJECT", "DEPLOYMENT", "MODEL"], "description": "Scope 类型。" },
+        "scopeRef": { "type": "string", "maxLength": 255, "description": "Scope 引用。" },
+        "metric": { "type": "string", "enum": ["REQUEST_RATE", "INPUT_TOKEN", "OUTPUT_TOKEN", "COST", "CONCURRENT_RUN"], "description": "配额指标。" },
+        "enforcement": { "type": "string", "enum": ["SOFT", "HARD"], "description": "软硬执行。" },
+        "limitValue": { "type": "number", "minimum": 0, "description": "上限。" },
+        "windowSeconds": { "type": ["integer", "null"], "minimum": 1, "description": "非并发指标窗口秒数。" },
+        "budgetAction": { "type": "string", "enum": ["WARN", "REQUIRE_APPROVAL", "STOP"], "description": "运行中动作。" },
+        "effectiveFrom": { "type": "string", "format": "date-time", "description": "起效时间。" },
+        "effectiveUntil": { "type": ["string", "null"], "format": "date-time", "description": "可选失效时间。" }
+      }
+    },
+    "EvaluationDataset": {
+      "title": "Evaluation Dataset",
+      "description": "稳定 Dataset 身份。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "key", "name", "description", "status", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "key": { "type": "string", "description": "项目内 Key。" },
+        "name": { "type": "string", "description": "名称。" },
+        "description": { "type": ["string", "null"], "description": "可选说明。" },
+        "status": { "type": "string", "enum": ["ACTIVE", "ARCHIVED"], "description": "状态。" },
+        "version": { "type": "integer", "minimum": 0, "description": "乐观锁版本。" }
+      }
+    },
+    "DatasetVersion": {
+      "title": "Dataset Version",
+      "description": "不可变 Dataset Version。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "datasetId", "versionNumber", "schema", "contentHash"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "datasetId": { "$ref": "#/$defs/UuidV7" },
+        "versionNumber": { "type": "integer", "minimum": 1, "description": "版本号。" },
+        "schema": { "type": "object", "additionalProperties": true, "description": "Case Schema。" },
+        "contentHash": { "$ref": "#/$defs/Checksum" }
+      }
+    },
+    "CreateDatasetRequest": {
+      "title": "创建 Dataset 请求",
+      "description": "创建 Dataset、V1 和固定 Test Cases。",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["key", "name", "schema", "contentHash", "cases"],
+      "properties": {
+        "key": { "type": "string", "description": "Dataset Key。" },
+        "name": { "type": "string", "description": "名称。" },
+        "description": { "type": ["string", "null"], "description": "可选说明。" },
+        "schema": { "type": "object", "additionalProperties": true, "description": "Case Schema。" },
+        "contentHash": { "$ref": "#/$defs/Checksum" },
+        "cases": { "type": "array", "minItems": 1, "items": { "type": "object", "additionalProperties": true }, "description": "固定 Test Cases。" }
+      }
+    },
+    "Evaluator": {
+      "title": "Evaluator",
+      "description": "稳定 Evaluator 身份。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "key", "name", "status", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "key": { "type": "string", "description": "Evaluator Key。" },
+        "name": { "type": "string", "description": "名称。" },
+        "status": { "type": "string", "enum": ["ACTIVE", "ARCHIVED"], "description": "状态。" },
+        "version": { "type": "integer", "minimum": 0, "description": "乐观锁版本。" }
+      }
+    },
+    "EvaluatorVersion": {
+      "title": "Evaluator Version",
+      "description": "不可变 Evaluator Version。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "evaluatorId", "versionNumber", "type", "config", "contentHash"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "evaluatorId": { "$ref": "#/$defs/UuidV7" },
+        "versionNumber": { "type": "integer", "minimum": 1, "description": "版本号。" },
+        "type": { "type": "string", "enum": ["DETERMINISTIC", "MODEL", "HUMAN"], "description": "Evaluator 类型。" },
+        "config": { "type": "object", "additionalProperties": true, "description": "安全配置。" },
+        "contentHash": { "$ref": "#/$defs/Checksum" }
+      }
+    },
+    "CreateEvaluatorRequest": {
+      "title": "创建 Evaluator 请求",
+      "description": "创建 Evaluator 与不可变 V1。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["key", "name", "type", "config", "contentHash"],
+      "properties": {
+        "key": { "type": "string", "description": "Evaluator Key。" },
+        "name": { "type": "string", "description": "名称。" },
+        "type": { "type": "string", "enum": ["DETERMINISTIC", "MODEL", "HUMAN"], "description": "类型。" },
+        "config": { "type": "object", "additionalProperties": true, "description": "安全配置。" },
+        "contentHash": { "$ref": "#/$defs/Checksum" }
+      }
+    },
+    "EvaluationRun": {
+      "title": "Evaluation Run",
+      "description": "固定 Revision、Snapshot、Dataset Version 和 Evaluator Version 的执行。",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["id", "candidateRevisionId", "candidateSnapshotId", "datasetVersionId", "evaluatorVersionId", "provider", "model", "threshold", "baselineRunId", "status", "totalScore", "regressionDelta", "createdAt", "completedAt"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "candidateRevisionId": { "$ref": "#/$defs/UuidV7" },
+        "candidateSnapshotId": { "$ref": "#/$defs/UuidV7" },
+        "datasetVersionId": { "$ref": "#/$defs/UuidV7" },
+        "evaluatorVersionId": { "$ref": "#/$defs/UuidV7" },
+        "provider": { "type": "string", "description": "执行 Provider。" },
+        "model": { "type": ["string", "null"], "description": "模型型 Evaluator 的模型；确定性评估为空。" },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1, "description": "通过阈值。" },
+        "baselineRunId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }], "description": "可选回归基准 Run。" },
+        "status": { "type": "string", "enum": ["QUEUED", "RUNNING", "PASSED", "FAILED", "ERROR", "CANCELLED"], "description": "Run 状态。" },
+        "totalScore": { "type": ["number", "null"], "minimum": 0, "maximum": 1, "description": "终态总分。" },
+        "regressionDelta": { "type": ["number", "null"], "description": "相对 Baseline 的分数差。" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "创建时间。" },
+        "completedAt": { "type": ["string", "null"], "format": "date-time", "description": "终态完成时间。" }
+      }
+    },
+    "RunEvaluationRequest": {
+      "title": "执行 Evaluation 请求",
+      "description": "使用固定输出 Hash 运行确定性 Evaluator。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["candidateRevisionId", "datasetVersionId", "evaluatorVersionId", "threshold", "observedHashes"],
+      "properties": {
+        "candidateRevisionId": { "$ref": "#/$defs/UuidV7" },
+        "datasetVersionId": { "$ref": "#/$defs/UuidV7" },
+        "evaluatorVersionId": { "$ref": "#/$defs/UuidV7" },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1, "description": "通过阈值。" },
+        "baselineRunId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }], "description": "可选基准 Run。" },
+        "observedHashes": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/$defs/Checksum" }, "description": "Case Key 到规范输出 Hash。" }
+      }
+    },
+    "ReleaseGate": {
+      "title": "Release Gate",
+      "description": "固定 Dataset/Evaluator Version 的 Deployment Promote Gate。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "organizationId", "projectId", "agentId", "environmentId", "datasetVersionId", "evaluatorVersionId", "threshold", "enforcement", "status", "version"],
+      "properties": {
+        "id": { "$ref": "#/$defs/UuidV7" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "agentId": { "$ref": "#/$defs/UuidV7" },
+        "environmentId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }], "description": "可选 Environment。" },
+        "datasetVersionId": { "$ref": "#/$defs/UuidV7" },
+        "evaluatorVersionId": { "$ref": "#/$defs/UuidV7" },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1, "description": "通过阈值。" },
+        "enforcement": { "type": "string", "enum": ["SOFT", "HARD"], "description": "软硬执行。" },
+        "status": { "type": "string", "enum": ["ACTIVE", "DISABLED"], "description": "状态。" },
+        "version": { "type": "integer", "minimum": 0, "description": "乐观锁版本。" }
+      }
+    },
+    "SaveReleaseGateRequest": {
+      "title": "保存 Release Gate 请求",
+      "description": "创建或乐观锁更新 Gate。",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["agentId", "datasetVersionId", "evaluatorVersionId", "threshold", "enforcement", "status"],
+      "properties": {
+        "agentId": { "$ref": "#/$defs/UuidV7" },
+        "datasetVersionId": { "$ref": "#/$defs/UuidV7" },
+        "evaluatorVersionId": { "$ref": "#/$defs/UuidV7" },
+        "threshold": { "type": "number", "minimum": 0, "maximum": 1, "description": "通过阈值。" },
+        "enforcement": { "type": "string", "enum": ["SOFT", "HARD"], "description": "软硬执行。" },
+        "status": { "type": "string", "enum": ["ACTIVE", "DISABLED"], "description": "状态。" }
+      }
+    }
+  }
+}

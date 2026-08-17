@@ -32,6 +32,25 @@
             <artifactId>micrometer-observation</artifactId>
         </dependency>
 
+        <!-- 提供 Prometheus MeterRegistry 与 Actuator `/prometheus` 抓取格式。 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
+        <!-- 使用 Spring Boot 4 官方 OpenTelemetry Starter 装配 W3C 传播、SDK 与 OTLP Exporter。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-opentelemetry</artifactId>
+            <exclusions>
+                <!-- Metric 由 Prometheus Pull 模式采集，禁止额外 OTLP Push Registry 后台线程。 -->
+                <exclusion>
+                    <groupId>io.micrometer</groupId>
+                    <artifactId>micrometer-registry-otlp</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
         <!-- 提供厂商中立的 OpenTelemetry Tracer 和 Span API。 -->
         <dependency>
             <groupId>io.opentelemetry</groupId>

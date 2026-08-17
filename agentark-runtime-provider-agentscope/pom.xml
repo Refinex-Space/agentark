@@ -33,6 +33,12 @@
             <artifactId>agentark-runtime</artifactId>
         </dependency>
 
+        <!-- 提供 Provider 编译、Agent/Model/Tool/MCP/RAG/Sandbox 的安全 Span 约定。 -->
+        <dependency>
+            <groupId>space.refinex.agentark</groupId>
+            <artifactId>agentark-starter-observability</artifactId>
+        </dependency>
+
         <!-- 提供 AgentScope Message、Agent 与 Runtime 基础能力，仅允许在 Provider 边界使用。 -->
         <dependency>
             <groupId>io.agentscope</groupId>

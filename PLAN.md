@@ -453,7 +453,7 @@ flowchart LR
 | 16 | DONE | 2026-08-16 | `docs/implementation/phase-16-gateway.md` | 无业务状态 Gateway、公共认证、精确 CORS、限流、SSE 代理与安全门禁已验收 |
 | 17 | DONE | 2026-08-17 | `docs/implementation/phase-17-web-foundation.md` | 独立 Web 工程、设计系统、生成式 API Client、可靠 SSE Client、CI 与浏览器验收已完成 |
 | 18 | DONE | 2026-08-17 | `docs/implementation/phase-18-web-features.md` | 真实 API 核心产品流程、Web-readiness Contract、四服务 E2E 与可访问性验收已完成 |
-| 19 | NOT_STARTED | — | `docs/implementation/phase-19-observability-governance.md` | |
+| 19 | DONE | 2026-08-17 | `docs/implementation/phase-19-observability-governance.md` | OTel、Audit、Usage/Cost、Quota、Evaluation、Web 与观测部署已完成验收 |
 | 20 | NOT_STARTED | — | `docs/implementation/phase-20-security-hardening.md` | |
 | 21 | NOT_STARTED | — | `docs/implementation/phase-21-aistio-strangler.md` | |
 | 22 | NOT_STARTED | — | `docs/implementation/phase-22-production.md` | |
@@ -3094,85 +3094,85 @@ $AGENTSCOPE_ROOT/agentscope-service/frontend/
 
 #### Telemetry
 
-- [ ] Gateway/Control/Runtime/Scheduler OTel；
-- [ ] W3C Trace Context；
-- [ ] `control.agent.publish`；
-- [ ] `control.deployment.promote`；
-- [ ] `runtime.turn.execute`；
-- [ ] `runtime.agent.compile`；
-- [ ] `agent.run`；
-- [ ] `model.call`；
-- [ ] `tool.call`/`mcp.call`；
-- [ ] `knowledge.retrieve`；
-- [ ] `sandbox.execute`；
-- [ ] `scheduler.job.execute`；
-- [ ] Event/Trace 关联；
-- [ ] Prompt/文档/Secret 默认不采集。
+- [x] Gateway/Control/Runtime/Scheduler OTel；
+- [x] W3C Trace Context；
+- [x] `control.agent.publish`；
+- [x] `control.deployment.promote`；
+- [x] `runtime.turn.execute`；
+- [x] `runtime.agent.compile`；
+- [x] `agent.run`；
+- [x] `model.call`；
+- [x] `tool.call`/`mcp.call`；
+- [x] `knowledge.retrieve`；
+- [x] `sandbox.execute`；
+- [x] `scheduler.job.execute`；
+- [x] Event/Trace 关联；
+- [x] Prompt/文档/Secret 默认不采集。
 
 #### Metrics
 
-- [ ] HTTP/JVM/DB/Redis/Object/Qdrant；
-- [ ] Active Session/Run；
-- [ ] Turn/Model/Tool/RAG/HITL 延迟；
-- [ ] Event Delivery Lag；
-- [ ] Lease Conflict；
-- [ ] Job Queue/Oldest Age/Retry/Dead Letter；
-- [ ] Outbox Lag；
-- [ ] 限制高基数 Label；
-- [ ] Dashboard/Alert Rule。
+- [x] HTTP/JVM/DB/Redis/Object/Qdrant；
+- [x] Active Session/Run；
+- [x] Turn/Model/Tool/RAG/HITL 延迟；
+- [x] Event Delivery Lag；
+- [x] Lease Conflict；
+- [x] Job Queue/Oldest Age/Retry/Dead Letter；
+- [x] Outbox Lag；
+- [x] 限制高基数 Label；
+- [x] Dashboard/Alert Rule。
 
 #### Audit
 
-- [ ] Append-only Audit Event；
-- [ ] Principal/Scope/Action/Result；
-- [ ] Diff Summary；
-- [ ] Policy/Role Version；
-- [ ] Trace/Request；
-- [ ] 发布/部署/回滚；
-- [ ] Role/API Key/Secret；
-- [ ] HITL；
-- [ ] Run Cancel；
-- [ ] Data Export/Delete；
-- [ ] Dead Letter Redrive；
-- [ ] 跨租户管理员访问；
-- [ ] 严格查询授权；
-- [ ] 可选防篡改导出/归档 Port。
+- [x] Append-only Audit Event；
+- [x] Principal/Scope/Action/Result；
+- [x] Diff Summary；
+- [x] Policy/Role Version；
+- [x] Trace/Request；
+- [x] 发布/部署/回滚；
+- [x] Role/API Key/Secret；
+- [x] HITL；
+- [x] Run Cancel；
+- [x] Data Export/Delete；
+- [x] Dead Letter Redrive；
+- [x] 跨租户管理员访问；
+- [x] 严格查询授权；
+- [x] 可选防篡改导出/归档 Port。
 
 #### Usage/Cost
 
-- [ ] Model Token；
-- [ ] Embedding；
-- [ ] Tool；
-- [ ] Sandbox Duration；
-- [ ] Provider Usage 优先；
-- [ ] Estimate 标识；
-- [ ] Price Table Version；
-- [ ] Currency；
-- [ ] 明细与聚合；
-- [ ] Organization/Project/Agent/Revision；
-- [ ] Web Cost View。
+- [x] Model Token；
+- [x] Embedding；
+- [x] Tool；
+- [x] Sandbox Duration；
+- [x] Provider Usage 优先；
+- [x] Estimate 标识；
+- [x] Price Table Version；
+- [x] Currency；
+- [x] 明细与聚合；
+- [x] Organization/Project/Agent/Revision；
+- [x] Web Cost View。
 
 #### Quota
 
-- [ ] Organization/Project/Deployment/Model；
-- [ ] Soft/Hard Limit；
-- [ ] Rate/Token/Cost/Concurrent Run；
-- [ ] 运行前检查；
-- [ ] 运行中预算策略；
-- [ ] 审批/停止；
-- [ ] Cache 与一致性。
+- [x] Organization/Project/Deployment/Model；
+- [x] Soft/Hard Limit；
+- [x] Rate/Token/Cost/Concurrent Run；
+- [x] 运行前检查；
+- [x] 运行中预算策略；
+- [x] 审批/停止；
+- [x] Cache 与一致性。
 
 #### Evaluation
 
-- [ ] Dataset；
-- [ ] Test Case；
-- [ ] Candidate Revision；
-- [ ] Evaluator；
-- [ ] Score/Threshold；
-- [ ] Regression Comparison；
-- [ ] 发布 Gate 最小实现；
-- [ ] 固定 Snapshot/Dataset/Evaluator Version；
-- [ ] Fake/Deterministic Evaluator 测试。
+- [x] Dataset；
+- [x] Test Case；
+- [x] Candidate Revision；
+- [x] Evaluator；
+- [x] Score/Threshold；
+- [x] Regression Comparison；
+- [x] 发布 Gate 最小实现；
+- [x] 固定 Snapshot/Dataset/Evaluator Version；
+- [x] Fake/Deterministic Evaluator 测试。
 
 ### 产物
 
@@ -3187,17 +3187,17 @@ docs/implementation/phase-19-observability-governance.md
 
 ### 验收条件
 
-- [ ] Trace 能从 Gateway 到 Model/Tool/RAG；
-- [ ] Secret/Prompt/文档不出现在默认 Telemetry；
-- [ ] Metric 无 Session/User/Project 等无界 Label；
-- [ ] Audit 与 Runtime Event/Log 明确分离；
-- [ ] Usage 可追溯到 Revision/Run；
-- [ ] Cost 有 Price Version 和 Estimate 标记；
-- [ ] Hard Quota 并发下不会明显超卖；
-- [ ] Evaluation 固定所有版本；
-- [ ] Web 可查看 Trace Link、Usage、Cost、Audit、Quota、Evaluation；
-- [ ] OTel Backend 不可用不阻断业务；
-- [ ] Dashboard 和告警有可部署配置。
+- [x] Trace 能从 Gateway 到 Model/Tool/RAG；
+- [x] Secret/Prompt/文档不出现在默认 Telemetry；
+- [x] Metric 无 Session/User/Project 等无界 Label；
+- [x] Audit 与 Runtime Event/Log 明确分离；
+- [x] Usage 可追溯到 Revision/Run；
+- [x] Cost 有 Price Version 和 Estimate 标记；
+- [x] Hard Quota 并发下不会明显超卖；
+- [x] Evaluation 固定所有版本；
+- [x] Web 可查看 Trace Link、Usage、Cost、Audit、Quota、Evaluation；
+- [x] OTel Backend 不可用不阻断业务；
+- [x] Dashboard 和告警有可部署配置。
 
 ### 验收命令
 

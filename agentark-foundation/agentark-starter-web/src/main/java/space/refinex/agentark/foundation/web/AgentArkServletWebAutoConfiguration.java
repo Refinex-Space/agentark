@@ -24,6 +24,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.http.MediaType;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.HandlerExceptionResolver;
 import org.springframework.web.servlet.ModelAndView;
 import tools.jackson.databind.json.JsonMapper;
@@ -41,6 +43,12 @@ import tools.jackson.databind.json.JsonMapper;
     havingValue = "true",
     matchIfMissing = true)
 public class AgentArkServletWebAutoConfiguration {
+
+    /**
+     * 只记录未知异常类型链和关联标识的安全诊断日志器。
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(
+        AgentArkServletWebAutoConfiguration.class);
 
     /**
      * 创建 Servlet Web 自动配置。
@@ -98,6 +106,11 @@ public class AgentArkServletWebAutoConfiguration {
                                 request.getHeader(properties.getRequestIdHeader()),
                                 request.getHeader("traceparent")));
             var problem = problemDetailFactory.create(error, context);
+            if (problem.getStatus() >= 500) {
+                LOGGER.error(
+                    "Unhandled request failure requestId={} traceId={} errorTypes={}",
+                    context.requestId(), context.traceId(), errorTypes(error));
+            }
             response.setStatus(problem.getStatus());
             response.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
             try {
@@ -107,5 +120,33 @@ public class AgentArkServletWebAutoConfiguration {
                 throw new IllegalStateException("failed to write ProblemDetail response", writeFailure);
             }
         };
+    }
+
+    /**
+     * 构造最多八层的异常类名链，不记录异常消息、SQL、参数或请求正文。
+     *
+     * @param error 未知请求异常
+     * @return 使用箭头连接的异常类名链
+     */
+    private static String errorTypes(Throwable error) {
+        StringBuilder types = new StringBuilder();
+        Throwable current = error;
+        int depth = 0;
+        while (current != null && depth < 8) {
+            if (!types.isEmpty()) {
+                types.append("->");
+            }
+            types.append(current.getClass().getName());
+            if (current instanceof java.sql.SQLException sqlException) {
+                types.append("[sqlState=")
+                    .append(sqlException.getSQLState())
+                    .append(",vendorCode=")
+                    .append(sqlException.getErrorCode())
+                    .append(']');
+            }
+            current = current.getCause();
+            depth++;
+        }
+        return types.toString();
     }
 }

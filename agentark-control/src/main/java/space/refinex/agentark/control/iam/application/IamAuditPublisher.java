@@ -23,7 +23,7 @@ import space.refinex.agentark.control.iam.application.port.IamAuditPort;
 import java.util.Objects;
 
 /**
- * 在事务成功提交后调用真实审计端口，避免为已回滚变更记录成功事件。
+ * 在业务事务提交前调用真实审计端口，使 Control 变更和持久 Audit 同成同败。
  *
  * @author refinex
  */
@@ -44,11 +44,11 @@ public final class IamAuditPublisher {
     }
 
     /**
-     * 在当前事务提交后追加记录；没有事务时立即追加。
+     * 在当前事务提交前追加记录；没有事务时立即追加。
      *
      * @param record 不含 Secret 的审计记录
      */
-    public void afterCommit(IamAuditRecord record) {
+    public void append(IamAuditRecord record) {
         Objects.requireNonNull(record, "record must not be null");
         if (!TransactionSynchronizationManager.isSynchronizationActive()) {
             auditPort.append(record);
@@ -58,10 +58,13 @@ public final class IamAuditPublisher {
             new TransactionSynchronization() {
 
                 /**
-                 * 事务确认提交后把记录交给真实审计 Sink。
+                 * 在提交前把记录交给真实审计 Sink，使数据库实现加入同一事务。
                  */
                 @Override
-                public void afterCommit() {
+                public void beforeCommit(boolean readOnly) {
+                    if (readOnly) {
+                        throw new IllegalStateException("audit append requires a write transaction");
+                    }
                     auditPort.append(record);
                 }
             });

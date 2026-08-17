@@ -206,16 +206,34 @@ public interface RuntimeMapper {
         INSERT INTO run
             (id, organization_id, project_id, session_id, turn_id, attempt_number,
              runtime_provider, compiler_version, status, event_sequence, fencing_token,
-             started_at, ended_at, error_code, created_at)
+             quota_reservation_ref, started_at, ended_at, error_code, created_at)
         VALUES
             (#{row.id,jdbcType=BINARY}, #{row.organizationId,jdbcType=BINARY},
              #{row.projectId,jdbcType=BINARY}, #{row.sessionId,jdbcType=BINARY},
              #{row.turnId,jdbcType=BINARY}, #{row.attemptNumber}, #{row.runtimeProvider},
              #{row.compilerVersion}, #{row.status}, #{row.eventSequence},
-             #{row.fencingToken}, #{row.startedAt}, #{row.endedAt},
+             #{row.fencingToken}, #{quotaReservationRef}, #{row.startedAt}, #{row.endedAt},
              #{row.errorCode}, #{row.createdAt})
         """)
-    void insertRun(@Param("row") RunRow row);
+    void insertRun(
+        @Param("row") RunRow row,
+        @Param("quotaReservationRef") String quotaReservationRef);
+
+    /**
+     * 读取 Turn 首次 Run 绑定的 Control 并发配额 Reservation 引用。
+     *
+     * @param turnId Turn UUID
+     * @return 可选 Reservation 引用
+     */
+    @Select("""
+        SELECT quota_reservation_ref
+        FROM run
+        WHERE turn_id = #{turnId,jdbcType=BINARY}
+          AND quota_reservation_ref IS NOT NULL
+        ORDER BY attempt_number
+        LIMIT 1
+        """)
+    Optional<String> findQuotaReservation(@Param("turnId") UUID turnId);
 
     /**
      * 读取 Run。
@@ -943,13 +961,27 @@ public interface RuntimeMapper {
      */
     @Insert("""
         INSERT INTO usage_record
-            (id, run_id, event_id, provider, model, tool, provider_request_id,
-             input_units, output_units, duration_millis, estimated, price_version, occurred_at)
-        VALUES
-            (#{id,jdbcType=BINARY}, #{runId,jdbcType=BINARY}, #{eventId,jdbcType=BINARY},
+            (id, organization_id, project_id, session_id, turn_id, agent_id,
+             revision_id, deployment_id, run_id, event_id, usage_type, provider,
+             model, tool, provider_request_id, input_units, output_units, cached_tokens,
+             embedding_tokens, tool_calls, sandbox_duration_millis, duration_millis,
+             estimated, price_version, currency, cost_amount, governance_status,
+             governance_attempts, governance_available_at, governance_exported_at,
+             occurred_at)
+        SELECT
+             #{id,jdbcType=BINARY}, runtime_run.organization_id, runtime_run.project_id,
+             runtime_run.session_id, runtime_run.turn_id, NULL,
+             runtime_session.revision_id, runtime_session.deployment_id,
+             runtime_run.id, #{eventId,jdbcType=BINARY},
+             CASE WHEN #{tool} IS NULL THEN 'MODEL' ELSE 'TOOL' END,
              #{provider}, #{model}, #{tool}, #{providerRequestId}, #{inputUnits},
-             #{outputUnits}, #{durationMillis}, #{estimated}, #{priceVersion}, #{occurredAt})
-        ON DUPLICATE KEY UPDATE id = id
+             #{outputUnits}, 0, 0, CASE WHEN #{tool} IS NULL THEN 0 ELSE 1 END,
+             0, #{durationMillis}, #{estimated}, #{priceVersion}, NULL, 0,
+             'PENDING', 0, #{occurredAt}, NULL, #{occurredAt}
+        FROM run runtime_run
+        JOIN session runtime_session ON runtime_session.id = runtime_run.session_id
+        WHERE runtime_run.id = #{runId,jdbcType=BINARY}
+        ON DUPLICATE KEY UPDATE id = usage_record.id
         """)
     void insertUsage(
         @Param("id") UUID id,
@@ -965,4 +997,144 @@ public interface RuntimeMapper {
         @Param("estimated") boolean estimated,
         @Param("priceVersion") String priceVersion,
         @Param("occurredAt") Instant occurredAt);
+
+    /**
+     * 锁定一批待治理汇聚 Usage。
+     *
+     * @param now   当前时间
+     * @param limit 最大数量
+     * @return Usage 汇聚行
+     */
+    @Select("""
+        SELECT id, organization_id, project_id, session_id, turn_id, run_id,
+               revision_id, deployment_id, usage_type, provider, model, tool,
+               input_units, output_units, cached_tokens, embedding_tokens, tool_calls,
+               sandbox_duration_millis, estimated, price_version, currency, cost_amount,
+               occurred_at, governance_attempts
+        FROM usage_record
+        WHERE governance_status IN ('PENDING', 'RETRY')
+          AND governance_available_at &lt;= #{now}
+        ORDER BY occurred_at, id
+        LIMIT #{limit}
+        FOR UPDATE SKIP LOCKED
+        """)
+    List<UsageGovernanceRow> lockUsageForGovernance(
+        @Param("now") Instant now, @Param("limit") int limit);
+
+    /**
+     * 将已 Claim Usage 推进重试时间并增加尝试次数。
+     *
+     * @param id          Usage UUID
+     * @param availableAt 下一次可重试时间
+     * @return 更新数量
+     */
+    @Update("""
+        UPDATE usage_record
+        SET governance_status = 'RETRY', governance_attempts = governance_attempts + 1,
+            governance_available_at = #{availableAt}
+        WHERE id = #{id,jdbcType=BINARY}
+          AND governance_status IN ('PENDING', 'RETRY')
+        """)
+    int claimUsageForGovernance(
+        @Param("id") UUID id, @Param("availableAt") Instant availableAt);
+
+    /**
+     * 确认 Usage 已由 Control 幂等接收。
+     *
+     * @param id  Usage UUID
+     * @param now 确认时间
+     * @return 更新数量
+     */
+    @Update("""
+        UPDATE usage_record
+        SET governance_status = 'EXPORTED', governance_available_at = NULL,
+            governance_exported_at = #{now}
+        WHERE id = #{id,jdbcType=BINARY} AND governance_status = 'RETRY'
+        """)
+    int markUsageExported(@Param("id") UUID id, @Param("now") Instant now);
+
+    /**
+     * 标记 Usage 汇聚达到重试终态。
+     *
+     * @param id Usage UUID
+     * @return 更新数量
+     */
+    @Update("""
+        UPDATE usage_record
+        SET governance_status = 'FAILED', governance_available_at = NULL
+        WHERE id = #{id,jdbcType=BINARY} AND governance_status = 'RETRY'
+        """)
+    int markUsageExportFailed(@Param("id") UUID id);
+
+    /** @return ACTIVE Session 数量。 */
+    @Select("SELECT COUNT(*) FROM session WHERE status = 'ACTIVE'")
+    long countActiveSessions();
+
+    /** @return 活跃 Run 数量。 */
+    @Select("SELECT COUNT(*) FROM run WHERE status IN ('CLAIMED', 'RUNNING', 'PAUSED')")
+    long countActiveRuns();
+
+    /** @return PENDING Approval 数量。 */
+    @Select("SELECT COUNT(*) FROM approval WHERE status = 'PENDING'")
+    long countPendingApprovals();
+
+    /** @return 最老 PENDING Outbox 创建时间。 */
+    @Select("SELECT MIN(created_at) FROM runtime_outbox WHERE status = 'PENDING'")
+    Optional<Instant> oldestPendingOutbox();
+
+    /**
+     * Runtime Usage 治理汇聚数据库行。
+     *
+     * @param id                    用量记录标识
+     * @param organizationId        组织 UUID
+     * @param projectId             项目 UUID
+     * @param sessionId             会话标识
+     * @param turnId                轮次标识
+     * @param runId                 运行标识
+     * @param revisionId            修订标识
+     * @param deploymentId          部署标识
+     * @param usageType             计量类型
+     * @param provider              供应方标识
+     * @param model                 模型
+     * @param tool                  工具名称
+     * @param inputUnits            输入 Token
+     * @param outputUnits           输出 Token
+     * @param cachedTokens          缓存 Token
+     * @param embeddingTokens       嵌入令牌数
+     * @param toolCalls             Tool 次数
+     * @param sandboxDurationMillis Sandbox 毫秒
+     * @param estimated             是否估算
+     * @param priceVersion          价格版本
+     * @param currency              币种
+     * @param costAmount            成本
+     * @param occurredAt            发生时间
+     * @param governanceAttempts    尝试次数
+     * @author refinex
+     */
+    record UsageGovernanceRow(
+        UUID id,
+        UUID organizationId,
+        UUID projectId,
+        UUID sessionId,
+        UUID turnId,
+        UUID runId,
+        UUID revisionId,
+        UUID deploymentId,
+        String usageType,
+        String provider,
+        String model,
+        String tool,
+        long inputUnits,
+        long outputUnits,
+        long cachedTokens,
+        long embeddingTokens,
+        long toolCalls,
+        long sandboxDurationMillis,
+        boolean estimated,
+        String priceVersion,
+        String currency,
+        java.math.BigDecimal costAmount,
+        Instant occurredAt,
+        int governanceAttempts) {
+    }
 }

@@ -102,23 +102,23 @@ class RuntimeMySqlMigrationIT extends AbstractMySqlMigrationIT {
     }
 
     /**
-     * 声明 Runtime 当前最新迁移为 Phase 11 的 V2。
+     * 声明 Runtime 当前最新迁移为 Phase 19 的 V3。
+     *
+     * @return Flyway 版本 3
+     */
+    @Override
+    protected String expectedVersion() {
+        return "3";
+    }
+
+    /**
+     * 声明 Phase 11 V2 是升级测试起点。
      *
      * @return Flyway 版本 2
      */
     @Override
-    protected String expectedVersion() {
-        return "2";
-    }
-
-    /**
-     * 声明 Phase 06 空基线 V1 是升级测试起点。
-     *
-     * @return Flyway 版本 1
-     */
-    @Override
     protected String previousVersion() {
-        return "1";
+        return "2";
     }
 
     /**

@@ -565,6 +565,30 @@ public interface SchedulerMapper {
     Optional<Instant> oldestDue(@Param("type") String type, @Param("now") Instant now);
 
     /**
+     * 统计等待重试 Job。
+     *
+     * @return RETRY_WAIT Job 数量
+     */
+    @Select("SELECT COUNT(*) FROM job WHERE status = 'RETRY_WAIT'")
+    long countRetryWaiting();
+
+    /**
+     * 统计 OPEN Dead Letter。
+     *
+     * @return OPEN Dead Letter 数量
+     */
+    @Select("SELECT COUNT(*) FROM dead_letter WHERE status = 'OPEN'")
+    long countOpenDeadLetters();
+
+    /**
+     * 查询最老 PENDING Outbox 创建时间。
+     *
+     * @return 无积压时为空
+     */
+    @Select("SELECT MIN(created_at) FROM scheduler_outbox WHERE status = 'PENDING'")
+    Optional<Instant> oldestPendingOutbox();
+
+    /**
      * 按 Provider 幂等键读取 Delivery。
      *
      * @param providerKey Provider Key

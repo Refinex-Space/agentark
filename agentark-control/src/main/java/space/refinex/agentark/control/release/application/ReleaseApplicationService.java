@@ -26,10 +26,13 @@ import space.refinex.agentark.control.iam.application.port.TenantCatalogReposito
 import space.refinex.agentark.control.iam.domain.Environment;
 import space.refinex.agentark.control.iam.domain.Project;
 import space.refinex.agentark.control.release.application.port.ReleaseRepository;
+import space.refinex.agentark.control.release.application.port.ReleaseGatePolicy;
 import space.refinex.agentark.control.release.domain.AgentDraftSpec;
 import space.refinex.agentark.control.release.domain.ReleaseModels.*;
 import space.refinex.agentark.control.secret.application.port.SecretRepository;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
+import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
+import space.refinex.agentark.foundation.observability.SpanConvention;
 import space.refinex.agentark.foundation.web.CursorPage;
 import space.refinex.agentark.kernel.id.*;
 import space.refinex.agentark.kernel.ref.SecretRef;
@@ -73,6 +76,11 @@ public class ReleaseApplicationService {
     private final SecretRepository secretRepository;
 
     /**
+     * Deployment Promote 前的 Evaluation Gate。
+     */
+    private final ReleaseGatePolicy releaseGatePolicy;
+
+    /**
      * 审计发布器。
      */
     private final IamAuditPublisher auditPublisher;
@@ -86,6 +94,9 @@ public class ReleaseApplicationService {
      * JSON 映射器。
      */
     private final JsonMapper jsonMapper;
+
+    /** Deployment 关键路径 Telemetry。 */
+    private final AgentArkTelemetry telemetry;
 
     /**
      * 创建 Release 应用服务。
@@ -108,14 +119,80 @@ public class ReleaseApplicationService {
         IamAuditPublisher auditPublisher,
         Clock clock,
         JsonMapper jsonMapper) {
+        this(
+            repository, catalogRepository, tenantRepository, authorizationService,
+            secretRepository,
+            (organizationId, projectId, agentId, environmentId, revisionId) -> {
+                // 未装配 Governance 的纯单元测试没有活动 Gate。
+            },
+            auditPublisher, clock, jsonMapper, AgentArkTelemetry.noop());
+    }
+
+    /**
+     * 创建带 Release Gate 的应用服务。
+     *
+     * @param repository           Release 端口
+     * @param catalogRepository    Catalog 端口
+     * @param tenantRepository     租户目录
+     * @param authorizationService 授权服务
+     * @param secretRepository     Secret 端口
+     * @param releaseGatePolicy    Release Gate
+     * @param auditPublisher       审计发布器
+     * @param clock                UTC 时钟
+     * @param jsonMapper           JSON 映射器
+     */
+    public ReleaseApplicationService(
+        ReleaseRepository repository,
+        CatalogRepository catalogRepository,
+        TenantCatalogRepository tenantRepository,
+        IamAuthorizationService authorizationService,
+        SecretRepository secretRepository,
+        ReleaseGatePolicy releaseGatePolicy,
+        IamAuditPublisher auditPublisher,
+        Clock clock,
+        JsonMapper jsonMapper) {
+        this(
+            repository, catalogRepository, tenantRepository, authorizationService,
+            secretRepository, releaseGatePolicy, auditPublisher, clock, jsonMapper,
+            AgentArkTelemetry.noop());
+    }
+
+    /**
+     * 创建带真实 Telemetry 的 Release 应用服务。
+     *
+     * @param repository           Release 端口
+     * @param catalogRepository    Catalog 端口
+     * @param tenantRepository     租户目录
+     * @param authorizationService 授权服务
+     * @param secretRepository     Secret 端口
+     * @param releaseGatePolicy    Release Gate
+     * @param auditPublisher       审计发布器
+     * @param clock                UTC 时钟
+     * @param jsonMapper           JSON 映射器
+     * @param telemetry            Deployment Telemetry
+     */
+    public ReleaseApplicationService(
+        ReleaseRepository repository,
+        CatalogRepository catalogRepository,
+        TenantCatalogRepository tenantRepository,
+        IamAuthorizationService authorizationService,
+        SecretRepository secretRepository,
+        ReleaseGatePolicy releaseGatePolicy,
+        IamAuditPublisher auditPublisher,
+        Clock clock,
+        JsonMapper jsonMapper,
+        AgentArkTelemetry telemetry) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
         this.catalogRepository = Objects.requireNonNull(catalogRepository, "catalogRepository must not be null");
         this.tenantRepository = Objects.requireNonNull(tenantRepository, "tenantRepository must not be null");
         this.authorizationService = Objects.requireNonNull(authorizationService, "authorizationService must not be null");
         this.secretRepository = Objects.requireNonNull(secretRepository, "secretRepository must not be null");
+        this.releaseGatePolicy = Objects.requireNonNull(
+            releaseGatePolicy, "releaseGatePolicy must not be null");
         this.auditPublisher = Objects.requireNonNull(auditPublisher, "auditPublisher must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
         this.jsonMapper = Objects.requireNonNull(jsonMapper, "jsonMapper must not be null");
+        this.telemetry = Objects.requireNonNull(telemetry, "telemetry must not be null");
     }
 
     /**
@@ -341,6 +418,8 @@ public class ReleaseApplicationService {
             principal, projectId, environmentId, PermissionRegistry.DEPLOYMENT_MANAGE);
         requireFull(policy);
         StoredSnapshot snapshot = requiredRevision(projectId, agentId, revisionId);
+        releaseGatePolicy.requireEligible(
+            project.organizationId(), projectId, agentId, environmentId, revisionId);
         verifySecretsForEnvironment(projectId, environmentId, snapshot.canonicalJson());
         Instant now = Instant.now(clock);
         Deployment deployment = new Deployment(
@@ -423,8 +502,11 @@ public class ReleaseApplicationService {
     public Deployment promote(
         AgentArkPrincipal principal, ProjectId projectId, EnvironmentId environmentId,
         DeploymentId id, RevisionId revisionId, long expectedVersion) {
-        return move(principal, projectId, environmentId, id, revisionId,
-            expectedVersion, DeploymentAction.PROMOTE);
+        return telemetry.inSpan(
+            SpanConvention.CONTROL, "deployment.promote",
+            Map.of("operation", "promote"),
+            () -> move(principal, projectId, environmentId, id, revisionId,
+                expectedVersion, DeploymentAction.PROMOTE));
     }
 
     /**
@@ -492,6 +574,10 @@ public class ReleaseApplicationService {
             principal, projectId, environmentId, PermissionRegistry.DEPLOYMENT_MANAGE);
         Deployment current = requiredDeployment(projectId, environmentId, id);
         StoredSnapshot snapshot = requiredRevision(projectId, current.agentId(), revisionId);
+        if (action == DeploymentAction.PROMOTE) {
+            releaseGatePolicy.requireEligible(
+                project.organizationId(), projectId, current.agentId(), environmentId, revisionId);
+        }
         verifySecretsForEnvironment(projectId, environmentId, snapshot.canonicalJson());
         Instant now = Instant.now(clock);
         Deployment changed = new Deployment(
@@ -727,7 +813,7 @@ public class ReleaseApplicationService {
      */
     private void audit(
         String action, AgentArkPrincipal principal, Project project, String id, Instant now) {
-        auditPublisher.afterCommit(new IamAuditRecord(
+        auditPublisher.append(new IamAuditRecord(
             action, actor(principal), action.startsWith("agent") ? "agent" : "deployment", id,
             Optional.of(project.organizationId()), Optional.of(project.id()), "SUCCEEDED", now));
     }

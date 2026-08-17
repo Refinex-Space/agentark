@@ -1,6 +1,6 @@
 # AgentArk Web
 
-AgentArk Web 是独立构建的产品控制台。Phase 17 建立应用外壳、设计系统、认证与租户上下文、公共 OpenAPI Client 和 Runtime SSE Client；Phase 18 已基于真实 Gateway API 建立 Govern → Build → Release → Runtime → Approval → Operate 产品主链路。
+AgentArk Web 是独立构建的产品控制台。Phase 17 建立应用外壳、设计系统、认证与租户上下文、公共 OpenAPI Client 和 Runtime SSE Client；Phase 18 已基于真实 Gateway API 建立 Govern → Build → Release → Runtime → Approval → Operate 产品主链路；Phase 19 新增只读取真实 Control Governance API 的 `/observe` 治理与观测入口。
 
 ## 工具链
 
@@ -49,3 +49,4 @@ pnpm --dir agentark-web api:check
 - [Phase 17 执行证据](../docs/implementation/phase-17-web-foundation.md)
 - [Phase 18 执行证据](../docs/implementation/phase-18-web-features.md)
 - [Phase 18 交互与截图证据](../docs/frontend/phase-18-interactions.md)
+- [Phase 19 可观测与治理证据](../docs/implementation/phase-19-observability-governance.md)

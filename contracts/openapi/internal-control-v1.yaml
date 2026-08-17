@@ -194,10 +194,130 @@ paths:
         "404": { $ref: "#/components/responses/ProblemResponse" }
         # 幂等键重用、租户绑定或状态校验冲突。
         "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 幂等接收跨平面 Audit Event。
+  /internal/v1/governance/audit-events:
+    # 声明受服务身份保护的内部命令。
+    post:
+      # 固定内部客户端使用的稳定操作标识。
+      operationId: ingestGovernanceAuditEvent
+      # 归入 Internal Governance 功能分组。
+      tags: [InternalGovernance]
+      # 声明幂等内部命令的 JSON 请求体。
+      requestBody:
+        # 声明当前参数或请求体是否必需。
+        required: true
+        # 声明当前请求或响应的媒体类型映射。
+        content: { application/json: { schema: { $ref: "#/components/schemas/AuditIngestRequest" } } }
+      # 声明幂等成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前内部命令或响应的业务语义。
+          description: Audit Event 已首次接收或安全重放
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/IngestResponse" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 声明 HTTP 409 状态对应的响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 幂等接收跨平面 Usage 明细。
+  /internal/v1/governance/usage-records:
+    # 声明受服务身份保护的内部命令。
+    post:
+      # 固定内部客户端使用的稳定操作标识。
+      operationId: ingestGovernanceUsageRecord
+      # 归入 Internal Governance 功能分组。
+      tags: [InternalGovernance]
+      # 声明幂等内部命令的 JSON 请求体。
+      requestBody:
+        # 声明当前参数或请求体是否必需。
+        required: true
+        # 声明当前请求或响应的媒体类型映射。
+        content: { application/json: { schema: { $ref: "#/components/schemas/UsageIngestRequest" } } }
+      # 声明幂等成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前内部命令或响应的业务语义。
+          description: Usage 已首次接收或安全重放
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/IngestResponse" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 声明 HTTP 409 状态对应的响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 并发安全申请 Quota Reservation。
+  /internal/v1/governance/quota-reservations:
+    # 声明受服务身份保护的内部命令。
+    post:
+      # 固定内部客户端使用的稳定操作标识。
+      operationId: reserveGovernanceQuota
+      # 归入 Internal Governance 功能分组。
+      tags: [InternalGovernance]
+      # 声明幂等内部命令的 JSON 请求体。
+      requestBody:
+        # 声明当前参数或请求体是否必需。
+        required: true
+        # 声明当前请求或响应的媒体类型映射。
+        content: { application/json: { schema: { $ref: "#/components/schemas/QuotaReserveRequest" } } }
+      # 声明幂等成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前内部命令或响应的业务语义。
+          description: Quota Reservation 决策
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/QuotaDecision" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 声明 HTTP 409 状态对应的响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 提交或释放 Quota Reservation。
+  /internal/v1/governance/quota-reservations/{reservationId}:transition:
+    # 注册当前端点的路径参数。
+    parameters:
+      # 说明 { name 属性在内部治理契约中的用途。
+      - { name: reservationId, in: path, required: true, description: Reservation UUIDv7, schema: { $ref: "#/components/schemas/UuidV7" } }
+    # 声明受服务身份保护的内部命令。
+    post:
+      # 固定内部客户端使用的稳定操作标识。
+      operationId: transitionGovernanceQuotaReservation
+      # 归入 Internal Governance 功能分组。
+      tags: [InternalGovernance]
+      # 声明幂等内部命令的 JSON 请求体。
+      requestBody:
+        # 声明当前参数或请求体是否必需。
+        required: true
+        # 声明当前请求或响应的媒体类型映射。
+        content: { application/json: { schema: { $ref: "#/components/schemas/ReservationTransitionRequest" } } }
+      # 声明幂等成功结果与稳定安全错误响应。
+      responses:
+        # 声明 HTTP 200 状态对应的响应。
+        "200":
+          # 说明当前内部命令或响应的业务语义。
+          description: Reservation 已进入目标终态或安全重放
+          # 声明当前请求或响应的媒体类型映射。
+          content: { application/json: { schema: { $ref: "#/components/schemas/IngestResponse" } } }
+        # 声明 HTTP 403 状态对应的响应。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 声明 HTTP 409 状态对应的响应。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
 # 汇总可复用的 Schema、参数、响应与认证组件。
 components:
   # 注册公共 Schema 引用。
   schemas:
+    # Audit 汇聚请求。
+    AuditIngestRequest: { $ref: ../schemas/governance-internal/v1.json#/$defs/AuditIngestRequest }
+    # Usage 汇聚请求。
+    UsageIngestRequest: { $ref: ../schemas/governance-internal/v1.json#/$defs/UsageIngestRequest }
+    # 幂等接收响应。
+    IngestResponse: { $ref: ../schemas/governance-internal/v1.json#/$defs/IngestResponse }
+    # Quota Reservation 请求。
+    QuotaReserveRequest: { $ref: ../schemas/governance-internal/v1.json#/$defs/QuotaReserveRequest }
+    # Quota 决策。
+    QuotaDecision: { $ref: ../schemas/governance-internal/v1.json#/$defs/QuotaDecision }
+    # Reservation 终态请求。
+    ReservationTransitionRequest: { $ref: ../schemas/governance-internal/v1.json#/$defs/ReservationTransitionRequest }
     # 暴露 AgentArk 公共 Problem Detail 错误结构。
     ProblemDetail:
       # 引用版本化的公共错误 JSON Schema。

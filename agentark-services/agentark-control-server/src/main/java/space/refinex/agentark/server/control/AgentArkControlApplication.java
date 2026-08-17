@@ -21,6 +21,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Import;
 import space.refinex.agentark.control.catalog.CatalogControlConfiguration;
 import space.refinex.agentark.control.iam.IamControlConfiguration;
+import space.refinex.agentark.control.governance.GovernanceControlConfiguration;
 import space.refinex.agentark.control.release.ReleaseControlConfiguration;
 
 /**
@@ -33,7 +34,8 @@ import space.refinex.agentark.control.release.ReleaseControlConfiguration;
     IamControlConfiguration.class,
     CatalogControlConfiguration.class,
     KnowledgeControlBridgeConfiguration.class,
-    ReleaseControlConfiguration.class
+    ReleaseControlConfiguration.class,
+    GovernanceControlConfiguration.class
 })
 public class AgentArkControlApplication {
 

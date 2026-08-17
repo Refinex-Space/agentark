@@ -121,7 +121,7 @@ public class SecretApplicationService {
             provider, externalPath, externalVersion, scope, SecretMetadataStatus.ENABLED, 0,
             now, now);
         repository.insertMetadata(metadata, principal.subject());
-        auditPublisher.afterCommit(new IamAuditRecord(
+        auditPublisher.append(new IamAuditRecord(
             "secret.metadata.create", principal.subject(), "secret-metadata",
             metadata.id().asString(), Optional.of(project.organizationId()),
             Optional.of(project.id()), "SUCCEEDED", now));
@@ -178,7 +178,7 @@ public class SecretApplicationService {
             SecretBindingId.generate(), project.organizationId(), project.id(), environment.id(),
             metadata.id(), bindingKey, true, 0, now, now);
         repository.insertBinding(binding, principal.subject());
-        auditPublisher.afterCommit(new IamAuditRecord(
+        auditPublisher.append(new IamAuditRecord(
             "secret.binding.create", principal.subject(), "secret-binding",
             binding.id().asString(), Optional.of(project.organizationId()),
             Optional.of(project.id()), "SUCCEEDED", now));

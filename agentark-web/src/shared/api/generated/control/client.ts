@@ -14,6 +14,7 @@ import type {
   AgentSnapshot,
   ApiKeyListResponse,
   ArchiveCatalogAssetRequest,
+  AuditEvent,
   CatalogAsset,
   CatalogVersion,
   CatalogVersionDiff,
@@ -24,15 +25,19 @@ import type {
   CreateCatalogAssetRequest,
   CreateCatalogVersionRequest,
   CreateDataSourceRequest,
+  CreateDatasetRequest,
   CreateDeploymentRequest,
   CreateEnvironmentRequest,
+  CreateEvaluatorRequest,
   CreateKnowledgeBaseRequest,
   CreateKnowledgeIngestionRequest,
   CreateKnowledgeProfileRequest,
   CreateKnowledgeRevisionRequest,
   CreateMembershipRequest,
   CreateOrganizationRequest,
+  CreatePriceTableRequest,
   CreateProjectRequest,
+  CreateQuotaPolicyRequest,
   CreateRoleBindingRequest,
   CreateRoleRequest,
   CreateSecretBindingRequest,
@@ -52,12 +57,18 @@ import type {
   CursorPageSecretBinding,
   CursorPageSecretMetadata,
   DataSource,
+  DatasetVersion,
   DeploymentPageResponseResponse,
   DeploymentResponseResponse,
   DiffCatalogVersionsParams,
   DocumentRevision,
   Environment,
   EnvironmentListResponse,
+  EvaluationDataset,
+  EvaluationRun,
+  Evaluator,
+  EvaluatorVersion,
+  GovernanceOverview,
   KnowledgeBase,
   KnowledgeIngestionRequest,
   KnowledgeProfile,
@@ -66,6 +77,16 @@ import type {
   ListCatalogAssetsParams,
   ListCatalogVersionsParams,
   ListDeploymentsParams,
+  ListGovernanceAuditEventsParams,
+  ListGovernanceEvaluationDatasetsParams,
+  ListGovernanceEvaluationRunsParams,
+  ListGovernanceEvaluatorsParams,
+  ListGovernancePriceTableVersionsParams,
+  ListGovernancePriceTablesParams,
+  ListGovernanceQuotaPoliciesParams,
+  ListGovernanceReleaseGatesParams,
+  ListGovernanceUsageAggregatesParams,
+  ListGovernanceUsageParams,
   ListKnowledgeBasesParams,
   ListKnowledgeDataSourcesParams,
   ListKnowledgeDocumentsParams,
@@ -77,19 +98,28 @@ import type {
   ObjectRef,
   Organization,
   PermissionListResponse,
+  PriceTable,
+  PriceTableVersion,
   ProblemResponseResponse,
   Project,
   ProjectListResponse,
   PublishRequest,
+  QuotaPolicy,
+  ReleaseGate,
   RevokeApiKeyRequest,
   RoleBindingListResponse,
   RoleListResponse,
+  RunEvaluationRequest,
+  SaveReleaseGateRequest,
   SecretBinding,
   SecretMetadata,
   ServiceAccountListResponse,
   UpdateDraftRequest,
   UploadKnowledgeDocumentBody,
   UploadSkillArtifactBody,
+  UsageAggregate,
+  UsageLedgerEntry,
+  UuidV7,
   ValidationReportResponseResponse,
 } from "./models";
 
@@ -3486,4 +3516,906 @@ export const disableDeployment = async (
 
   const data: disableDeploymentResponse["data"] = body ? JSON.parse(body) : {};
   return { data, status: res.status, headers: res.headers } as disableDeploymentResponse;
+};
+
+export type getGovernanceOverviewResponse200 = {
+  data: GovernanceOverview;
+  status: 200;
+};
+
+export type getGovernanceOverviewResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type getGovernanceOverviewResponseSuccess = getGovernanceOverviewResponse200 & {
+  headers: Headers;
+};
+export type getGovernanceOverviewResponseError = getGovernanceOverviewResponse403 & {
+  headers: Headers;
+};
+
+export type getGovernanceOverviewResponse =
+  getGovernanceOverviewResponseSuccess | getGovernanceOverviewResponseError;
+
+export const getGetGovernanceOverviewUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}/governance/overview`;
+};
+
+export const getGovernanceOverview = async (
+  projectId: string,
+  options?: RequestInit,
+): Promise<getGovernanceOverviewResponse> => {
+  const res = await fetch(getGetGovernanceOverviewUrl(projectId), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: getGovernanceOverviewResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as getGovernanceOverviewResponse;
+};
+
+export type listGovernanceAuditEventsResponse200 = {
+  data: AuditEvent[];
+  status: 200;
+};
+
+export type listGovernanceAuditEventsResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listGovernanceAuditEventsResponseSuccess = listGovernanceAuditEventsResponse200 & {
+  headers: Headers;
+};
+export type listGovernanceAuditEventsResponseError = listGovernanceAuditEventsResponse403 & {
+  headers: Headers;
+};
+
+export type listGovernanceAuditEventsResponse =
+  listGovernanceAuditEventsResponseSuccess | listGovernanceAuditEventsResponseError;
+
+export const getListGovernanceAuditEventsUrl = (
+  projectId: string,
+  params?: ListGovernanceAuditEventsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/governance/audit-events?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/governance/audit-events`;
+};
+
+export const listGovernanceAuditEvents = async (
+  projectId: string,
+  params?: ListGovernanceAuditEventsParams,
+  options?: RequestInit,
+): Promise<listGovernanceAuditEventsResponse> => {
+  const res = await fetch(getListGovernanceAuditEventsUrl(projectId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listGovernanceAuditEventsResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listGovernanceAuditEventsResponse;
+};
+
+export type listGovernanceUsageResponse200 = {
+  data: UsageLedgerEntry[];
+  status: 200;
+};
+
+export type listGovernanceUsageResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listGovernanceUsageResponseSuccess = listGovernanceUsageResponse200 & {
+  headers: Headers;
+};
+export type listGovernanceUsageResponseError = listGovernanceUsageResponse403 & {
+  headers: Headers;
+};
+
+export type listGovernanceUsageResponse =
+  listGovernanceUsageResponseSuccess | listGovernanceUsageResponseError;
+
+export const getListGovernanceUsageUrl = (
+  projectId: string,
+  params?: ListGovernanceUsageParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/governance/usage?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/governance/usage`;
+};
+
+export const listGovernanceUsage = async (
+  projectId: string,
+  params?: ListGovernanceUsageParams,
+  options?: RequestInit,
+): Promise<listGovernanceUsageResponse> => {
+  const res = await fetch(getListGovernanceUsageUrl(projectId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listGovernanceUsageResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listGovernanceUsageResponse;
+};
+
+export type listGovernanceUsageAggregatesResponse200 = {
+  data: UsageAggregate[];
+  status: 200;
+};
+
+export type listGovernanceUsageAggregatesResponse400 = {
+  data: ProblemResponseResponse;
+  status: 400;
+};
+
+export type listGovernanceUsageAggregatesResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listGovernanceUsageAggregatesResponseSuccess =
+  listGovernanceUsageAggregatesResponse200 & {
+    headers: Headers;
+  };
+export type listGovernanceUsageAggregatesResponseError = (
+  listGovernanceUsageAggregatesResponse400 | listGovernanceUsageAggregatesResponse403
+) & {
+  headers: Headers;
+};
+
+export type listGovernanceUsageAggregatesResponse =
+  listGovernanceUsageAggregatesResponseSuccess | listGovernanceUsageAggregatesResponseError;
+
+export const getListGovernanceUsageAggregatesUrl = (
+  projectId: string,
+  params: ListGovernanceUsageAggregatesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/governance/usage:aggregate?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/governance/usage:aggregate`;
+};
+
+export const listGovernanceUsageAggregates = async (
+  projectId: string,
+  params: ListGovernanceUsageAggregatesParams,
+  options?: RequestInit,
+): Promise<listGovernanceUsageAggregatesResponse> => {
+  const res = await fetch(getListGovernanceUsageAggregatesUrl(projectId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listGovernanceUsageAggregatesResponse["data"] = body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listGovernanceUsageAggregatesResponse;
+};
+
+export type listGovernancePriceTablesResponse200 = {
+  data: PriceTable[];
+  status: 200;
+};
+
+export type listGovernancePriceTablesResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listGovernancePriceTablesResponseSuccess = listGovernancePriceTablesResponse200 & {
+  headers: Headers;
+};
+export type listGovernancePriceTablesResponseError = listGovernancePriceTablesResponse403 & {
+  headers: Headers;
+};
+
+export type listGovernancePriceTablesResponse =
+  listGovernancePriceTablesResponseSuccess | listGovernancePriceTablesResponseError;
+
+export const getListGovernancePriceTablesUrl = (
+  projectId: string,
+  params?: ListGovernancePriceTablesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/governance/price-tables?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/governance/price-tables`;
+};
+
+export const listGovernancePriceTables = async (
+  projectId: string,
+  params?: ListGovernancePriceTablesParams,
+  options?: RequestInit,
+): Promise<listGovernancePriceTablesResponse> => {
+  const res = await fetch(getListGovernancePriceTablesUrl(projectId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listGovernancePriceTablesResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listGovernancePriceTablesResponse;
+};
+
+export type createGovernancePriceTableResponse201 = {
+  data: PriceTableVersion;
+  status: 201;
+};
+
+export type createGovernancePriceTableResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type createGovernancePriceTableResponse409 = {
+  data: ProblemResponseResponse;
+  status: 409;
+};
+
+export type createGovernancePriceTableResponseSuccess = createGovernancePriceTableResponse201 & {
+  headers: Headers;
+};
+export type createGovernancePriceTableResponseError = (
+  createGovernancePriceTableResponse403 | createGovernancePriceTableResponse409
+) & {
+  headers: Headers;
+};
+
+export type createGovernancePriceTableResponse =
+  createGovernancePriceTableResponseSuccess | createGovernancePriceTableResponseError;
+
+export const getCreateGovernancePriceTableUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}/governance/price-tables`;
+};
+
+export const createGovernancePriceTable = async (
+  projectId: string,
+  createPriceTableRequest: CreatePriceTableRequest,
+  options?: RequestInit,
+): Promise<createGovernancePriceTableResponse> => {
+  const res = await fetch(getCreateGovernancePriceTableUrl(projectId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createPriceTableRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createGovernancePriceTableResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as createGovernancePriceTableResponse;
+};
+
+export type listGovernancePriceTableVersionsResponse200 = {
+  data: PriceTableVersion[];
+  status: 200;
+};
+
+export type listGovernancePriceTableVersionsResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listGovernancePriceTableVersionsResponseSuccess =
+  listGovernancePriceTableVersionsResponse200 & {
+    headers: Headers;
+  };
+export type listGovernancePriceTableVersionsResponseError =
+  listGovernancePriceTableVersionsResponse403 & {
+    headers: Headers;
+  };
+
+export type listGovernancePriceTableVersionsResponse =
+  listGovernancePriceTableVersionsResponseSuccess | listGovernancePriceTableVersionsResponseError;
+
+export const getListGovernancePriceTableVersionsUrl = (
+  projectId: string,
+  priceTableId: UuidV7,
+  params?: ListGovernancePriceTableVersionsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/governance/price-tables/${priceTableId}/versions?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/governance/price-tables/${priceTableId}/versions`;
+};
+
+export const listGovernancePriceTableVersions = async (
+  projectId: string,
+  priceTableId: UuidV7,
+  params?: ListGovernancePriceTableVersionsParams,
+  options?: RequestInit,
+): Promise<listGovernancePriceTableVersionsResponse> => {
+  const res = await fetch(getListGovernancePriceTableVersionsUrl(projectId, priceTableId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listGovernancePriceTableVersionsResponse["data"] = body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listGovernancePriceTableVersionsResponse;
+};
+
+export type listGovernanceQuotaPoliciesResponse200 = {
+  data: QuotaPolicy[];
+  status: 200;
+};
+
+export type listGovernanceQuotaPoliciesResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listGovernanceQuotaPoliciesResponseSuccess = listGovernanceQuotaPoliciesResponse200 & {
+  headers: Headers;
+};
+export type listGovernanceQuotaPoliciesResponseError = listGovernanceQuotaPoliciesResponse403 & {
+  headers: Headers;
+};
+
+export type listGovernanceQuotaPoliciesResponse =
+  listGovernanceQuotaPoliciesResponseSuccess | listGovernanceQuotaPoliciesResponseError;
+
+export const getListGovernanceQuotaPoliciesUrl = (
+  projectId: string,
+  params?: ListGovernanceQuotaPoliciesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/governance/quota-policies?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/governance/quota-policies`;
+};
+
+export const listGovernanceQuotaPolicies = async (
+  projectId: string,
+  params?: ListGovernanceQuotaPoliciesParams,
+  options?: RequestInit,
+): Promise<listGovernanceQuotaPoliciesResponse> => {
+  const res = await fetch(getListGovernanceQuotaPoliciesUrl(projectId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listGovernanceQuotaPoliciesResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listGovernanceQuotaPoliciesResponse;
+};
+
+export type createGovernanceQuotaPolicyResponse201 = {
+  data: QuotaPolicy;
+  status: 201;
+};
+
+export type createGovernanceQuotaPolicyResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type createGovernanceQuotaPolicyResponse409 = {
+  data: ProblemResponseResponse;
+  status: 409;
+};
+
+export type createGovernanceQuotaPolicyResponseSuccess = createGovernanceQuotaPolicyResponse201 & {
+  headers: Headers;
+};
+export type createGovernanceQuotaPolicyResponseError = (
+  createGovernanceQuotaPolicyResponse403 | createGovernanceQuotaPolicyResponse409
+) & {
+  headers: Headers;
+};
+
+export type createGovernanceQuotaPolicyResponse =
+  createGovernanceQuotaPolicyResponseSuccess | createGovernanceQuotaPolicyResponseError;
+
+export const getCreateGovernanceQuotaPolicyUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}/governance/quota-policies`;
+};
+
+export const createGovernanceQuotaPolicy = async (
+  projectId: string,
+  createQuotaPolicyRequest: CreateQuotaPolicyRequest,
+  options?: RequestInit,
+): Promise<createGovernanceQuotaPolicyResponse> => {
+  const res = await fetch(getCreateGovernanceQuotaPolicyUrl(projectId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createQuotaPolicyRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createGovernanceQuotaPolicyResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as createGovernanceQuotaPolicyResponse;
+};
+
+export type listGovernanceEvaluationDatasetsResponse200 = {
+  data: EvaluationDataset[];
+  status: 200;
+};
+
+export type listGovernanceEvaluationDatasetsResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listGovernanceEvaluationDatasetsResponseSuccess =
+  listGovernanceEvaluationDatasetsResponse200 & {
+    headers: Headers;
+  };
+export type listGovernanceEvaluationDatasetsResponseError =
+  listGovernanceEvaluationDatasetsResponse403 & {
+    headers: Headers;
+  };
+
+export type listGovernanceEvaluationDatasetsResponse =
+  listGovernanceEvaluationDatasetsResponseSuccess | listGovernanceEvaluationDatasetsResponseError;
+
+export const getListGovernanceEvaluationDatasetsUrl = (
+  projectId: string,
+  params?: ListGovernanceEvaluationDatasetsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/governance/evaluation/datasets?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/governance/evaluation/datasets`;
+};
+
+export const listGovernanceEvaluationDatasets = async (
+  projectId: string,
+  params?: ListGovernanceEvaluationDatasetsParams,
+  options?: RequestInit,
+): Promise<listGovernanceEvaluationDatasetsResponse> => {
+  const res = await fetch(getListGovernanceEvaluationDatasetsUrl(projectId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listGovernanceEvaluationDatasetsResponse["data"] = body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as listGovernanceEvaluationDatasetsResponse;
+};
+
+export type createGovernanceEvaluationDatasetResponse201 = {
+  data: DatasetVersion;
+  status: 201;
+};
+
+export type createGovernanceEvaluationDatasetResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type createGovernanceEvaluationDatasetResponseSuccess =
+  createGovernanceEvaluationDatasetResponse201 & {
+    headers: Headers;
+  };
+export type createGovernanceEvaluationDatasetResponseError =
+  createGovernanceEvaluationDatasetResponse403 & {
+    headers: Headers;
+  };
+
+export type createGovernanceEvaluationDatasetResponse =
+  createGovernanceEvaluationDatasetResponseSuccess | createGovernanceEvaluationDatasetResponseError;
+
+export const getCreateGovernanceEvaluationDatasetUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}/governance/evaluation/datasets`;
+};
+
+export const createGovernanceEvaluationDataset = async (
+  projectId: string,
+  createDatasetRequest: CreateDatasetRequest,
+  options?: RequestInit,
+): Promise<createGovernanceEvaluationDatasetResponse> => {
+  const res = await fetch(getCreateGovernanceEvaluationDatasetUrl(projectId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createDatasetRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createGovernanceEvaluationDatasetResponse["data"] = body ? JSON.parse(body) : {};
+  return {
+    data,
+    status: res.status,
+    headers: res.headers,
+  } as createGovernanceEvaluationDatasetResponse;
+};
+
+export type listGovernanceEvaluatorsResponse200 = {
+  data: Evaluator[];
+  status: 200;
+};
+
+export type listGovernanceEvaluatorsResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listGovernanceEvaluatorsResponseSuccess = listGovernanceEvaluatorsResponse200 & {
+  headers: Headers;
+};
+export type listGovernanceEvaluatorsResponseError = listGovernanceEvaluatorsResponse403 & {
+  headers: Headers;
+};
+
+export type listGovernanceEvaluatorsResponse =
+  listGovernanceEvaluatorsResponseSuccess | listGovernanceEvaluatorsResponseError;
+
+export const getListGovernanceEvaluatorsUrl = (
+  projectId: string,
+  params?: ListGovernanceEvaluatorsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/governance/evaluation/evaluators?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/governance/evaluation/evaluators`;
+};
+
+export const listGovernanceEvaluators = async (
+  projectId: string,
+  params?: ListGovernanceEvaluatorsParams,
+  options?: RequestInit,
+): Promise<listGovernanceEvaluatorsResponse> => {
+  const res = await fetch(getListGovernanceEvaluatorsUrl(projectId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listGovernanceEvaluatorsResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listGovernanceEvaluatorsResponse;
+};
+
+export type createGovernanceEvaluatorResponse201 = {
+  data: EvaluatorVersion;
+  status: 201;
+};
+
+export type createGovernanceEvaluatorResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type createGovernanceEvaluatorResponseSuccess = createGovernanceEvaluatorResponse201 & {
+  headers: Headers;
+};
+export type createGovernanceEvaluatorResponseError = createGovernanceEvaluatorResponse403 & {
+  headers: Headers;
+};
+
+export type createGovernanceEvaluatorResponse =
+  createGovernanceEvaluatorResponseSuccess | createGovernanceEvaluatorResponseError;
+
+export const getCreateGovernanceEvaluatorUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}/governance/evaluation/evaluators`;
+};
+
+export const createGovernanceEvaluator = async (
+  projectId: string,
+  createEvaluatorRequest: CreateEvaluatorRequest,
+  options?: RequestInit,
+): Promise<createGovernanceEvaluatorResponse> => {
+  const res = await fetch(getCreateGovernanceEvaluatorUrl(projectId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(createEvaluatorRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: createGovernanceEvaluatorResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as createGovernanceEvaluatorResponse;
+};
+
+export type listGovernanceEvaluationRunsResponse200 = {
+  data: EvaluationRun[];
+  status: 200;
+};
+
+export type listGovernanceEvaluationRunsResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listGovernanceEvaluationRunsResponseSuccess =
+  listGovernanceEvaluationRunsResponse200 & {
+    headers: Headers;
+  };
+export type listGovernanceEvaluationRunsResponseError = listGovernanceEvaluationRunsResponse403 & {
+  headers: Headers;
+};
+
+export type listGovernanceEvaluationRunsResponse =
+  listGovernanceEvaluationRunsResponseSuccess | listGovernanceEvaluationRunsResponseError;
+
+export const getListGovernanceEvaluationRunsUrl = (
+  projectId: string,
+  params?: ListGovernanceEvaluationRunsParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/governance/evaluation/runs?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/governance/evaluation/runs`;
+};
+
+export const listGovernanceEvaluationRuns = async (
+  projectId: string,
+  params?: ListGovernanceEvaluationRunsParams,
+  options?: RequestInit,
+): Promise<listGovernanceEvaluationRunsResponse> => {
+  const res = await fetch(getListGovernanceEvaluationRunsUrl(projectId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listGovernanceEvaluationRunsResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listGovernanceEvaluationRunsResponse;
+};
+
+export type runGovernanceEvaluationResponse201 = {
+  data: EvaluationRun;
+  status: 201;
+};
+
+export type runGovernanceEvaluationResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type runGovernanceEvaluationResponse409 = {
+  data: ProblemResponseResponse;
+  status: 409;
+};
+
+export type runGovernanceEvaluationResponseSuccess = runGovernanceEvaluationResponse201 & {
+  headers: Headers;
+};
+export type runGovernanceEvaluationResponseError = (
+  runGovernanceEvaluationResponse403 | runGovernanceEvaluationResponse409
+) & {
+  headers: Headers;
+};
+
+export type runGovernanceEvaluationResponse =
+  runGovernanceEvaluationResponseSuccess | runGovernanceEvaluationResponseError;
+
+export const getRunGovernanceEvaluationUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}/governance/evaluation/runs`;
+};
+
+export const runGovernanceEvaluation = async (
+  projectId: string,
+  runEvaluationRequest: RunEvaluationRequest,
+  options?: RequestInit,
+): Promise<runGovernanceEvaluationResponse> => {
+  const res = await fetch(getRunGovernanceEvaluationUrl(projectId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(runEvaluationRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: runGovernanceEvaluationResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as runGovernanceEvaluationResponse;
+};
+
+export type listGovernanceReleaseGatesResponse200 = {
+  data: ReleaseGate[];
+  status: 200;
+};
+
+export type listGovernanceReleaseGatesResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type listGovernanceReleaseGatesResponseSuccess = listGovernanceReleaseGatesResponse200 & {
+  headers: Headers;
+};
+export type listGovernanceReleaseGatesResponseError = listGovernanceReleaseGatesResponse403 & {
+  headers: Headers;
+};
+
+export type listGovernanceReleaseGatesResponse =
+  listGovernanceReleaseGatesResponseSuccess | listGovernanceReleaseGatesResponseError;
+
+export const getListGovernanceReleaseGatesUrl = (
+  projectId: string,
+  params?: ListGovernanceReleaseGatesParams,
+) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : String(value));
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/v1/projects/${projectId}/governance/evaluation/release-gates?${stringifiedParams}`
+    : `/api/v1/projects/${projectId}/governance/evaluation/release-gates`;
+};
+
+export const listGovernanceReleaseGates = async (
+  projectId: string,
+  params?: ListGovernanceReleaseGatesParams,
+  options?: RequestInit,
+): Promise<listGovernanceReleaseGatesResponse> => {
+  const res = await fetch(getListGovernanceReleaseGatesUrl(projectId, params), {
+    ...options,
+    method: "GET",
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: listGovernanceReleaseGatesResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as listGovernanceReleaseGatesResponse;
+};
+
+export type saveGovernanceReleaseGateResponse200 = {
+  data: ReleaseGate;
+  status: 200;
+};
+
+export type saveGovernanceReleaseGateResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type saveGovernanceReleaseGateResponse409 = {
+  data: ProblemResponseResponse;
+  status: 409;
+};
+
+export type saveGovernanceReleaseGateResponseSuccess = saveGovernanceReleaseGateResponse200 & {
+  headers: Headers;
+};
+export type saveGovernanceReleaseGateResponseError = (
+  saveGovernanceReleaseGateResponse403 | saveGovernanceReleaseGateResponse409
+) & {
+  headers: Headers;
+};
+
+export type saveGovernanceReleaseGateResponse =
+  saveGovernanceReleaseGateResponseSuccess | saveGovernanceReleaseGateResponseError;
+
+export const getSaveGovernanceReleaseGateUrl = (projectId: string) => {
+  return `/api/v1/projects/${projectId}/governance/evaluation/release-gates`;
+};
+
+export const saveGovernanceReleaseGate = async (
+  projectId: string,
+  saveReleaseGateRequest: SaveReleaseGateRequest,
+  options?: RequestInit,
+): Promise<saveGovernanceReleaseGateResponse> => {
+  const res = await fetch(getSaveGovernanceReleaseGateUrl(projectId), {
+    ...options,
+    method: "PUT",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(saveReleaseGateRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: saveGovernanceReleaseGateResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as saveGovernanceReleaseGateResponse;
 };

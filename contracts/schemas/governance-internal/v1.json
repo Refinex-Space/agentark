@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/governance-internal/v1.json",
+  "title": "AgentArk Governance Internal Contract v1",
+  "description": "定义跨平面幂等 Audit、Usage 与 Quota 命令；所有请求禁止携带正文、凭据或授权 Header。",
+  "$comment": "调用方必须使用 Audience 限定服务身份；sourceEventId/sourceRecordId/idempotencyKey 是重试一致性边界。",
+  "$defs": {
+    "UuidV7": {
+      "title": "UUIDv7",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+      "description": "RFC 9562 UUIDv7 小写规范文本。"
+    },
+    "AuditIngestRequest": {
+      "title": "Audit 汇聚请求",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sourceEventId", "sourcePlane", "principalType", "principalRef", "scopeType", "scopeRef", "action", "result", "resourceType", "resourceRef", "diffSummary", "occurredAt"],
+      "properties": {
+        "sourceEventId": { "type": "string", "maxLength": 128, "description": "来源幂等事件标识。" },
+        "sourcePlane": { "type": "string", "enum": ["GATEWAY", "CONTROL", "RUNTIME", "SCHEDULER"], "description": "来源平面。" },
+        "organizationId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }], "description": "可选组织。" },
+        "projectId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }], "description": "可选项目。" },
+        "principalType": { "type": "string", "enum": ["USER", "SERVICE_ACCOUNT", "API_KEY", "SERVICE", "SYSTEM"], "description": "主体类型。" },
+        "principalRef": { "type": "string", "maxLength": 255, "description": "非秘密主体引用。" },
+        "scopeType": { "type": "string", "enum": ["PLATFORM", "ORGANIZATION", "PROJECT", "ENVIRONMENT", "RUN", "JOB"], "description": "Scope 类型。" },
+        "scopeRef": { "type": "string", "maxLength": 128, "description": "Scope 引用。" },
+        "action": { "type": "string", "maxLength": 128, "description": "动作代码。" },
+        "result": { "type": "string", "enum": ["SUCCEEDED", "DENIED", "FAILED"], "description": "结果。" },
+        "resourceType": { "type": "string", "maxLength": 64, "description": "资源类型。" },
+        "resourceRef": { "type": "string", "maxLength": 128, "description": "资源引用。" },
+        "diffSummary": { "type": "object", "additionalProperties": true, "description": "安全差异摘要。" },
+        "occurredAt": { "type": "string", "format": "date-time", "description": "发生时间。" }
+      }
+    },
+    "UsageIngestRequest": {
+      "title": "Usage 汇聚请求",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["sourcePlane", "sourceRecordId", "organizationId", "projectId", "usageType", "provider", "inputTokens", "outputTokens", "cachedTokens", "embeddingTokens", "toolCalls", "sandboxDurationMs", "estimated", "costAmount", "occurredAt"],
+      "properties": {
+        "sourcePlane": { "type": "string", "enum": ["RUNTIME", "SCHEDULER", "CONTROL"], "description": "来源平面。" },
+        "sourceRecordId": { "type": "string", "maxLength": 128, "description": "来源幂等记录。" },
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "usageType": { "type": "string", "enum": ["MODEL", "EMBEDDING", "TOOL", "SANDBOX"], "description": "计量类型。" },
+        "provider": { "type": "string", "maxLength": 128, "description": "Provider。" },
+        "inputTokens": { "type": "integer", "minimum": 0, "description": "输入 Token。" },
+        "outputTokens": { "type": "integer", "minimum": 0, "description": "输出 Token。" },
+        "cachedTokens": { "type": "integer", "minimum": 0, "description": "缓存 Token。" },
+        "embeddingTokens": { "type": "integer", "minimum": 0, "description": "Embedding Token。" },
+        "toolCalls": { "type": "integer", "minimum": 0, "description": "Tool 次数。" },
+        "sandboxDurationMs": { "type": "integer", "minimum": 0, "description": "Sandbox 毫秒。" },
+        "estimated": { "type": "boolean", "description": "是否估算。" },
+        "costAmount": { "type": "number", "minimum": 0, "description": "成本。" },
+        "occurredAt": { "type": "string", "format": "date-time", "description": "发生时间。" }
+      }
+    },
+    "IngestResponse": {
+      "title": "幂等接收响应",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["accepted"],
+      "properties": { "accepted": { "type": "boolean", "description": "首次接收为 true，安全重放为 false。" } }
+    },
+    "QuotaReserveRequest": {
+      "title": "Quota Reservation 请求",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["organizationId", "projectId", "scopeType", "scopeRef", "metric", "idempotencyKey", "subjectRef", "amount", "ttlSeconds"],
+      "properties": {
+        "organizationId": { "$ref": "#/$defs/UuidV7" },
+        "projectId": { "$ref": "#/$defs/UuidV7" },
+        "scopeType": { "type": "string", "enum": ["ORGANIZATION", "PROJECT", "DEPLOYMENT", "MODEL"], "description": "Scope 类型。" },
+        "scopeRef": { "type": "string", "maxLength": 255, "description": "Scope 引用。" },
+        "metric": { "type": "string", "enum": ["REQUEST_RATE", "INPUT_TOKEN", "OUTPUT_TOKEN", "COST", "CONCURRENT_RUN"], "description": "指标。" },
+        "idempotencyKey": { "type": "string", "maxLength": 128, "description": "幂等键。" },
+        "subjectRef": { "type": "string", "maxLength": 128, "description": "工作引用。" },
+        "amount": { "type": "number", "exclusiveMinimum": 0, "description": "预留量。" },
+        "ttlSeconds": { "type": "integer", "minimum": 5, "maximum": 3600, "description": "TTL 秒数。" }
+      }
+    },
+    "QuotaDecision": {
+      "title": "Quota 决策",
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["allowed", "softExceeded"],
+      "properties": {
+        "allowed": { "type": "boolean", "description": "是否允许接单。" },
+        "softExceeded": { "type": "boolean", "description": "是否超过软限额。" },
+        "reservationId": { "oneOf": [{ "$ref": "#/$defs/UuidV7" }, { "type": "null" }], "description": "可选 Reservation。" },
+        "action": { "type": ["string", "null"], "enum": ["WARN", "REQUIRE_APPROVAL", "STOP", null], "description": "预算动作。" }
+      }
+    },
+    "ReservationTransitionRequest": {
+      "title": "Reservation 终态请求",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["target"],
+      "properties": { "target": { "type": "string", "enum": ["COMMITTED", "RELEASED"], "description": "目标终态。" } }
+    }
+  }
+}

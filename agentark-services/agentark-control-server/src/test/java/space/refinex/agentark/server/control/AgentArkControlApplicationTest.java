@@ -26,6 +26,7 @@ import org.springframework.context.annotation.Import;
 import space.refinex.agentark.control.catalog.CatalogControlConfiguration;
 import space.refinex.agentark.control.iam.IamControlConfiguration;
 import space.refinex.agentark.control.release.ReleaseControlConfiguration;
+import space.refinex.agentark.control.governance.GovernanceControlConfiguration;
 
 /**
  * 验证 Control 空业务应用能以 Spring MVC 容器独立启动。
@@ -79,6 +80,7 @@ class AgentArkControlApplicationTest {
             IamControlConfiguration.class,
             CatalogControlConfiguration.class,
             KnowledgeControlBridgeConfiguration.class,
-            ReleaseControlConfiguration.class);
+            ReleaseControlConfiguration.class,
+            GovernanceControlConfiguration.class);
     }
 }

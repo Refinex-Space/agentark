@@ -537,6 +537,29 @@ test.describe("真实后端核心产品流程", () => {
       path: resolve("output/playwright/phase-18-operate.png"),
       fullPage: true,
     });
+    await page.getByRole("link", { name: "治理与观测" }).click();
+    await expect(
+      page.getByRole("heading", {
+        level: 1,
+        name: "Trace、Audit、Usage、Quota 与 Evaluation",
+      }),
+    ).toBeVisible();
+    await expect(page.getByRole("table", { name: "安全审计事件" })).toContainText("agent.publish");
+    await page.getByRole("tab", { name: "Quota", exact: true }).click();
+    await page.getByLabel("Scope Ref").fill(auth.projectId);
+    await page.getByLabel("Limit").fill("2");
+    const quotaResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/governance/quota-policies") &&
+        response.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: "创建 Policy" }).click();
+    expect((await quotaResponse).status()).toBe(201);
+    await expect(page.getByRole("table", { name: "Quota Policy" })).toContainText("CONCURRENT_RUN");
+    await page.screenshot({
+      path: resolve("output/playwright/phase-19-governance.png"),
+      fullPage: true,
+    });
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(page.getByRole("navigation", { name: "主导航" })).toBeVisible();
     const overflow = await page.evaluate(() => {

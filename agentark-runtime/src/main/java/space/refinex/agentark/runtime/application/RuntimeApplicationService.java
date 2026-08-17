@@ -176,7 +176,27 @@ public class RuntimeApplicationService {
      */
     @Transactional
     public Turn acceptTurn(AcceptTurnCommand command) {
+        return acceptTurn(command, Optional.empty());
+    }
+
+    /**
+     * 原子接收 Turn，并把 Control 并发配额 Reservation 与首次 Run 一并持久化。
+     *
+     * @param command             Turn 接收命令
+     * @param quotaReservationRef 可选 Control Reservation 引用；仅保存标识，不保存凭据
+     * @return 已进入 QUEUED 的 Turn
+     */
+    @Transactional
+    public Turn acceptTurn(
+        AcceptTurnCommand command, Optional<String> quotaReservationRef) {
         Objects.requireNonNull(command, "command must not be null");
+        quotaReservationRef = Objects.requireNonNull(
+            quotaReservationRef, "quotaReservationRef must not be null");
+        quotaReservationRef.ifPresent(value -> {
+            if (value.isBlank() || value.length() > 64) {
+                throw new IllegalArgumentException("quota reservation reference is invalid");
+            }
+        });
         String scopeId = command.sessionId().asString();
         Optional<IdempotencyRecord> existing = repository.findIdempotency(
             TURN_SCOPE, scopeId, command.idempotencyKey());
@@ -212,7 +232,8 @@ public class RuntimeApplicationService {
             TURN_SCOPE, scopeId, command.idempotencyKey(), command.requestHash(),
             "turn:" + turnId.asString(), now);
         repository.insertAcceptedTurn(
-            turn, run, workItem, EventId.generate(), now, outbox, idempotency);
+            turn, run, workItem, EventId.generate(), now, outbox, idempotency,
+            quotaReservationRef);
         requireUpdated(repository.transitionTurn(
             turnId, TurnStatus.ACCEPTED, TurnStatus.QUEUED,
             FencingToken.unclaimed(), now), "turn queue transition conflicted");

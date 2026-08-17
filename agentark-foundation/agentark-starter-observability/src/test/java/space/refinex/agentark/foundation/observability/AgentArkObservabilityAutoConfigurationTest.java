@@ -18,8 +18,13 @@ package space.refinex.agentark.foundation.observability;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.opentelemetry.sdk.OpenTelemetrySdk;
+import io.opentelemetry.sdk.trace.SdkTracerProvider;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.autoconfigure.AutoConfigurations;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -99,5 +104,44 @@ class AgentArkObservabilityAutoConfigurationTest {
     org.assertj.core.api.Assertions.assertThatThrownBy(
             () -> W3cTraceContext.parse("00-00000000000000000000000000000000-1234567890abcdef-01"))
         .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  /** 验证业务 Span 生成有效 Trace ID 和 Timer，且高基数租户标签不会进入指标。 */
+  @Test
+  void recordsTraceAndBoundedDurationMetric() {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    SdkTracerProvider tracerProvider = SdkTracerProvider.builder().build();
+    try {
+      OpenTelemetrySdk openTelemetry =
+          OpenTelemetrySdk.builder().setTracerProvider(tracerProvider).build();
+      AgentArkTelemetry telemetry =
+          new AgentArkTelemetry(
+              Optional.of(registry),
+              Optional.of(openTelemetry),
+              new MetricTagPolicy(Set.of("operation", "outcome")));
+      AtomicReference<String> traceId = new AtomicReference<>();
+
+      telemetry.inSpan(
+          SpanConvention.RUNTIME,
+          "turn.execute",
+          Map.of(
+              "operation", "turn.execute",
+              "projectId", "019d0000-0000-7000-8000-000000000001"),
+          () -> {
+            traceId.set(telemetry.currentTraceId().orElseThrow());
+            return null;
+          });
+
+      assertThat(traceId.get()).matches("[0-9a-f]{32}");
+      var timer = registry.get("agentark.runtime.turn.execute.duration").timer();
+      assertThat(timer.count()).isEqualTo(1L);
+      assertThat(timer.getId().getTags())
+          .extracting(io.micrometer.core.instrument.Tag::getKey)
+          .containsExactlyInAnyOrder("operation", "outcome")
+          .doesNotContain("projectId");
+    } finally {
+      tracerProvider.close();
+      registry.close();
+    }
   }
 }

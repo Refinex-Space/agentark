@@ -331,6 +331,26 @@ public class MybatisSchedulerStore
             .map(oldest -> Duration.between(oldest, now));
     }
 
+    /** 返回等待重试 Job 数量。 */
+    @Override
+    public long retryWaitingCount() {
+        return mapper.countRetryWaiting();
+    }
+
+    /** 返回 OPEN Dead Letter 数量。 */
+    @Override
+    public long openDeadLetterCount() {
+        return mapper.countOpenDeadLetters();
+    }
+
+    /** 返回最老 Scheduler Outbox 积压秒数。 */
+    @Override
+    public long outboxLagSeconds(Instant now) {
+        return mapper.oldestPendingOutbox()
+            .map(value -> Math.max(0L, Duration.between(value, now).toSeconds()))
+            .orElse(0L);
+    }
+
     /**
      * 读取 Trigger。
      */

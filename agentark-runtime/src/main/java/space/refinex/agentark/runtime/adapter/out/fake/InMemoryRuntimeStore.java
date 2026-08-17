@@ -58,6 +58,11 @@ public final class InMemoryRuntimeStore implements
     private final Map<RunId, Run> runs = new HashMap<>();
 
     /**
+     * Turn 首次接单时绑定的 Control 并发配额 Reservation 引用。
+     */
+    private final Map<TurnId, String> quotaReservations = new HashMap<>();
+
+    /**
      * Work Item 存储。
      */
     private final Map<RunId, RuntimeWorkItem> workItems = new HashMap<>();
@@ -167,6 +172,7 @@ public final class InMemoryRuntimeStore implements
      * @param occurredAt  接受时刻
      * @param outbox      Outbox
      * @param idempotency 幂等结果
+     * @param quotaReservationRef Control 并发配额 Reservation 引用
      * @return 已分配双重序号的接受 Event
      */
     @Override
@@ -177,7 +183,8 @@ public final class InMemoryRuntimeStore implements
         EventId eventId,
         Instant occurredAt,
         RuntimeOutboxEvent outbox,
-        IdempotencyRecord idempotency) {
+        IdempotencyRecord idempotency,
+        Optional<String> quotaReservationRef) {
         Session session = requireSession(turn.sessionId());
         if (session.status() != SessionStatus.ACTIVE || !run.turnId().equals(turn.id())
             || !workItem.runId().equals(run.id()) || turns.containsKey(turn.id())
@@ -208,7 +215,19 @@ public final class InMemoryRuntimeStore implements
         events.put(accepted.id(), accepted);
         outboxEvents.put(outbox.id(), outbox);
         idempotencyRecords.put(idempotencyKey(idempotency), idempotency);
+        quotaReservationRef.ifPresent(value -> quotaReservations.put(turn.id(), value));
         return accepted;
+    }
+
+    /**
+     * 读取 Turn 级 Control 并发配额 Reservation 引用。
+     *
+     * @param turnId Turn 标识
+     * @return 可选 Reservation 引用
+     */
+    @Override
+    public synchronized Optional<String> findQuotaReservation(TurnId turnId) {
+        return Optional.ofNullable(quotaReservations.get(turnId));
     }
 
     /**

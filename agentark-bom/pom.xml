@@ -99,6 +99,55 @@
                 <version>3.16.4</version>
             </dependency>
 
+            <!-- 覆盖 Spring Boot BOM 的旧 Prometheus Core，匹配 Micrometer 1.17.0。 -->
+            <dependency>
+                <groupId>io.prometheus</groupId>
+                <artifactId>prometheus-metrics-core</artifactId>
+                <version>${prometheus-metrics.version}</version>
+            </dependency>
+
+            <!-- 统一 Prometheus Metric Model，避免 Core 传递版本降级。 -->
+            <dependency>
+                <groupId>io.prometheus</groupId>
+                <artifactId>prometheus-metrics-model</artifactId>
+                <version>${prometheus-metrics.version}</version>
+            </dependency>
+
+            <!-- 统一 Prometheus Metric Config，避免 Registry 运行期不兼容。 -->
+            <dependency>
+                <groupId>io.prometheus</groupId>
+                <artifactId>prometheus-metrics-config</artifactId>
+                <version>${prometheus-metrics.version}</version>
+            </dependency>
+
+            <!-- 统一 Prometheus Trace Exemplar 公共类型版本。 -->
+            <dependency>
+                <groupId>io.prometheus</groupId>
+                <artifactId>prometheus-metrics-tracer-common</artifactId>
+                <version>${prometheus-metrics.version}</version>
+            </dependency>
+
+            <!-- 统一 Prometheus exposition 格式版本，匹配 Registry 运行时。 -->
+            <dependency>
+                <groupId>io.prometheus</groupId>
+                <artifactId>prometheus-metrics-exposition-formats</artifactId>
+                <version>${prometheus-metrics.version}</version>
+            </dependency>
+
+            <!-- 统一 Prometheus 文本 exposition 格式版本。 -->
+            <dependency>
+                <groupId>io.prometheus</groupId>
+                <artifactId>prometheus-metrics-exposition-textformats</artifactId>
+                <version>${prometheus-metrics.version}</version>
+            </dependency>
+
+            <!-- 对齐 Spring Boot OTel Bridge 与 AgentScope Reactor Instrumentation 的稳定 SemConv。 -->
+            <dependency>
+                <groupId>io.opentelemetry.semconv</groupId>
+                <artifactId>opentelemetry-semconv</artifactId>
+                <version>${opentelemetry-semconv.version}</version>
+            </dependency>
+
             <!-- 统一管理 AgentArk Kernel 模块版本。 -->
             <dependency>
                 <groupId>${project.groupId}</groupId>

@@ -1,0 +1,42 @@
+# Prometheus 全局抓取和规则评估配置。
+global:
+  # 每十五秒抓取一次，适合本地开发。
+  scrape_interval: 15s
+  # 每十五秒评估一次告警规则。
+  evaluation_interval: 15s
+
+# 加载 AgentArk 告警规则。
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+# 四服务和 Collector 的静态本地抓取目标。
+scrape_configs:
+  # Gateway 指标；只使用低基数 service/environment Label。
+  - job_name: agentark-gateway
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        labels: { service: gateway, environment: local }
+    metrics_path: /actuator/prometheus
+  # Control 指标。
+  - job_name: agentark-control
+    static_configs:
+      - targets: ["host.docker.internal:8081"]
+        labels: { service: control, environment: local }
+    metrics_path: /actuator/prometheus
+  # Runtime 指标。
+  - job_name: agentark-runtime
+    static_configs:
+      - targets: ["host.docker.internal:8082"]
+        labels: { service: runtime, environment: local }
+    metrics_path: /actuator/prometheus
+  # Scheduler 指标。
+  - job_name: agentark-scheduler
+    static_configs:
+      - targets: ["host.docker.internal:8083"]
+        labels: { service: scheduler, environment: local }
+    metrics_path: /actuator/prometheus
+  # OTel Collector Pipeline 指标。
+  - job_name: otel-collector
+    static_configs:
+      - targets: ["otel-collector:8889"]
+        labels: { service: otel-collector, environment: local }

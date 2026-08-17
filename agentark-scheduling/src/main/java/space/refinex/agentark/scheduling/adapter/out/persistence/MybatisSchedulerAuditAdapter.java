@@ -16,11 +16,14 @@
 
 package space.refinex.agentark.scheduling.adapter.out.persistence;
 
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import space.refinex.agentark.kernel.id.JobId;
 import space.refinex.agentark.kernel.id.OrganizationId;
 import space.refinex.agentark.kernel.id.ProjectId;
 import space.refinex.agentark.scheduling.domain.SchedulerUuidV7;
 import space.refinex.agentark.scheduling.port.SchedulerAuditPort;
+import space.refinex.agentark.scheduling.port.ControlInternalClient;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Instant;
@@ -46,14 +49,32 @@ public final class MybatisSchedulerAuditAdapter implements SchedulerAuditPort {
     private final JsonMapper jsonMapper;
 
     /**
+     * 可选 Control Audit 汇聚客户端。
+     */
+    private final ControlInternalClient controlClient;
+
+    /**
      * 创建 Outbox 审计适配器。
      *
      * @param mapper     Scheduler Mapper
      * @param jsonMapper JSON Mapper
      */
     public MybatisSchedulerAuditAdapter(SchedulerMapper mapper, JsonMapper jsonMapper) {
+        this(mapper, jsonMapper, null);
+    }
+
+    /**
+     * 创建同时保留本地 Outbox 并向 Control 汇聚的审计适配器。
+     *
+     * @param mapper        Scheduler Mapper
+     * @param jsonMapper    JSON Mapper
+     * @param controlClient Control Internal Client；为空时只保留本地 Outbox
+     */
+    public MybatisSchedulerAuditAdapter(
+        SchedulerMapper mapper, JsonMapper jsonMapper, ControlInternalClient controlClient) {
         this.mapper = Objects.requireNonNull(mapper, "mapper must not be null");
         this.jsonMapper = Objects.requireNonNull(jsonMapper, "jsonMapper must not be null");
+        this.controlClient = controlClient;
     }
 
     /**
@@ -71,8 +92,33 @@ public final class MybatisSchedulerAuditAdapter implements SchedulerAuditPort {
         payload.put("jobId", jobId.asString());
         payload.put("reason", reason);
         payload.put("occurredAt", occurredAt.toString());
+        java.util.UUID sourceEventId = SchedulerUuidV7.generate(occurredAt);
         mapper.insertOutbox(
-            SchedulerUuidV7.generate(occurredAt), "audit", jobId.value(), action,
+            sourceEventId, "audit", jobId.value(), action,
             jsonMapper.writeValueAsString(payload), "PENDING", occurredAt, 0, occurredAt);
+        if (controlClient != null) {
+            afterCommit(() -> controlClient.appendAudit(new ControlInternalClient.AuditRecord(
+                sourceEventId.toString(), organizationId, projectId, actor, action,
+                jobId.asString(), Map.of("reason", reason), occurredAt)));
+        }
+    }
+
+    /**
+     * 在本地 Scheduler 事务成功提交后执行跨平面汇聚，无事务时立即执行。
+     *
+     * @param action 提交后动作
+     */
+    private void afterCommit(Runnable action) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            action.run();
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            /** 事务成功提交后汇聚 Audit。 */
+            @Override
+            public void afterCommit() {
+                action.run();
+            }
+        });
     }
 }

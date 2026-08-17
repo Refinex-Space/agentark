@@ -18,6 +18,9 @@ package space.refinex.agentark.control.adapter.out.persistence;
 
 import java.sql.SQLException;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -67,23 +70,23 @@ class ControlMySqlMigrationIT extends AbstractMySqlMigrationIT {
     }
 
     /**
-     * 声明 Control 当前最新迁移为 Phase 10 的 V5；V4 由 Knowledge 制品提供。
+     * 声明 Control 当前最新迁移为 Phase 19 的 V7；V4/V6 由 Knowledge 制品提供。
+     *
+     * @return Flyway 版本 7
+     */
+    @Override
+    protected String expectedVersion() {
+        return "7";
+    }
+
+    /**
+     * 声明 Phase 10 的 V5 是 Control 独立制品升级测试起点。
      *
      * @return Flyway 版本 5
      */
     @Override
-    protected String expectedVersion() {
-        return "5";
-    }
-
-    /**
-     * 声明 Phase 08 的 V3 是 Control 独立制品升级测试起点。
-     *
-     * @return Flyway 版本 3
-     */
-    @Override
     protected String previousVersion() {
-        return "3";
+        return "5";
     }
 
     /**
@@ -134,7 +137,181 @@ class ControlMySqlMigrationIT extends AbstractMySqlMigrationIT {
             "publish_operation",
             "deployment",
             "deployment_revision",
-            "control_outbox");
+            "control_outbox",
+            "audit_event",
+            "price_table",
+            "price_table_version",
+            "usage_ledger",
+            "usage_aggregate",
+            "quota_policy",
+            "quota_reservation",
+            "evaluation_dataset",
+            "evaluation_dataset_version",
+            "evaluation_test_case",
+            "evaluator",
+            "evaluator_version",
+            "evaluation_run",
+            "evaluation_score",
+            "release_gate");
+    }
+
+    /**
+     * 证明 Audit Event 和版本化 Governance 事实在数据库层拒绝 UPDATE/DELETE。
+     *
+     * @throws SQLException 初始化租户或执行非法写入失败时抛出
+     */
+    @Test
+    void rejectsAuditAndGovernanceVersionMutation() throws SQLException {
+        migrateCurrentSchema();
+        seedGovernanceProject();
+        try (var connection = ownerConnection(); var statement = connection.createStatement()) {
+            statement.execute("""
+                INSERT INTO audit_event
+                    (id, source_event_id, source_plane, organization_id, project_id,
+                     principal_type, principal_ref, scope_type, scope_ref, action, result,
+                     resource_type, resource_ref, diff_summary_json, occurred_at, ingested_at)
+                VALUES
+                    (UNHEX(REPLACE('019d0000-0000-7000-8000-000000000203','-','')),
+                     'control:test-audit', 'CONTROL',
+                     UNHEX(REPLACE('019d0000-0000-7000-8000-000000000201','-','')),
+                     UNHEX(REPLACE('019d0000-0000-7000-8000-000000000202','-','')),
+                     'USER', 'issuer:subject', 'PROJECT',
+                     '019d0000-0000-7000-8000-000000000202', 'quota_policy.create',
+                     'SUCCEEDED', 'quota_policy',
+                     '019d0000-0000-7000-8000-000000000204', JSON_OBJECT('fields', JSON_ARRAY('metric')),
+                     UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))
+                """);
+            assertThatThrownBy(() -> statement.execute(
+                "UPDATE audit_event SET result = 'FAILED'"))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("audit event cannot be updated");
+            assertThatThrownBy(() -> statement.execute("DELETE FROM audit_event"))
+                .isInstanceOf(SQLException.class)
+                .hasMessageContaining("audit event cannot be deleted");
+        }
+    }
+
+    /**
+     * 证明两个并发事务通过 Policy 行锁最多创建一个额度为 1 的硬配额预留。
+     *
+     * @throws Exception 并发事务或断言失败时抛出
+     */
+    @Test
+    void preventsConcurrentHardQuotaOversell() throws Exception {
+        migrateCurrentSchema();
+        seedGovernanceProject();
+        try (var connection = ownerConnection(); var statement = connection.createStatement()) {
+            statement.execute("""
+                INSERT INTO quota_policy
+                    (id, organization_id, project_id, scope_type, scope_ref, metric,
+                     enforcement, limit_value, window_seconds, budget_action,
+                     effective_from, effective_until, status, version,
+                     created_at, created_by, updated_at, updated_by)
+                VALUES
+                    (UNHEX(REPLACE('019d0000-0000-7000-8000-000000000204','-','')),
+                     UNHEX(REPLACE('019d0000-0000-7000-8000-000000000201','-','')),
+                     UNHEX(REPLACE('019d0000-0000-7000-8000-000000000202','-','')),
+                     'PROJECT', '019d0000-0000-7000-8000-000000000202',
+                     'CONCURRENT_RUN', 'HARD', 1, NULL, 'STOP',
+                     UTC_TIMESTAMP(6), NULL, 'ACTIVE', 0,
+                     UTC_TIMESTAMP(6), 'test', UTC_TIMESTAMP(6), 'test')
+                """);
+        }
+
+        try (var executor = Executors.newFixedThreadPool(2)) {
+            Callable<Boolean> reserve = this::reserveSingleConcurrentRun;
+            var results = executor.invokeAll(java.util.List.of(reserve, reserve));
+            executor.shutdown();
+            org.assertj.core.api.Assertions.assertThat(executor.awaitTermination(10, TimeUnit.SECONDS))
+                .isTrue();
+            org.assertj.core.api.Assertions.assertThat(results)
+                .extracting(result -> result.get())
+                .containsExactlyInAnyOrder(true, false);
+        }
+        try (var connection = ownerConnection(); var statement = connection.createStatement();
+            var result = statement.executeQuery(
+                "SELECT COUNT(*) FROM quota_reservation WHERE status = 'HELD'")) {
+            org.assertj.core.api.Assertions.assertThat(result.next()).isTrue();
+            org.assertj.core.api.Assertions.assertThat(result.getInt(1)).isEqualTo(1);
+        }
+    }
+
+    /**
+     * 在独立事务锁定 Policy、检查当前预留并在额度允许时插入一条 HELD Reservation。
+     *
+     * @return 是否成功创建预留
+     * @throws SQLException 事务失败时抛出
+     */
+    private boolean reserveSingleConcurrentRun() throws SQLException {
+        try (var connection = ownerConnection()) {
+            connection.setAutoCommit(false);
+            try (var statement = connection.createStatement()) {
+                statement.executeQuery("""
+                    SELECT limit_value FROM quota_policy
+                    WHERE id = UNHEX(REPLACE('019d0000-0000-7000-8000-000000000204','-',''))
+                    FOR UPDATE
+                    """).close();
+                int held;
+                try (var result = statement.executeQuery("""
+                    SELECT COUNT(*) FROM quota_reservation
+                    WHERE policy_id = UNHEX(REPLACE('019d0000-0000-7000-8000-000000000204','-',''))
+                      AND status = 'HELD' AND expires_at > UTC_TIMESTAMP(6)
+                    """)) {
+                    result.next();
+                    held = result.getInt(1);
+                }
+                if (held >= 1) {
+                    connection.commit();
+                    return false;
+                }
+                String suffix = Thread.currentThread().getName().endsWith("1") ? "205" : "206";
+                statement.execute("""
+                    INSERT INTO quota_reservation
+                        (id, organization_id, project_id, policy_id, idempotency_key,
+                         subject_ref, amount, status, expires_at, version, created_at, updated_at)
+                    VALUES
+                        (UNHEX(REPLACE('019d0000-0000-7000-8000-000000000%s','-','')),
+                         UNHEX(REPLACE('019d0000-0000-7000-8000-000000000201','-','')),
+                         UNHEX(REPLACE('019d0000-0000-7000-8000-000000000202','-','')),
+                         UNHEX(REPLACE('019d0000-0000-7000-8000-000000000204','-','')),
+                         'quota-%s', 'run-%s', 1, 'HELD',
+                         UTC_TIMESTAMP(6) + INTERVAL 5 MINUTE, 0, UTC_TIMESTAMP(6), UTC_TIMESTAMP(6))
+                    """.formatted(suffix, suffix, suffix));
+                connection.commit();
+                return true;
+            } catch (SQLException exception) {
+                connection.rollback();
+                throw exception;
+            }
+        }
+    }
+
+    /**
+     * 初始化 Governance 测试使用的 Organization 与 Project。
+     *
+     * @throws SQLException 插入失败时抛出
+     */
+    private void seedGovernanceProject() throws SQLException {
+        try (var connection = ownerConnection(); var statement = connection.createStatement()) {
+            statement.execute("""
+                INSERT INTO organization
+                    (id, slug, name, status, version, created_at, created_by, updated_at, updated_by)
+                VALUES
+                    (UNHEX(REPLACE('019d0000-0000-7000-8000-000000000201','-','')),
+                     'governance-org', '治理组织', 'ACTIVE', 0,
+                     UTC_TIMESTAMP(6), 'test', UTC_TIMESTAMP(6), 'test')
+                """);
+            statement.execute("""
+                INSERT INTO project
+                    (id, organization_id, slug, name, status, version,
+                     created_at, created_by, updated_at, updated_by)
+                VALUES
+                    (UNHEX(REPLACE('019d0000-0000-7000-8000-000000000202','-','')),
+                     UNHEX(REPLACE('019d0000-0000-7000-8000-000000000201','-','')),
+                     'governance-project', '治理项目', 'ACTIVE', 0,
+                     UTC_TIMESTAMP(6), 'test', UTC_TIMESTAMP(6), 'test')
+                """);
+        }
     }
 
     /**

@@ -150,6 +150,27 @@ public final class PermissionRegistry {
     /** 允许创建、Promote、Rollback、Enable 和 Disable Deployment。 */
     public static final String DEPLOYMENT_MANAGE = "deployment:manage";
 
+    /** 允许严格查询所属项目的安全审计事实。 */
+    public static final String AUDIT_READ = "audit:read";
+
+    /** 允许读取所属项目的 Usage 与 Cost 明细和聚合。 */
+    public static final String USAGE_READ = "usage:read";
+
+    /** 允许读取所属项目的 Quota Policy 与 Reservation 摘要。 */
+    public static final String QUOTA_READ = "quota:read";
+
+    /** 允许创建和更新所属项目的软硬配额策略。 */
+    public static final String QUOTA_MANAGE = "quota:manage";
+
+    /** 允许读取版本化 Evaluation 与 Release Gate。 */
+    public static final String EVALUATION_READ = "evaluation:read";
+
+    /** 允许管理 Dataset、Evaluator、Evaluation Run 与 Release Gate。 */
+    public static final String EVALUATION_MANAGE = "evaluation:manage";
+
+    /** 允许管理版本化 Price Table 和计费规则。 */
+    public static final String PRICE_MANAGE = "price:manage";
+
     /**
      * 按固定顺序保存所有注册权限，便于 Flyway 和 OpenAPI 对齐校验。
      */
@@ -187,7 +208,14 @@ public final class PermissionRegistry {
         AGENT_MANAGE,
         AGENT_PUBLISH,
         DEPLOYMENT_READ,
-        DEPLOYMENT_MANAGE);
+        DEPLOYMENT_MANAGE,
+        AUDIT_READ,
+        USAGE_READ,
+        QUOTA_READ,
+        QUOTA_MANAGE,
+        EVALUATION_READ,
+        EVALUATION_MANAGE,
+        PRICE_MANAGE);
 
     /**
      * 项目开发者拥有的非授权管理权限。
@@ -207,7 +235,11 @@ public final class PermissionRegistry {
         AGENT_MANAGE,
         AGENT_PUBLISH,
         DEPLOYMENT_READ,
-        DEPLOYMENT_MANAGE);
+        DEPLOYMENT_MANAGE,
+        USAGE_READ,
+        QUOTA_READ,
+        EVALUATION_READ,
+        EVALUATION_MANAGE);
 
     /**
      * 项目只读角色拥有的最低读取权限。
@@ -223,7 +255,10 @@ public final class PermissionRegistry {
         CATALOG_READ,
         KNOWLEDGE_READ,
         AGENT_READ,
-        DEPLOYMENT_READ);
+        DEPLOYMENT_READ,
+        USAGE_READ,
+        QUOTA_READ,
+        EVALUATION_READ);
 
     /**
      * 禁止实例化静态权限注册表。
@@ -325,6 +360,13 @@ public final class PermissionRegistry {
         values.put(AGENT_PUBLISH, new Definition("发布 Agent Revision", PermissionRiskLevel.HIGH));
         values.put(DEPLOYMENT_READ, new Definition("读取 Environment Deployment", PermissionRiskLevel.LOW));
         values.put(DEPLOYMENT_MANAGE, new Definition("管理 Environment Deployment", PermissionRiskLevel.HIGH));
+        values.put(AUDIT_READ, new Definition("严格查询安全审计事实", PermissionRiskLevel.HIGH));
+        values.put(USAGE_READ, new Definition("读取 Usage 与 Cost", PermissionRiskLevel.MEDIUM));
+        values.put(QUOTA_READ, new Definition("读取 Quota Policy", PermissionRiskLevel.MEDIUM));
+        values.put(QUOTA_MANAGE, new Definition("管理软硬配额策略", PermissionRiskLevel.HIGH));
+        values.put(EVALUATION_READ, new Definition("读取 Evaluation 与 Release Gate", PermissionRiskLevel.LOW));
+        values.put(EVALUATION_MANAGE, new Definition("管理 Evaluation 与 Release Gate", PermissionRiskLevel.HIGH));
+        values.put(PRICE_MANAGE, new Definition("管理版本化 Price Table", PermissionRiskLevel.HIGH));
         return Collections.unmodifiableMap(new LinkedHashMap<>(values));
     }
 

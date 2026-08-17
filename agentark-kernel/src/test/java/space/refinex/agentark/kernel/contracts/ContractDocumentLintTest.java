@@ -110,7 +110,18 @@ class ContractDocumentLintTest {
                     "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/promote",
                     "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/rollback",
                     "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/enable",
-                    "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/disable"));
+                    "/api/v1/projects/{projectId}/environments/{environmentId}/deployments/{deploymentId}/disable",
+                    "/api/v1/projects/{projectId}/governance/overview",
+                    "/api/v1/projects/{projectId}/governance/audit-events",
+                    "/api/v1/projects/{projectId}/governance/usage",
+                    "/api/v1/projects/{projectId}/governance/usage:aggregate",
+                    "/api/v1/projects/{projectId}/governance/price-tables",
+                    "/api/v1/projects/{projectId}/governance/price-tables/{priceTableId}/versions",
+                    "/api/v1/projects/{projectId}/governance/quota-policies",
+                    "/api/v1/projects/{projectId}/governance/evaluation/datasets",
+                    "/api/v1/projects/{projectId}/governance/evaluation/evaluators",
+                    "/api/v1/projects/{projectId}/governance/evaluation/runs",
+                    "/api/v1/projects/{projectId}/governance/evaluation/release-gates"));
       } else if (fileName.equals("internal-control-v1.yaml")) {
         Set<String> paths =
             ((Map<?, ?>) document.get("paths"))
@@ -121,7 +132,11 @@ class ContractDocumentLintTest {
                 "/internal/v1/deployments/{deploymentId}",
                 "/internal/v1/auth/api-keys:verify",
                 "/internal/v1/knowledge/ingestions/{requestId}/plan",
-                "/internal/v1/knowledge/ingestions/{requestId}:complete");
+                "/internal/v1/knowledge/ingestions/{requestId}:complete",
+                "/internal/v1/governance/audit-events",
+                "/internal/v1/governance/usage-records",
+                "/internal/v1/governance/quota-reservations",
+                "/internal/v1/governance/quota-reservations/{reservationId}:transition");
       } else if (fileName.equals("public-runtime-v1.yaml")) {
         Set<String> paths =
             ((Map<?, ?>) document.get("paths"))
@@ -221,6 +236,27 @@ class ContractDocumentLintTest {
         .doesNotContain("AgentScope")
         .doesNotContain("collectionName")
         .doesNotContain("apiKey");
+  }
+
+  /** 验证 Governance 契约已版本化且不允许正文、凭据或无界 Metric Label。 */
+  @Test
+  void governanceSchemasAreVersionedAndDataMinimized() throws IOException {
+    String publicSchema =
+        Files.readString(CONTRACTS.resolve("schemas/governance-public/v1.json"));
+    String internalSchema =
+        Files.readString(CONTRACTS.resolve("schemas/governance-internal/v1.json"));
+
+    assertThat(publicSchema)
+        .contains("governance-public/v1.json")
+        .contains("\"AuditEvent\"")
+        .contains("\"QuotaPolicy\"")
+        .contains("\"EvaluationRun\"")
+        .doesNotContain("secretValue", "promptText", "documentText", "toolArguments");
+    assertThat(internalSchema)
+        .contains("governance-internal/v1.json")
+        .contains("\"sourceRecordId\"")
+        .contains("\"idempotencyKey\"")
+        .doesNotContain("authorization", "apiKey", "credentialValue");
   }
 
   /** 验证 Release 公共 Schema 已版本化且不暴露明文 Secret 或 Control 持久化实体。 */

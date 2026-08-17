@@ -1,0 +1,77 @@
+# OTLP Receiver 同时接受 gRPC 与 HTTP/Protobuf。
+receivers:
+  # 四服务统一 OTLP 接收器。
+  otlp:
+    # 启用两种标准传输。
+    protocols:
+      # gRPC 接收端绑定容器内部所有接口。
+      grpc:
+        endpoint: 0.0.0.0:4317
+      # HTTP/Protobuf 接收端绑定容器内部所有接口。
+      http:
+        endpoint: 0.0.0.0:4318
+
+# Processor 负责有界内存、敏感属性删除和批处理。
+processors:
+  # 在 Collector 内存压力前拒绝新批次，避免容器被 OOM Kill。
+  memory_limiter:
+    # 每秒检查一次内存。
+    check_interval: 1s
+    # 使用容器内存上限的 75%。
+    limit_percentage: 75
+    # 允许 15% 突发。
+    spike_limit_percentage: 15
+  # 删除任何误入 Span 的敏感正文或认证属性。
+  attributes/security:
+    # 按固定键执行删除，未知正文仍由应用白名单阻挡。
+    actions:
+      - { key: authorization, action: delete }
+      - { key: http.request.header.authorization, action: delete }
+      - { key: prompt.text, action: delete }
+      - { key: document.text, action: delete }
+      - { key: tool.arguments, action: delete }
+      - { key: secret.value, action: delete }
+  # 以有界批次异步转发 Trace。
+  batch:
+    # 最多等待两秒形成批次。
+    timeout: 2s
+    # 每批最多 512 个 Span。
+    send_batch_size: 512
+
+# Exporter 把 Trace 写入 Tempo，并暴露 Collector 自身 Metric。
+exporters:
+  # Tempo OTLP/HTTP 接口。
+  otlphttp/tempo:
+    # 使用 Compose 内部 DNS，不暴露公网。
+    endpoint: http://tempo:4318
+    # 本地明文链路仅存在于隔离 Compose Network。
+    tls:
+      insecure: true
+  # Collector Pipeline 指标供 Prometheus 抓取。
+  prometheus:
+    # 容器内部 Metric 端口。
+    endpoint: 0.0.0.0:8889
+
+# Extension 提供健康探针。
+extensions:
+  # Collector Health Check。
+  health_check:
+    # 容器内部健康端口。
+    endpoint: 0.0.0.0:13133
+
+# Service 组装 Trace Pipeline。
+service:
+  # 启用健康 Extension。
+  extensions: [health_check]
+  # 定义信号处理管线。
+  pipelines:
+    # Trace 经过内存、敏感属性和批处理后进入 Tempo。
+    traces:
+      receivers: [otlp]
+      processors: [memory_limiter, attributes/security, batch]
+      exporters: [otlphttp/tempo]
+    # Collector 自身 Metric 以 Prometheus 格式暴露。
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, batch]
+      exporters: [prometheus]

@@ -23,30 +23,45 @@ package space.refinex.agentark.foundation.observability;
  */
 public enum SpanConvention {
 
+    /** Control Plane 发布、部署与治理操作。 */
+    CONTROL("control"),
+
+    /** Runtime 接单、编译和执行操作。 */
+    RUNTIME("runtime"),
+
+    /** Gateway 边缘认证与路由操作。 */
+    GATEWAY("gateway"),
+
     /**
      * Agent 调度或执行操作，Span 前缀为 {@code agentark.agent}。
      */
-    AGENT("agentark.agent"),
+    AGENT("agent"),
 
     /**
      * 模型推理操作，Span 前缀为 {@code agentark.model}。
      */
-    MODEL("agentark.model"),
+    MODEL("model"),
 
     /**
      * Tool 或 MCP 调用操作，Span 前缀为 {@code agentark.tool}。
      */
-    TOOL("agentark.tool"),
+    TOOL("tool"),
+
+    /** MCP 调用操作。 */
+    MCP("mcp"),
 
     /**
      * RAG 检索操作，Span 前缀为 {@code agentark.rag}。
      */
-    RAG("agentark.rag"),
+    RAG("knowledge"),
 
     /**
      * Sandbox 受限执行操作，Span 前缀为 {@code agentark.sandbox}。
      */
-    SANDBOX("agentark.sandbox");
+    SANDBOX("sandbox"),
+
+    /** Scheduler Job 执行操作。 */
+    SCHEDULER("scheduler");
 
     /**
      * 稳定 Span 名称前缀。
