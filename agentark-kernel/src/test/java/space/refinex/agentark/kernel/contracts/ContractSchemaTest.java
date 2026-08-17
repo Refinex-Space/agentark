@@ -98,6 +98,30 @@ class ContractSchemaTest {
         "schemas/scheduler-job/examples/valid-enqueue-job.json");
   }
 
+  /** 验证 Aistio 只读迁移 Fixture 符合固定来源、备份、主键和引用契约。 */
+  @Test
+  void aistioMigrationExportFixtureConformsToMigrationSchema() throws IOException {
+    assertValid(
+        "schemas/migration/aistio-export/v1.json",
+        "../tools/migration/fixtures/aistio-export-v1.json");
+  }
+
+  /** 验证 Aistio 数据迁移校验报告符合无正文、无 Secret 的版本化格式。 */
+  @Test
+  void aistioMigrationReportConformsToValidationSchema() throws IOException {
+    assertValid(
+        "schemas/migration/aistio-validation/v1.json",
+        "schemas/migration/aistio-validation/examples/valid-migration-report.json");
+  }
+
+  /** 验证 Aistio Shadow Compare 报告符合 Hash、状态、延迟和字段路径格式。 */
+  @Test
+  void aistioShadowReportConformsToValidationSchema() throws IOException {
+    assertValid(
+        "schemas/migration/aistio-validation/v1.json",
+        "schemas/migration/aistio-validation/examples/valid-shadow-report.json");
+  }
+
   /** 验证 Agent Revision Golden File 符合 Phase 10 Release 公共 Schema。 */
   @Test
   void releaseRevisionGoldenFileConformsToPublicSchema() throws IOException {

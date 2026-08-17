@@ -310,6 +310,20 @@ Phase 19 没有迁入上游源码或视觉资产。治理 Domain、Flyway、Cont
 
 Phase 20 没有迁入 AgentScope 或 DeepSeek 源码、测试 Fixture、品牌和资产。新增安全实现、清单、测试和文档均为 AgentArk 独立代码；上游只提供固定 Commit 的行为与限制证据。
 
-## 21. 变更协议
+## 21. Phase 21 实际处置
+
+| 候选能力 | 分类 | AgentArk 落点 | 明确边界 |
+|---|---|---|---|
+| Aistio User/Environment/Agent/Version/Deployment | `MIGRATE/ADAPT` | 显式 Principal 映射、Environment、Agent Draft/Publish、不可变 Snapshot、Deployment | 不迁本地密码/HMAC、API Key Hash 或 Go DTO；Agent 使用 `(owner_id, agent_id)` 复合来源 Key |
+| Aistio Vault Credential | `ADAPT` | Control Secret Metadata 与受控 `secretMappings` | 不导出 `ciphertext`，不伪造外部路径；未预先迁到真实 Secret Provider 时阻断 |
+| Aistio Cron/Webhook Deployment | `ADAPT` | Control Deployment + Scheduler Trigger Public Contract | Webhook 必须配置新 SecretRef；不迁旧 Token，不让 Control 拥有 Job |
+| Product/Runtime Session 与 Command | `REFERENCE/ADAPT` | 活动 Owner Pin、终态归档、Runtime Instance 重注册、Command Audit | 不重放历史副作用，不把旧 Event 伪造成 Java Run，不切换活动 Session Owner |
+| Compatibility Proxy/Shadow | `ADAPT` | `tools/migration/aistio_shadow.py` | 仅 Loopback/GET；显式字段投影、Secret/安全 Gate；不是默认服务或长期 Route |
+| Team/Task/Message、CRD、ASDP/BYO | `DEFER` | ADR-0006 Backlog | 需要独立 Collaboration/Deployment Adapter Contract，不阻塞核心切换 |
+| Hosted `dp_*` Store、Go 本地认证、Aistio UI | `REJECT` | 无长期落点 | AgentArk 已有中立 Runtime Ports、OIDC/JWK 和独立 Web，不翻译表或复制静态资产 |
+
+Phase 21 新增迁移工具、Schema、Fixture、测试和文档均为 AgentArk 独立实现，没有把任何候选提升为文件级 `REUSE`。默认 Flags 为 `JAVA_ONLY`，Go Writes/Fallback 为 `DISABLED`；真实外部 Aistio Cohort 仍须按 Runbook 产生独立批准证据。
+
+## 22. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

@@ -329,7 +329,7 @@ packages/client/connection
 | Java Monorepo | `mvn install -DskipTests`；测试可用 `mvn test` 或限定 `-pl ... -am test` | 未执行；会写固定 Worktree `target/` |
 | Service 本地栈 | `cd agentscope-service && scripts/dev-down.sh && BUILDER_REBUILD=1 scripts/dev-up.sh` | 未执行；会建容器、进程和 `.dev-stack/` |
 | Service Smoke | `cd agentscope-service && scripts/smoke.sh` | 未执行；依赖已启动服务和模型凭据 |
-| Aistio | `cd agentscope-service/aistio && go test ./...`；Integration 用 `make test-integration` | 仅记录；`make test` 会生成 `cover.out` |
+| Aistio | `cd agentscope-service/aistio && go test ./...`；Integration 用 `make test-integration` | Phase 21 已在固定 detached Worktree 执行 `go test ./...` 并通过；未执行依赖外部 PostgreSQL/Kubernetes 的 Integration |
 | Service Frontend | `cd agentscope-service/frontend && npm install && npm run build` | 未执行；安装依赖且构建会改写 `aistio/ui` |
 | DeepSeek GUI | `pnpm run test:gui` | 未执行；当前本机 pnpm 10.33.0 与上游 11.7.0 不匹配 |
 | DeepSeek Web | `pnpm run build`，再 `DSH_SNAPSHOT=replay pnpm run test:web:built` | 未执行；会产生构建输出 |
@@ -365,3 +365,11 @@ Phase 11 继续使用同一固定 Commit，只读取 Dataplane、Service Common�
 | AgentState Store、Checkpoint 相关测试 | 版本化 State 与恢复点 | Runtime MySQL 保存 State Version、Hash、ObjectRef、Commit 可见性和 Checkpoint；拒绝 AgentScope Auto-DDL |
 
 上游只有 Session 级 Event 序号且缺少单调 Fencing Token；AgentArk 的双 Sequence、旧 Token 数据库 Trigger、幂等记录、Runtime Outbox 和 ObjectRef Payload 是为满足既定架构约束新增的中立能力，不能归因于上游已有实现。
+
+## 15. Phase 21 Aistio 全量审计补充
+
+Phase 21 对固定 Commit 下 311 个版本化 Aistio 文件完成二次审计：215 个 Go 文件、44 个 Go 测试、18 个 Runtime Migration SQL、34 个 YAML/Helm/CRD 文件。实际注册 Route 为 Product 149 条、Runtime/Kubernetes 82 条；Product `cp` 18 张表，Runtime 迁移后 22 张表。完整 Package、Route、Auth、表、Session/Team/Command、Registration/ASDP/CRD、UI、配置和部署清单见 [Aistio 绞杀与迁移规范](aistio-strangler.md)。
+
+列级复核确认 Product 时间字段是 Epoch 毫秒，Runtime 时间字段是 `TIMESTAMPTZ`；Agent 稳定主键是 `(owner_id, agent_id)` 而非单独 `agent_id`。Phase 21 导出因此统一转换 UTC，并使用 `owner_id/agent_id` 复合来源 Key。Environment `config_json`、`api_key_hash`、Vault `ciphertext`、Deployment `webhook_token`、用户 `password_hash` 均不进入导出；目标 Principal、SecretRef、Webhook SecretRef 和 Profile/Model/MCP/Skill 版本必须由受控配置显式映射。
+
+本阶段没有复制 Go 源码、SQL Migration、Proto、CRD、测试或 UI。新增 Python/SQL 工具是依据已记录字段语义独立实现；默认 AgentArk Compose 仍只包含四个 Java Server。真实外部 Aistio 数据、生产流量和 Kubernetes 集成未提供，故只完成可执行工具/Fixture/Contract Gate，不把生产迁移描述为已发生。

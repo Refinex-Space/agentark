@@ -1,0 +1,76 @@
+{
+  "title": "AgentArk Aistio Cutover Flags 示例",
+  "description": "临时只读兼容代理和迁移工具配置；默认 JAVA_ONLY，不启用 Go Fallback。",
+  "$comment": "生产副本不得把令牌放入本文件，tokenFiles 只能指向未提交的普通文件。",
+  "schemaVersion": 1,
+  "mode": "JAVA_ONLY",
+  "listenHost": "127.0.0.1",
+  "listenPort": 18081,
+  "projectId": "019d0000-0000-7000-8000-000000000002",
+  "tenantAllowlist": ["019d0000-0000-7000-8000-000000000002"],
+  "capabilityAllowlist": ["catalog-read", "deployment-read"],
+  "endpoints": {
+    "go": "http://127.0.0.1:18090",
+    "java": "http://127.0.0.1:18091",
+    "control": "http://127.0.0.1:8081",
+    "runtime": "http://127.0.0.1:8082",
+    "scheduler": "http://127.0.0.1:8083"
+  },
+  "tokenFiles": {},
+  "thresholds": {
+    "minMatchRate": 0.999,
+    "maxErrorRate": 0.001,
+    "maxP95LatencyRatio": 1.2
+  },
+  "target": {
+    "organizationId": "019d0000-0000-7000-8000-000000000001",
+    "projectId": "019d0000-0000-7000-8000-000000000002",
+    "defaultEnvironmentId": "019d0000-0000-7000-8000-000000000003"
+  },
+  "defaults": {
+    "runtimeProvider": "agentscope-java-2",
+    "memoryId": "019d0000-0000-7000-8000-000000000010",
+    "memoryVersionId": "019d0000-0000-7000-8000-000000000011",
+    "workspaceId": "019d0000-0000-7000-8000-000000000012",
+    "workspaceVersionId": "019d0000-0000-7000-8000-000000000013",
+    "sandboxId": "019d0000-0000-7000-8000-000000000014",
+    "sandboxVersionId": "019d0000-0000-7000-8000-000000000015",
+    "permissionPolicyId": "019d0000-0000-7000-8000-000000000016",
+    "permissionPolicyVersionId": "019d0000-0000-7000-8000-000000000017",
+    "schedulerZoneId": "UTC",
+    "turnTimeoutSeconds": 300
+  },
+  "principalMappings": {
+    "user-1": {
+      "targetPrincipalId": "019d0000-0000-7000-8000-000000000030"
+    }
+  },
+  "secretMappings": {},
+  "webhookSecretMappings": {},
+  "modelMappings": {
+    "model-a": {
+      "providerId": "019d0000-0000-7000-8000-000000000020",
+      "profileId": "019d0000-0000-7000-8000-000000000021"
+    }
+  },
+  "mcpMappings": {},
+  "skillMappings": {},
+  "preexistingMappings": {},
+  "largeObjectThresholdBytes": 65536,
+  "routes": [
+    {
+      "cohort": "C3_AGENT",
+      "legacyPattern": "^/api/agents/(?P<sourceId>[A-Za-z0-9._-]+)$",
+      "javaTemplate": "/api/v1/projects/{projectId}/agents/{targetId}",
+      "mappingType": "agent",
+      "securityCritical": true,
+      "ignorePointers": ["/createdAt", "/updatedAt"],
+      "normalization": {
+        "fieldMappings": [
+          { "canonical": "name", "go": "/name", "java": "/name" },
+          { "canonical": "description", "go": "/description", "java": "/description" }
+        ]
+      }
+    }
+  ]
+}

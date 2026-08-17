@@ -1,0 +1,148 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "system": "AISTIO",
+    "commit": "0c61e7494197ded54eefdeaf9bdeb51807beb752",
+    "exportedAt": "2026-08-17T00:00:00Z",
+    "timezone": "UTC",
+    "readOnlyBackup": {
+      "uri": "object://migration-backups/aistio-fixture.dump",
+      "checksum": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    }
+  },
+  "resources": [
+    {
+      "type": "user_identity",
+      "sourceId": "user-1",
+      "ownerId": "user-1",
+      "status": "ACTIVE",
+      "updatedAt": 1786924800000,
+      "payload": {
+        "issuer": "urn:agentscope:aistio",
+        "subject": "user-1",
+        "displayName": "迁移用户"
+      },
+      "references": []
+    },
+    {
+      "type": "environment",
+      "sourceId": "env-1",
+      "ownerId": "user-1",
+      "status": "ACTIVE",
+      "updatedAt": "2026-08-17T00:00:00Z",
+      "payload": {
+        "key": "legacy-prod",
+        "name": "旧生产环境",
+        "type": "local"
+      },
+      "references": ["user_identity:user-1"]
+    },
+    {
+      "type": "agent",
+      "sourceId": "agent-1",
+      "ownerId": "user-1",
+      "status": "ACTIVE",
+      "updatedAt": "2026-08-17T00:00:00Z",
+      "payload": {
+        "key": "legacy-agent",
+        "name": "旧 Agent",
+        "description": "用于迁移行为验证",
+        "versions": [
+          {
+            "version": 1,
+            "createdAt": "2026-08-16T00:00:00Z",
+            "snapshot": {
+              "sysPrompt": "你是一个只读迁移验证 Agent。",
+              "model": "model-a",
+              "maxIters": 4,
+              "requiredCapabilities": ["tool-calling", "streaming"],
+              "mcpServers": [],
+              "skills": []
+            }
+          },
+          {
+            "version": 2,
+            "createdAt": "2026-08-17T00:00:00Z",
+            "snapshot": {
+              "sysPrompt": "你是一个只读迁移验证 Agent，回答必须可审计。",
+              "model": "model-a",
+              "maxIters": 6,
+              "requiredCapabilities": ["tool-calling", "streaming"],
+              "mcpServers": [],
+              "skills": []
+            }
+          }
+        ]
+      },
+      "references": ["user_identity:user-1", "environment:env-1"]
+    },
+    {
+      "type": "deployment",
+      "sourceId": "deployment-1",
+      "ownerId": "user-1",
+      "status": "ENABLED",
+      "updatedAt": "2026-08-17T00:00:00Z",
+      "payload": {
+        "name": "旧部署",
+        "agentRef": "agent:agent-1",
+        "agentVersion": 2,
+        "environmentRef": "environment:env-1",
+        "triggerType": "MANUAL"
+      },
+      "references": ["user_identity:user-1", "agent:agent-1", "environment:env-1"]
+    },
+    {
+      "type": "session",
+      "sourceId": "session-active-1",
+      "ownerId": "user-1",
+      "status": "RUNNING",
+      "updatedAt": "2026-08-17T00:00:00Z",
+      "payload": {
+        "deploymentRef": "deployment:deployment-1",
+        "agentVersion": 2,
+        "eventCount": 3
+      },
+      "references": ["user_identity:user-1", "deployment:deployment-1"]
+    },
+    {
+      "type": "runtime_instance",
+      "sourceId": "runtime-go-1",
+      "ownerId": "user-1",
+      "status": "ACTIVE",
+      "updatedAt": "2026-08-17T00:00:00Z",
+      "payload": {
+        "runtime": "agentscope-java",
+        "frameworkVersion": "2.0.2",
+        "capabilities": ["session-command"]
+      },
+      "references": ["user_identity:user-1"]
+    },
+    {
+      "type": "team",
+      "sourceId": "team-1",
+      "ownerId": "user-1",
+      "status": "PENDING",
+      "updatedAt": "2026-08-17T00:00:00Z",
+      "payload": {
+        "name": "legacy-team",
+        "objective": "迁移后延后处理"
+      },
+      "references": ["agent:agent-1"]
+    },
+    {
+      "type": "large_object",
+      "sourceId": "file-1",
+      "ownerId": "user-1",
+      "status": "ACTIVE",
+      "updatedAt": "2026-08-17T00:00:00Z",
+      "payload": {
+        "sourceUri": "object://migration-source/file-1",
+        "checksum": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+        "size": 70000,
+        "mediaType": "text/plain",
+        "targetNamespace": "migration-artifacts"
+      },
+      "references": ["user_identity:user-1"]
+    }
+  ]
+}

@@ -1,0 +1,144 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/migration/aistio-export/v1.json",
+  "title": "Aistio 只读迁移导出 v1",
+  "description": "固定来源 Commit、只读备份、资源主键、引用和非敏感载荷的迁移输入契约。",
+  "$comment": "递归 Secret 字段和 Canonical Hash 由迁移工具二次校验；Schema 不允许用密文替代 SecretRef。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "source", "resources"],
+  "properties": {
+    "schemaVersion": {
+      "description": "迁移导出 Schema 版本，v1 固定为 1。",
+      "const": 1
+    },
+    "source": {
+      "description": "固定 Aistio 来源与只读备份证据。",
+      "$ref": "#/$defs/source"
+    },
+    "resources": {
+      "description": "按来源主键唯一的规范化资源集合。",
+      "type": "array",
+      "items": { "$ref": "#/$defs/resource" }
+    }
+  },
+  "$defs": {
+    "checksum": {
+      "description": "规范 SHA-256。",
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "instant": {
+      "description": "带时区的 RFC 3339 时间；工具也接受来源 Epoch 毫秒并规范化。",
+      "oneOf": [
+        { "type": "string", "format": "date-time" },
+        { "type": "integer", "minimum": 0 }
+      ]
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["system", "commit", "exportedAt", "timezone", "readOnlyBackup"],
+      "properties": {
+        "system": {
+          "description": "来源系统固定为 AISTIO。",
+          "const": "AISTIO"
+        },
+        "commit": {
+          "description": "固定 AgentScope/Aistio 来源 Commit。",
+          "const": "0c61e7494197ded54eefdeaf9bdeb51807beb752"
+        },
+        "exportedAt": {
+          "description": "只读导出完成时间。",
+          "$ref": "#/$defs/instant"
+        },
+        "timezone": {
+          "description": "来源时间解释固定为 UTC。",
+          "const": "UTC"
+        },
+        "readOnlyBackup": {
+          "description": "切换前只读 PostgreSQL 备份 ObjectRef 摘要。",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["uri", "checksum"],
+          "properties": {
+            "uri": {
+              "description": "不含凭据的对象存储 URI。",
+              "type": "string",
+              "pattern": "^(?:object|s3|oss|cos)://[^@?#]+$"
+            },
+            "checksum": { "$ref": "#/$defs/checksum" }
+          }
+        }
+      }
+    },
+    "resource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "sourceId", "status", "payload", "references"],
+      "properties": {
+        "type": {
+          "description": "规范资源类型；Team/Registration 保留用于明确 DEFER/ADAPT。",
+          "enum": [
+            "user_identity",
+            "environment",
+            "catalog_asset",
+            "secret_metadata",
+            "knowledge_metadata",
+            "agent",
+            "deployment",
+            "session",
+            "runtime_instance",
+            "runtime_command",
+            "team",
+            "registration",
+            "large_object"
+          ]
+        },
+        "sourceId": {
+          "description": "来源表或 API 中的稳定主键。",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255
+        },
+        "ownerId": {
+          "description": "可选 Aistio Owner 标识；不直接作为 AgentArk 授权事实。",
+          "type": "string",
+          "maxLength": 255
+        },
+        "sourceVersion": {
+          "description": "可选来源乐观锁或版本号。",
+          "type": "integer",
+          "minimum": 0
+        },
+        "status": {
+          "description": "来源状态；工具必须显式映射或拒绝。",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "updatedAt": {
+          "description": "来源最后更新时间。",
+          "$ref": "#/$defs/instant"
+        },
+        "payload": {
+          "description": "不含密码摘要、密文、Token 和 Secret 值的资源载荷。",
+          "type": "object"
+        },
+        "references": {
+          "description": "使用 type:sourceId 表示的来源外键。",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z_]+:.+$"
+          }
+        },
+        "canonicalHash": {
+          "description": "可选声明 Hash；工具按 payload 重算并拒绝不一致。",
+          "$ref": "#/$defs/checksum"
+        }
+      }
+    }
+  }
+}

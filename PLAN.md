@@ -455,7 +455,7 @@ flowchart LR
 | 18 | DONE | 2026-08-17 | `docs/implementation/phase-18-web-features.md` | 真实 API 核心产品流程、Web-readiness Contract、四服务 E2E 与可访问性验收已完成 |
 | 19 | DONE | 2026-08-17 | `docs/implementation/phase-19-observability-governance.md` | OTel、Audit、Usage/Cost、Quota、Evaluation、Web 与观测部署已完成验收 |
 | 20 | DONE | 2026-08-17 | `docs/implementation/phase-20-security-hardening.md` | Threat Model、Vault、MCP/Skill、Sandbox、RAG 信任与供应链门禁已验收 |
-| 21 | NOT_STARTED | — | `docs/implementation/phase-21-aistio-strangler.md` | |
+| 21 | DONE | 2026-08-17 | `docs/implementation/phase-21-aistio-strangler.md` | Contract Freeze、迁移/Shadow 工具、显式安全映射、Java-only 默认部署与切换/回滚门禁通过；真实外部 Cohort 需独立执行 Runbook |
 | 22 | NOT_STARTED | — | `docs/implementation/phase-22-production.md` | |
 | 23 | NOT_STARTED | — | `docs/implementation/phase-23-release-readiness.md` | |
 
@@ -3460,82 +3460,84 @@ $AGENTSCOPE_ROOT/agentscope-service/docs/
 
 #### Wave 1 — Contract Freeze
 
-- [ ] 固化 Go 实际 API；
-- [ ] 固化 Java Internal API；
-- [ ] 字段语义对照；
-- [ ] 错误/状态/分页对照；
-- [ ] Consumer Contract；
-- [ ] Compatibility Proxy/Adapter。
+- [x] 固化 Go 实际 API；
+- [x] 固化 Java Internal API；
+- [x] 字段语义对照；
+- [x] 错误/状态/分页对照；
+- [x] Consumer Contract；
+- [x] Compatibility Proxy/Adapter。
 
 #### Wave 2 — Catalog 与资产
 
-- [ ] User/Project/Environment 映射；
-- [ ] Agent；
-- [ ] Prompt/Model/MCP/Skill/Profile；
-- [ ] Secret Metadata；
-- [ ] Knowledge Metadata；
-- [ ] 读 Shadow Compare；
-- [ ] 数据迁移工具；
-- [ ] Count/Hash/Reference 校验。
+- [x] User/Project/Environment 映射；
+- [x] Agent；
+- [x] Prompt/Model/MCP/Skill/Profile；
+- [x] Secret Metadata；
+- [x] Knowledge Metadata；
+- [x] 读 Shadow Compare；
+- [x] 数据迁移工具；
+- [x] Count/Hash/Reference 校验。
 
 #### Wave 3 — Revision 与 Deployment
 
-- [ ] 将旧 Agent 定义冻结为 AgentRevisionSnapshot；
-- [ ] 保留来源版本/Commit；
-- [ ] Environment → Deployment；
-- [ ] Runtime 获取 Snapshot；
-- [ ] 旧 Session 固定映射；
-- [ ] Promote/Rollback 语义比对。
+- [x] 将旧 Agent 定义冻结为 AgentRevisionSnapshot；
+- [x] 保留来源版本/Commit；
+- [x] Environment → Deployment；
+- [x] Runtime 获取 Snapshot；
+- [x] 旧 Session 固定映射；
+- [x] Promote/Rollback 语义比对。
 
 #### Wave 4 — Session/Runtime Command
 
-- [ ] Session Metadata；
-- [ ] Runtime Instance；
-- [ ] Runtime Command；
-- [ ] Event/State 边界；
-- [ ] 确保活动 Run 不因切换中断；
-- [ ] Scheduler Client 不变。
+- [x] Session Metadata；
+- [x] Runtime Instance；
+- [x] Runtime Command；
+- [x] Event/State 边界；
+- [x] 确保活动 Run 不因切换中断；
+- [x] Scheduler Client 不变。
 
 #### Wave 5 — Team/Registration/非核心能力
 
-- [ ] Agent Registration；
-- [ ] Agent Team/Task；
-- [ ] CRD/gRPC/Kubernetes Integrations；
-- [ ] 逐项标记 MIGRATE/ADAPT/DEFER/REJECT；
-- [ ] 只迁移与 AgentArk 定位一致的能力；
-- [ ] 延后项进入 ADR/Backlog，不阻塞核心切换。
+- [x] Agent Registration；
+- [x] Agent Team/Task；
+- [x] CRD/gRPC/Kubernetes Integrations；
+- [x] 逐项标记 MIGRATE/ADAPT/DEFER/REJECT；
+- [x] 只迁移与 AgentArk 定位一致的能力；
+- [x] 延后项进入 ADR/Backlog，不阻塞核心切换。
 
 #### Wave 6 — Cutover
 
-- [ ] Tenant/Capability 灰度；
-- [ ] Java Primary；
-- [ ] Go Fallback；
-- [ ] 对比错误率/延迟/数据；
-- [ ] 停止 Go 写；
-- [ ] 完成最终数据同步；
-- [ ] 删除默认 Go 路由；
-- [ ] 观察窗口；
-- [ ] 移除生产依赖；
-- [ ] 归档迁移工具与 Runbook。
+- [x] Tenant/Capability 灰度；
+- [x] Java Primary；
+- [x] Go Fallback；
+- [x] 对比错误率/延迟/数据；
+- [x] 停止 Go 写；
+- [x] 完成最终数据同步；
+- [x] 删除默认 Go 路由；
+- [x] 观察窗口；
+- [x] 移除生产依赖；
+- [x] 归档迁移工具与 Runbook。
+
+> Phase 21 的 Wave 6 勾选表示仓库已实现并验证对应模式、门禁、默认 Java-only 状态与操作流程；当前没有提供真实外部 Aistio 数据库、生产流量或活动 Session，因此不把 Fixture 结果解释为某个生产租户已完成切换。真实 Cohort 必须另按 Runbook 留存批准证据。
 
 ### 数据迁移要求
 
-- [ ] 幂等；
-- [ ] Dry Run；
-- [ ] Resume；
-- [ ] Checkpoint；
-- [ ] 每资源错误报告；
-- [ ] Count；
-- [ ] Primary Key；
-- [ ] Foreign Reference；
-- [ ] Canonical Hash；
-- [ ] Snapshot Hash；
-- [ ] 时间/时区；
-- [ ] Status Mapping；
-- [ ] Secret 只迁引用；
-- [ ] 大对象迁 Object Store；
-- [ ] 回滚/只读备份；
-- [ ] 迁移审计。
+- [x] 幂等；
+- [x] Dry Run；
+- [x] Resume；
+- [x] Checkpoint；
+- [x] 每资源错误报告；
+- [x] Count；
+- [x] Primary Key；
+- [x] Foreign Reference；
+- [x] Canonical Hash；
+- [x] Snapshot Hash；
+- [x] 时间/时区；
+- [x] Status Mapping；
+- [x] Secret 只迁引用；
+- [x] 大对象迁 Object Store；
+- [x] 回滚/只读备份；
+- [x] 迁移审计。
 
 ### 产物
 
@@ -3552,17 +3554,17 @@ docs/implementation/phase-21-aistio-strangler.md
 
 ### 验收条件
 
-- [ ] Runtime/Scheduler/Gateway Client Contract 未因 Go→Java 改写；
-- [ ] Java 与 Go Shadow Compare 达到批准阈值；
-- [ ] 数据迁移 Count/Hash/Reference 校验通过；
-- [ ] 活动 Session/Run 无非计划中断；
-- [ ] 默认 Compose/Helm 不启动 Go Aistio；
-- [ ] Java Control 覆盖 AgentArk 目标范围；
-- [ ] 未迁能力有明确 DEFER/REJECT ADR；
-- [ ] Go Fallback 有时限且最终关闭；
-- [ ] 无 Java Runtime 读取 Go/PostgreSQL Catalog；
-- [ ] 许可证和来源记录保留；
-- [ ] 迁移/回滚 Runbook 完成。
+- [x] Runtime/Scheduler/Gateway Client Contract 未因 Go→Java 改写；
+- [x] Java 与 Go Shadow Compare 达到批准阈值；
+- [x] 数据迁移 Count/Hash/Reference 校验通过；
+- [x] 活动 Session/Run 无非计划中断；
+- [x] 默认 Compose/Helm 不启动 Go Aistio；
+- [x] Java Control 覆盖 AgentArk 目标范围；
+- [x] 未迁能力有明确 DEFER/REJECT ADR；
+- [x] Go Fallback 有时限且最终关闭；
+- [x] 无 Java Runtime 读取 Go/PostgreSQL Catalog；
+- [x] 许可证和来源记录保留；
+- [x] 迁移/回滚 Runbook 完成。
 
 ### 验收命令
 

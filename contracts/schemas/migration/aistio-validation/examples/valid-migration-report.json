@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "0c61e7494197ded54eefdeaf9bdeb51807beb752",
+  "planHash": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "generatedAt": "2026-08-17T00:00:00Z",
+  "dryRun": true,
+  "counts": {
+    "sourceResources": 8,
+    "sourceByResourceType": {
+      "agent": 1,
+      "deployment": 1,
+      "environment": 1,
+      "large_object": 1,
+      "runtime_instance": 1,
+      "session": 1,
+      "team": 1,
+      "user_identity": 1
+    },
+    "operations": 14,
+    "succeeded": 0,
+    "failed": 0,
+    "operationsByResourceType": {
+      "agent": 4,
+      "catalog_asset": 3,
+      "deployment": 1,
+      "environment": 1,
+      "large_object": 1,
+      "runtime_instance": 1,
+      "session": 1,
+      "team": 1,
+      "user_identity": 1
+    },
+    "objectMigrations": 1
+  },
+  "hashes": {
+    "plan": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "sourceBackup": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  "referenceValidation": "PASSED",
+  "timeMapping": "UTC_RFC3339_MICROS",
+  "statusMapping": "PASSED",
+  "secretMigration": "REFERENCE_ONLY",
+  "failures": [],
+  "warnings": [
+    {
+      "sourceKey": "team:team-1",
+      "classification": "DEFER",
+      "reason": "TEAM_V1_OUT_OF_SCOPE"
+    }
+  ]
+}

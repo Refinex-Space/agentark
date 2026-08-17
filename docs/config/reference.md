@@ -249,6 +249,27 @@ Runtime API 权限固定为 `runtime:execute`、`runtime:read`、`runtime:cancel
 
 连接、池化、TLS、事务和 Migration 使用 Spring Boot 所属标准属性，例如 `spring.datasource.*`、`spring.flyway.*` 和 `spring.data.redis.*`。Phase 06 已固定 MySQL/Flyway 基线；生产 TLS 信任材料与强制模式仍必须由实际部署环境显式提供，不能依赖本地 Compose 的明文内部网络设置。
 
+## Aistio 临时迁移配置
+
+`tools/migration/aistio-cutover.example.json` 不是服务运行配置，只用于已有外部 Aistio 部署的短期迁移。副本必须放在已忽略的 `.agentark/migration/`，完成观察后归档或销毁；默认 `mode=JAVA_ONLY`，不会启动或调用 Go。
+
+| 字段 | 默认/示例 | 约束 |
+|---|---|---|
+| `mode` | `JAVA_ONLY` | `SHADOW`、`JAVA_PRIMARY`、`GO_FALLBACK`、`JAVA_ONLY`；Fallback 只读且必须配置未来 24 小时内绝对 UTC 到期时间 |
+| `listenHost/listenPort` | `127.0.0.1:18081` | 临时代理只允许 Loopback 和非特权端口，不是部署单元 |
+| `endpoints` | Loopback 示例 | 非 Loopback 必须 HTTPS，禁止 UserInfo、Query、Fragment 和重定向 |
+| `tokenFiles` | 空 | 只保存未提交的 `0600` 普通文件路径；工具按请求读取，禁止内联 Token、符号链接、组/其他用户权限或超过 8 KiB |
+| `target` | 示例 UUIDv7 | 固定目标 Organization/Project；不能让来源 Owner 选择目标租户 |
+| `principalMappings` | 显式 Source User → Target Principal | 缺失即阻断；不创建本地密码账号，不把 Aistio User ID 当授权事实 |
+| `secretMappings` | 默认空 | 每个旧 Credential 必须显式映射真实 Provider/External Path/Version/Scope；不允许合成虚假 SecretRef |
+| `webhookSecretMappings` | 默认空 | Webhook Trigger 必须换用新 SecretRef；旧 `webhook_token` 永不导出 |
+| `modelMappings/mcpMappings/skillMappings/defaults` | 受控版本 ID | 必须引用目标项目已存在且可发布的不可变资产/Profile/Policy；缺失即阻断 |
+| `tenantAllowlist/capabilityAllowlist` | 显式数组 | 只控制临时灰度；`JAVA_ONLY` 忽略旧 Go Allowlist，缺目标映射时失败关闭 |
+| `routes` | 锚定正则 | 只允许白名单 GET；字段语义通过 `normalization` 显式投影，安全 Case 不能忽略权限字段 |
+| `thresholds` | Match 99.9%、5xx 0.1%、p95 1.20 | Permission 与 Secret Redaction 必须 100%；任何放宽都需要迁移审批而非临时改配置 |
+
+只读导出不包含 Environment `config_json`，因为它是无 Schema 的任意 JSON，可能携带敏感值。环境类型只作为 Profile 映射提示，最终 Profile、Secret Binding、Model/MCP/Skill 和权限版本均来自上述显式映射。真实 Export、Plan、Checkpoint、Report、Shadow Case 和 Token File 禁止提交。
+
 ## 规范
 
 - 配置由所属 `*-server` 读取；Library 不直接读取进程环境。

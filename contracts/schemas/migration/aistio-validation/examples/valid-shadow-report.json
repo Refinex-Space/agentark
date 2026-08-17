@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "0c61e7494197ded54eefdeaf9bdeb51807beb752",
+  "generatedAt": "2026-08-17T00:00:00Z",
+  "records": [
+    {
+      "caseId": "agent-1",
+      "cohort": "C3_AGENT",
+      "tenant": "019d0000-0000-7000-8000-000000000002",
+      "securityCritical": true,
+      "goStatus": 200,
+      "javaStatus": 200,
+      "goHash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "javaHash": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "statusMatch": true,
+      "bodyMatch": true,
+      "secretRedactionMatch": true,
+      "match": true,
+      "differencePointers": [],
+      "goLatencyMs": 10,
+      "javaLatencyMs": 11,
+      "comparedAt": "2026-08-17T00:00:00Z"
+    }
+  ],
+  "summary": {
+    "total": 1,
+    "matches": 1,
+    "matchRate": 1.0,
+    "errorRate": 0.0,
+    "goP95LatencyMs": 10,
+    "javaP95LatencyMs": 11,
+    "p95LatencyRatio": 1.1,
+    "securityMismatches": 0,
+    "secretRedactionMismatches": 0,
+    "thresholds": {
+      "minMatchRate": 0.999,
+      "maxErrorRate": 0.001,
+      "maxP95LatencyRatio": 1.2,
+      "securityMatchRate": 1.0,
+      "secretRedactionMatchRate": 1.0
+    },
+    "approved": true
+  }
+}

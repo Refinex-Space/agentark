@@ -96,7 +96,7 @@ agentscope-service
 | 四平面职责边界 | 保留并强化 |
 | Dataplane 的 Harness Runtime、Event、SSE、HITL、Lease 思路 | 迁移到 Runtime Plane |
 | Scheduler 不拥有推理循环 | 作为长期硬约束 |
-| Go Aistio 的产品资源与控制面能力 | 通过语言中立契约逐步迁移到 Java |
+| Go Aistio 的产品资源与控制面能力 | Phase 21 已冻结语言中立契约和迁移工具；默认部署只使用 Java |
 | `service-common` | 拆解，不保留同义 `agentark-common` |
 | JPA + PostgreSQL | 迁移阶段暂留，最终改为 MyBatis-Plus + MySQL |
 | Shared JWT Secret/长期内部 Token | 仅限开发过渡，生产改为 OIDC/JWK 与服务身份 |
@@ -118,7 +118,7 @@ agentscope-service
 
 1. 保留所迁移 Apache-2.0 源码的版权、许可证头和 NOTICE 义务；
 2. 将“机械迁移”和“架构重构”拆为不同阶段，确保问题可定位；
-3. Go `aistio` 通过契约逐步替换，不进行一次性 Big Bang 重写；
+3. Go `aistio` 只通过冻结契约、一次性数据迁移与短期只读兼容工具处理，不作为默认或长期部署单元；
 4. 先维持上游可运行基线，再逐步迁移 JDK、Spring Boot、持久层和数据库；
 5. 不允许因为上游已有模块名而固化 AgentArk 的最终领域边界；
 6. JPA → MyBatis-Plus 与 PostgreSQL → MySQL 必须分成两个可验证阶段；
@@ -3255,6 +3255,7 @@ Phase 17 建立独立 Web Foundation，Phase 18 建立真实产品主链路；�
 - [Phase 18 交互证据](../frontend/phase-18-interactions.md)：主链路、截图生成、响应式、可访问性与安全展示约束。
 - [Phase 19 执行证据](../implementation/phase-19-observability-governance.md)：OTel、Audit、Usage/Cost、Quota、Evaluation、Web 与部署事实。
 - [Phase 20 执行证据](../implementation/phase-20-security-hardening.md)：Threat Model、Vault、MCP、Skill、Sandbox、RAG 与供应链安全事实。
+- [Phase 21 执行证据](../implementation/phase-21-aistio-strangler.md)：Aistio 固定审计、Contract Freeze、迁移/Shadow 工具与 Java-only 默认事实。
 
 `agentark-web` 仍是独立 pnpm 构建，不进入 Maven Reactor，也不直接访问任何平面的数据库或 Internal API。浏览器只通过 Gateway Public API/SSE 工作，Tenant Context 只表达选择意图。Phase 19 的 `/observe` 从 Control Governance Public API 读取统一 Audit、Usage/Cost、Quota 与 Evaluation，不用前端本地状态伪造治理事实。
 
@@ -3680,6 +3681,8 @@ package rename
 
 ### 20.9 Wave G：Go Aistio 绞杀替换
 
+Phase 21 已把下图从未来方案收敛为受控迁移状态机。AgentArk 从未把 Go Aistio 纳入默认 Compose，最终仓库状态固定为 `JAVA_ONLY`；前三态只服务于已有外部 AgentScope Service 部署的短期迁移，不构成第五个后端服务。
+
 ```mermaid
 flowchart LR
     subgraph P1["A · Go Primary"]
@@ -3724,6 +3727,18 @@ flowchart LR
 - 切主；
 - 停旧写；
 - 观察后删除。
+
+最终约束：
+
+- `contracts/migration/aistio-cutover-v1.json` 冻结 Go 源码锚点、Java Internal API Hash、字段/状态/错误/分页语义和阈值；
+- `tools/migration/` 只读导出 PostgreSQL，写入只调用 Owner API，禁止 Java Runtime 读取 Go/PostgreSQL Catalog；
+- 活动 Go Session 固定 `GO_UNTIL_TERMINAL`，新 Session 只使用 Java Deployment/Snapshot；
+- 临时兼容代理只允许 GET、只绑定 Loopback，Go Fallback 最长 24 小时且 `JAVA_ONLY` 缺映射时失败关闭；
+- UserIdentity、Secret 和 Webhook 必须显式映射，不迁密码摘要、密文、旧 Token 或伪造外部 Secret 路径；
+- Team/Task、CRD、ASDP/BYO 明确 `DEFER`，Hosted Store、Go 本地认证和 Aistio UI 明确 `REJECT`；
+- 当前没有 Helm Chart；Phase 22 创建 Chart 时必须保持 Java-only，不能把 Go 作为“兼容依赖”带回生产。
+
+详细边界见 [ADR-0006](decisions/0006-aistio-cutover-scope.md)，迁移与回滚分别遵循 [Cutover Runbook](../runbooks/aistio-cutover.md) 和 [Rollback Runbook](../runbooks/aistio-rollback.md)。真实外部 Aistio 数据和流量未提供，因此仓库验收只证明工具、Fixture、Contract 和默认部署门禁，不声称完成某个生产租户的迁移。
 
 退出条件：Java Control 全量承担功能，Runtime/Scheduler Client 不变，Go 从生产删除。
 

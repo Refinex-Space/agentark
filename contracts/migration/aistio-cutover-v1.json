@@ -1,0 +1,204 @@
+{
+  "title": "Aistio 到 AgentArk Java Control 切换契约 v1",
+  "description": "冻结固定 Go API/Schema 证据、Java Internal Contract Hash、字段语义和切换阈值。",
+  "$comment": "本文件是迁移期控制证据，不新增长期产品 API，也不授权 Runtime 双读 Catalog。",
+  "schemaVersion": 1,
+  "source": {
+    "repository": "AgentScope Java",
+    "commit": "0c61e7494197ded54eefdeaf9bdeb51807beb752",
+    "root": "agentscope-service/aistio",
+    "inventory": {
+      "files": 311,
+      "goFiles": 215,
+      "goTests": 44,
+      "sqlMigrations": 18,
+      "yamlFiles": 34,
+      "productRoutes": 149,
+      "runtimeAndKubernetesRoutes": 82,
+      "productTables": 18,
+      "runtimeTables": 22
+    },
+    "anchors": [
+      {
+        "path": "agentscope-service/aistio/internal/product/server.go",
+        "sha256": "581ebb88edfbd001614a78b7ffcb14a35359c033c604ebb22731c8604fca033b"
+      },
+      {
+        "path": "agentscope-service/aistio/internal/product/migrate.go",
+        "sha256": "f596546ed2051387710e95087b1f17950c5b7f9c0f594cdbe0bb4e5623d9c075"
+      },
+      {
+        "path": "agentscope-service/aistio/internal/httpapi/server.go",
+        "sha256": "74a62ab7c7abbf4dab637e85c999dfe9050311b21cabaa55c09a64f681643a69"
+      },
+      {
+        "path": "agentscope-service/aistio/internal/httpapi/types.go",
+        "sha256": "a8caf918a38d973dfadb82c578c81fe8fb0ea88a0ceac9796970538b7237d145"
+      },
+      {
+        "path": "agentscope-service/aistio/internal/asdp/asdp.proto",
+        "sha256": "98740efb2eadeb20a4d03b69373997ed027c5d17f96c266d4c259bcd821aabe3"
+      }
+    ]
+  },
+  "javaInternalContracts": [
+    {
+      "owner": "CONTROL",
+      "path": "contracts/openapi/internal-control-v1.yaml",
+      "sha256": "09e626016220d19dea803577590be15770964d3349ebbf99bcb797d47c6a3f5e"
+    },
+    {
+      "owner": "RUNTIME",
+      "path": "contracts/openapi/internal-runtime-v1.yaml",
+      "sha256": "c8721c26e07004a3b96cc3aa52b7fe0ccbb414791dfa909ad6d30393b75c78e8"
+    },
+    {
+      "owner": "SCHEDULER",
+      "path": "contracts/openapi/internal-scheduler-v1.yaml",
+      "sha256": "1d9af00e3c56573c98bdbe736a7ce384d8950a12197a60748bf25408e45c7062"
+    }
+  ],
+  "goApiFamilies": [
+    {
+      "family": "auth-user-admin",
+      "examples": ["/api/auth/login", "/api/auth/me", "/api/admin/users"],
+      "decision": "REJECT_LOCAL_AUTH_ADAPT_EXTERNAL_IDENTITY",
+      "javaOwner": "CONTROL_IAM"
+    },
+    {
+      "family": "agent-version-workspace-file",
+      "examples": ["/api/agents", "/api/agents/:id/versions", "/api/workspaces", "/api/files"],
+      "decision": "MIGRATE",
+      "javaOwner": "CONTROL_CATALOG_RELEASE_OBJECT_STORE"
+    },
+    {
+      "family": "environment-memory-vault",
+      "examples": ["/api/environments", "/api/memory-stores", "/api/vaults"],
+      "decision": "ADAPT",
+      "javaOwner": "CONTROL_PROFILE_SECRET"
+    },
+    {
+      "family": "deployment-channel-trigger",
+      "examples": ["/api/deployments", "/api/channels", "/api/internal/deployments/:id/fire"],
+      "decision": "SPLIT_OWNER",
+      "javaOwner": "CONTROL_DEPLOYMENT_AND_SCHEDULER_JOB"
+    },
+    {
+      "family": "session-command-event",
+      "examples": ["/api/sessions", "/api/v1/sessions/:id/events", "/api/v1/sessions/:id/terminate"],
+      "decision": "ADAPT",
+      "javaOwner": "RUNTIME"
+    },
+    {
+      "family": "dataplane-registration-hosted-store",
+      "examples": ["/api/v1/dataplanes/register", "/api/v1/dp/kv/item", "/api/v1/dp/locks/acquire"],
+      "decision": "REJECT_HOSTED_STORE_ADAPT_REGISTRATION",
+      "javaOwner": "RUNTIME_PORTS"
+    },
+    {
+      "family": "team-task-message",
+      "examples": ["/api/v1/teams", "/api/v1/teams/:team/tasks", "/api/v1/teams/:team/messages"],
+      "decision": "DEFER",
+      "javaOwner": "FUTURE_COLLABORATION_ADAPTER"
+    },
+    {
+      "family": "crd-grpc-kubernetes-byo",
+      "examples": ["Agent CRD", "AgentTeam CRD", "ASDP Connect", "BYOWorkloadReconciler"],
+      "decision": "DEFER_CRD_REJECT_AS_PLATFORM_AUTHORITY",
+      "javaOwner": "PHASE_22_DEPLOYMENT_ADAPTER"
+    },
+    {
+      "family": "console-static-assets",
+      "examples": ["aistio/ui", "SPA fallback"],
+      "decision": "REJECT",
+      "javaOwner": "AGENTARK_WEB"
+    }
+  ],
+  "fieldMappings": [
+    {
+      "go": "cp.users(username, roles_csv)",
+      "java": "user_identity + membership + role_binding",
+      "rule": "只映射外部 issuer/subject；不迁密码摘要或本地登录"
+    },
+    {
+      "go": "cp.environments(environment_id, owner_id, type, config_json)",
+      "java": "environment(id, organization_id, project_id, environment_key)",
+      "rule": "Owner 通过受控 ownerMappings 解析 Project，type/config 转 Profile 引用"
+    },
+    {
+      "go": "cp.agents + cp.agent_versions.snapshot_json",
+      "java": "agent + agent_draft + agent_revision + agent_revision_snapshot",
+      "rule": "逐版本映射 Draft 并 Publish；Checkpoint 保留 sourceVersion/sourceSnapshotHash/targetSnapshotHash"
+    },
+    {
+      "go": "cp.vaults + cp.vault_credentials",
+      "java": "secret_metadata + secret_binding",
+      "rule": "只迁 Provider 引用；ciphertext、Master Key 和值禁止进入导出"
+    },
+    {
+      "go": "cp.deployments(trigger_type, cron_expression, webhook_token)",
+      "java": "deployment + scheduler trigger/job",
+      "rule": "Revision 指针归 Control；Cron/Webhook 执行归 Scheduler；webhook_token 不迁"
+    },
+    {
+      "go": "cp.sessions + rt.sessions/session_events/session_turns",
+      "java": "runtime_session/runtime_turn/runtime_run/runtime_event",
+      "rule": "活动 Session 固定 Go Owner 排空；终态历史只读归档，不伪造成新 Run"
+    },
+    {
+      "go": "rt.data_planes",
+      "java": "runtime_instance",
+      "rule": "不复制旧心跳；Java Runtime 以新 Service Identity 重新注册"
+    },
+    {
+      "go": "rt.dp_kv/dp_locks/dp_snapshots/dp_bus_entries/dp_async_tools",
+      "java": "AgentState/Checkpoint/Lease/WorkQueue/ObjectStore Ports",
+      "rule": "拒绝表翻译和双写；按权威 Owner 迁移状态或归档"
+    }
+  ],
+  "statusMappings": {
+    "session.active|idle|running|busy|waiting|paused": "GO_UNTIL_TERMINAL",
+    "session.completed|failed|cancelled|terminated|archived": "ARCHIVE_ONLY",
+    "deployment.enabled": "ENABLED",
+    "deployment.disabled": "DISABLED",
+    "agent.archived_at!=null": "ARCHIVED",
+    "agent.archived_at==null": "ACTIVE"
+  },
+  "errorMappings": {
+    "400": "RFC9457 validation ProblemDetail",
+    "401": "unauthenticated ProblemDetail",
+    "403": "scope-aware authorization ProblemDetail",
+    "404": "tenant-safe not-found ProblemDetail",
+    "409 busy|conflict": "stable conflict ProblemDetail",
+    "501 unsupported": "capability mismatch ProblemDetail",
+    "503 unreachable": "dependency unavailable ProblemDetail"
+  },
+  "paginationMappings": {
+    "go": "metadata.continue 或 limit/before",
+    "java": "opaque cursor + limit + hasMore",
+    "comparison": "归一化为稳定 item key/id 排序后比较，不比较游标原文"
+  },
+  "consumerContract": {
+    "runtimeSnapshot": "/internal/v1/agent-revisions/{revisionId}/snapshot",
+    "runtimeDeployment": "/internal/v1/deployments/{deploymentId}",
+    "schedulerRuntimeTurn": "/internal/v1/runtime/turns",
+    "controlKnowledge": "/internal/v1/knowledge/ingestions/{requestId}/plan",
+    "rule": "Runtime/Scheduler/Gateway 不因 Go→Java 迁移改写 v1 路径或 DTO"
+  },
+  "cutoverThresholds": {
+    "minCanonicalReadMatchRate": 0.999,
+    "maxFiveXxErrorRate": 0.001,
+    "maxP95LatencyRatio": 1.2,
+    "permissionDecisionMatchRate": 1.0,
+    "secretRedactionMatchRate": 1.0,
+    "countHashReferenceValidation": 1.0
+  },
+  "defaultCutover": {
+    "mode": "JAVA_ONLY",
+    "goWrites": "DISABLED",
+    "goFallback": "DISABLED",
+    "runtimeCatalogReads": "JAVA_CONTROL_INTERNAL_V1_ONLY",
+    "schedulerClient": "UNCHANGED",
+    "gatewayDefaultRoutes": "JAVA_ONLY"
+  }
+}

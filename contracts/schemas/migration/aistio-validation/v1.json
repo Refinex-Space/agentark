@@ -1,0 +1,179 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agentark.refinex.space/contracts/migration/aistio-validation/v1.json",
+  "title": "Aistio 迁移与 Shadow 校验报告 v1",
+  "description": "定义不包含业务正文、Secret 或响应值的迁移/影子比对证据格式。",
+  "oneOf": [
+    { "$ref": "#/$defs/migrationReport" },
+    { "$ref": "#/$defs/shadowReport" }
+  ],
+  "$defs": {
+    "checksum": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$",
+      "description": "规范 SHA-256。"
+    },
+    "countMap": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "description": "按资源类型统计的非负数量。"
+    },
+    "failure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["operationId", "sourceKey", "code"],
+      "properties": {
+        "operationId": { "type": "string", "minLength": 1 },
+        "sourceKey": { "type": "string", "minLength": 1 },
+        "code": { "type": "string", "minLength": 1 }
+      },
+      "description": "不含业务值的单资源错误。"
+    },
+    "migrationReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "sourceCommit",
+        "planHash",
+        "generatedAt",
+        "dryRun",
+        "counts",
+        "hashes",
+        "referenceValidation",
+        "timeMapping",
+        "statusMapping",
+        "secretMigration",
+        "failures",
+        "warnings"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "sourceCommit": { "const": "0c61e7494197ded54eefdeaf9bdeb51807beb752" },
+        "planHash": { "$ref": "#/$defs/checksum" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "dryRun": { "type": "boolean" },
+        "counts": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "sourceResources",
+            "sourceByResourceType",
+            "operations",
+            "succeeded",
+            "failed",
+            "operationsByResourceType",
+            "objectMigrations"
+          ],
+          "properties": {
+            "sourceResources": { "type": "integer", "minimum": 0 },
+            "sourceByResourceType": { "$ref": "#/$defs/countMap" },
+            "operations": { "type": "integer", "minimum": 0 },
+            "succeeded": { "type": "integer", "minimum": 0 },
+            "failed": { "type": "integer", "minimum": 0 },
+            "operationsByResourceType": { "$ref": "#/$defs/countMap" },
+            "objectMigrations": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "hashes": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["plan", "sourceBackup"],
+          "properties": {
+            "plan": { "$ref": "#/$defs/checksum" },
+            "sourceBackup": { "$ref": "#/$defs/checksum" }
+          }
+        },
+        "referenceValidation": { "enum": ["PASSED", "FAILED"] },
+        "timeMapping": { "const": "UTC_RFC3339_MICROS" },
+        "statusMapping": { "enum": ["PASSED", "FAILED"] },
+        "secretMigration": { "const": "REFERENCE_ONLY" },
+        "failures": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/failure" }
+        },
+        "warnings": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    },
+    "shadowRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "caseId",
+        "cohort",
+        "tenant",
+        "securityCritical",
+        "goStatus",
+        "javaStatus",
+        "goHash",
+        "javaHash",
+        "statusMatch",
+        "bodyMatch",
+        "secretRedactionMatch",
+        "match",
+        "differencePointers",
+        "goLatencyMs",
+        "javaLatencyMs",
+        "comparedAt"
+      ],
+      "properties": {
+        "caseId": { "type": "string", "minLength": 1 },
+        "cohort": { "type": "string", "minLength": 1 },
+        "tenant": { "type": "string" },
+        "securityCritical": { "type": "boolean" },
+        "goStatus": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "javaStatus": { "type": "integer", "minimum": 100, "maximum": 599 },
+        "goHash": { "$ref": "#/$defs/checksum" },
+        "javaHash": { "$ref": "#/$defs/checksum" },
+        "statusMatch": { "type": "boolean" },
+        "bodyMatch": { "type": "boolean" },
+        "secretRedactionMatch": { "type": "boolean" },
+        "match": { "type": "boolean" },
+        "differencePointers": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^/" }
+        },
+        "goLatencyMs": { "type": "integer", "minimum": 0 },
+        "javaLatencyMs": { "type": "integer", "minimum": 0 },
+        "comparedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "shadowReport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "sourceCommit", "generatedAt", "records", "summary"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "sourceCommit": { "const": "0c61e7494197ded54eefdeaf9bdeb51807beb752" },
+        "generatedAt": { "type": "string", "format": "date-time" },
+        "records": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/shadowRecord" }
+        },
+        "summary": {
+          "type": "object",
+          "required": ["total", "matchRate", "errorRate", "securityMismatches", "secretRedactionMismatches", "approved"],
+          "properties": {
+            "total": { "type": "integer", "minimum": 1 },
+            "matches": { "type": "integer", "minimum": 0 },
+            "matchRate": { "type": "number", "minimum": 0, "maximum": 1 },
+            "errorRate": { "type": "number", "minimum": 0, "maximum": 1 },
+            "goP95LatencyMs": { "type": "integer", "minimum": 0 },
+            "javaP95LatencyMs": { "type": "integer", "minimum": 0 },
+            "p95LatencyRatio": { "type": "number", "minimum": 0 },
+            "securityMismatches": { "type": "integer", "minimum": 0 },
+            "secretRedactionMismatches": { "type": "integer", "minimum": 0 },
+            "thresholds": { "type": "object" },
+            "approved": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}
