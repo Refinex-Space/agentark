@@ -178,12 +178,23 @@ Control Governance 没有第二 DataSource，只访问 `agentark_control`。Audi
 |---|---|---|---|
 | `agentark.control.catalog.enabled` | `true` | Control 正常运行 | 装配 Catalog、Secret Metadata、Public API 和各自 MyBatis Adapter；不装配 Runtime 执行能力 |
 | `agentark.control.catalog.max-artifact-size` | `10MB` | Skill Artifact 上传 | 必须在 1 byte–64 MiB；同时受 ObjectStore `max-object-size` 约束 |
+| `agentark.control.catalog.skill-supply-chain-required` | `true`；`local` 为 `false` | 创建 Skill Version | 生产强制来源、Hash、Ed25519 签名、CycloneDX SBOM、扫描证明与许可证；不得在生产关闭 |
+| `agentark.control.catalog.max-skill-sbom-size` | `2MB` | 供应链门禁开启 | 1 byte–8 MiB；读取时再次校验实际长度和 SHA-256 |
+| `agentark.control.catalog.allowed-skill-licenses` | `Apache-2.0,MIT,BSD-2-Clause,BSD-3-Clause` | 供应链门禁开启 | SPDX 白名单；新增许可证前必须评审分发闭包 |
+| `agentark.control.catalog.trusted-skill-signing-keys` | 空 | 供应链门禁开启且创建 Skill Version | Key ID 到 Base64 X.509 Ed25519 公钥；由受保护部署配置提供，不提交签名私钥 |
 | `agentark.foundation.storage.enabled` | `false`；`local` 为 `true` | Skill Artifact 上传必须有 ObjectStore | 本地根目录为 `.agentark/data/objects`；生产必须提供受支持 Bean，不能依赖 Local 实现 |
 | `AGENTARK_LOCAL_OBJECT_ROOT` | `.agentark/data/objects` | `local` Storage 启用 | 已忽略的运行数据目录，不得指向仓库根、用户主目录或文件系统根 |
 | `agentark.control.secret.local-provider-enabled` / `AGENTARK_LOCAL_SECRET_PROVIDER_ENABLED` | `false` | 仅 `local` Profile 可开启 | 显式开启后才装配 Local File Resolver；生产 Profile 即使误设也不装配 |
 | `agentark.control.secret.local-root` / `AGENTARK_LOCAL_SECRET_ROOT` | `.agentark/secrets` | Local Provider 启用 | 只允许根目录内普通文件；拒绝目录穿越、符号链接和超过 64 KiB 的值 |
+| `agentark.control.secret.vault.enabled` / `AGENTARK_VAULT_ENABLED` | `false` | 非 local/test 生产集成 | 显式开启 Vault KV v2；不会回退 Local Provider |
+| `agentark.control.secret.vault.address` / `AGENTARK_VAULT_ADDRESS` | `https://vault.invalid` 模板 | Vault 启用 | 必须是绝对 HTTPS，禁止 UserInfo、Query、Fragment 和重定向 |
+| `agentark.control.secret.vault.mount` / `AGENTARK_VAULT_MOUNT` | `secret` | Vault 启用 | 小写受限 KV v2 Mount 名称 |
+| `agentark.control.secret.vault.namespace` / `AGENTARK_VAULT_NAMESPACE` | 空 | Vault Enterprise 可选 | 不含控制字符；只进入 Vault Header，不进入 Audit |
+| `agentark.control.secret.vault.token-file` / `AGENTARK_VAULT_TOKEN_FILE` | `/var/run/secrets/agentark/vault-token` | Vault 启用 | 专用绝对普通文件，拒绝符号链接；按请求读取以支持无重启轮换 |
+| `agentark.control.secret.vault.connect-timeout` | `3s` | Vault 启用 | 正数且不超过 30 秒 |
+| `agentark.control.secret.vault.read-timeout` | `5s` | Vault 启用 | 正数且不超过 30 秒；响应上限 64 KiB |
 
-生产 Vault、AWS、Azure、GCP 和 Custom Provider 当前只有枚举与 `SecretResolver` SPI。没有配置实际 Provider Bean 时不会伪造解析成功，也不存在读取 Secret 值的 Public API。
+Phase 20 提供可验证的生产 Vault KV v2 Adapter；AWS、Azure、GCP 和 Custom Provider 仍只有枚举与 `SecretResolver` SPI。没有配置实际 Provider Bean 时不会伪造解析成功，也不存在读取 Secret 值的 Public API。Secret Metadata 的 `rotate/disable/enable/revoke` 使用乐观锁并写 Audit；`REVOKED` 不可重新启用。
 
 ## Control Knowledge 配置
 
@@ -222,6 +233,11 @@ Runtime 调用 Snapshot Internal API 时必须携带受信 Service Identity，�
 | `agentark.runtime.worker-enabled` / `AGENTARK_RUNTIME_WORKER_ENABLED` | `false` | 真实 Model/Component/Secret Provider 均已装配 | 默认安全关闭；缺少生产 SPI 时显式启用会启动失败，不回退 Fake Engine |
 | `agentark.runtime.worker-poll-delay` / `AGENTARK_RUNTIME_WORKER_POLL_DELAY` | `250ms` | Worker 启用 | 每次最多领取一个持久 Work Item，排空后停止轮询 |
 | `agentark.runtime.instance-heartbeat-delay` / `AGENTARK_RUNTIME_HEARTBEAT_DELAY` | `10s` | Runtime 实例启动 | 只更新 Runtime MySQL Instance 心跳，不把 Redis 当作实例事实源 |
+| `agentark.runtime.security.mcp.allowed-remote-hosts` | 空 | 配置远程 MCP | 精确主机或 `*.example.com`；即使命中白名单仍强制 HTTPS 443、DNS 全地址公网校验和元数据阻断 |
+| `agentark.runtime.security.mcp.allowed-stdio-commands` | 空 | 配置本地 STDIO MCP | 固定命令名白名单；生产默认空，禁止从 Snapshot 直接指定任意命令 |
+| `agentark.runtime.security.mcp.connect-timeout` | `3s` | Runtime Provider 装配 | 正数且不超过 10 秒；由 Component Factory 消费 Permit 强制执行 |
+| `agentark.runtime.security.mcp.request-timeout` | `30s` | Runtime Provider 装配 | 正数且不超过 2 分钟；不允许 Tool 自行覆盖为无界请求 |
+| `agentark.runtime.security.mcp.max-response-bytes` | `1048576` | Runtime Provider 装配 | 1 KiB–16 MiB；Transport 在超限时中止并分类为 Provider 错误 |
 | `agentark.runtime.usage-governance-enabled` / `AGENTARK_RUNTIME_USAGE_GOVERNANCE_ENABLED` | `false` | Control Internal Service Identity 已配置 | 批量汇聚 Runtime 原始 Usage；关闭不删除或跳过 Runtime 权威记录 |
 | `agentark.runtime.usage-governance-delay` / `AGENTARK_RUNTIME_USAGE_GOVERNANCE_DELAY` | `5s` | Usage Worker 启用 | 正 Duration；单批最多 50 条，失败最多 8 次后保留失败状态供运维处理 |
 | `spring.data.redis.host` / `AGENTARK_REDIS_HOST` | `localhost` | 非测试 Runtime | Redis 只承载 Lease 与可丢失加速状态；全量丢失后从 MySQL/Object Storage 恢复 |

@@ -4,6 +4,7 @@
     "replyId": "reply-1",
     "blockId": "block-1",
     "delta": "hello",
-    "source": ""
+    "source": "",
+    "trustLevel": "UNTRUSTED_MODEL_OUTPUT"
   }
 }

@@ -81,7 +81,8 @@ public final class AgentScopeEventMapper {
         if (event instanceof TextBlockDeltaEvent delta) {
             return signal("agent.text.delta", Map.of(
                 "replyId", safe(delta.getReplyId()), "blockId", safe(delta.getBlockId()),
-                "delta", safe(delta.getDelta()), "source", safe(event.getSource())));
+                "delta", safe(delta.getDelta()), "source", safe(event.getSource()),
+                "trustLevel", "UNTRUSTED_MODEL_OUTPUT"));
         }
         if (event instanceof ToolCallStartEvent start) {
             return signal("tool.call.started", toolCall(
@@ -98,13 +99,15 @@ public final class AgentScopeEventMapper {
         if (event instanceof ToolResultTextDeltaEvent delta) {
             return signal("tool.result.delta", Map.of(
                 "replyId", safe(delta.getReplyId()), "toolCallId", safe(delta.getToolCallId()),
-                "toolName", safe(delta.getToolCallName()), "delta", safe(delta.getDelta())));
+                "toolName", safe(delta.getToolCallName()), "delta", safe(delta.getDelta()),
+                "trustLevel", "UNTRUSTED_TOOL_OUTPUT"));
         }
         if (event instanceof ToolResultEndEvent end) {
             return signal("tool.result.completed", Map.of(
                 "replyId", safe(end.getReplyId()), "toolCallId", safe(end.getToolCallId()),
                 "toolName", safe(end.getToolCallName()),
-                "state", end.getState() == null ? "unknown" : end.getState().name()));
+                "state", end.getState() == null ? "unknown" : end.getState().name(),
+                "trustLevel", "UNTRUSTED_TOOL_OUTPUT"));
         }
         if (event instanceof RequireUserConfirmEvent approval) {
             return signal("approval.requested", Map.of(
@@ -127,11 +130,13 @@ public final class AgentScopeEventMapper {
         if (event instanceof ExternalExecutionResultEvent external) {
             return signal("tool.external.completed", Map.of(
                 "replyId", safe(external.getReplyId()),
-                "resultCount", external.getToolResults().size()));
+                "resultCount", external.getToolResults().size(),
+                "trustLevel", "UNTRUSTED_TOOL_OUTPUT"));
         }
         if (event instanceof AgentResultEvent result) {
             String text = result.getResult() == null ? "" : safe(result.getResult().getTextContent());
-            return signal("agent.result.completed", Map.of("text", text));
+            return signal("agent.result.completed", Map.of(
+                "text", text, "trustLevel", "UNTRUSTED_MODEL_OUTPUT"));
         }
         if (event instanceof ExceedMaxItersEvent exceeded) {
             return signal("agent.run.failed", Map.of(
@@ -150,7 +155,10 @@ public final class AgentScopeEventMapper {
                 && (custom.getName().toLowerCase(java.util.Locale.ROOT).contains("rag")
                 || custom.getName().toLowerCase(java.util.Locale.ROOT).contains("retriev"))
                 ? "rag.activity.observed" : "provider.event.custom";
-            return signal(type, Map.of("name", safe(custom.getName())));
+            return signal(type, Map.of(
+                "name", safe(custom.getName()),
+                "trustLevel", "rag.activity.observed".equals(type)
+                    ? "UNTRUSTED_RETRIEVAL_CONTENT" : "UNTRUSTED_PROVIDER_EVENT"));
         }
         return signal("provider.event.unknown", Map.of(
             "upstreamType", event.getType().name(), "source", safe(event.getSource())));

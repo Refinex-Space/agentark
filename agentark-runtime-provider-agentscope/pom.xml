@@ -51,6 +51,18 @@
             <artifactId>agentscope-harness</artifactId>
         </dependency>
 
+        <!-- 提供已修复 DNS Rebinding 漏洞的 MCP 1.0 核心协议与 Transport API。 -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-core</artifactId>
+        </dependency>
+
+        <!-- AgentScope 2.0.2 仍使用 Jackson 2，显式选择 MCP 1.0 Jackson 2 绑定而非聚合包的 Jackson 3 默认值。 -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-json-jackson2</artifactId>
+        </dependency>
+
         <!-- 提供 Provider 编译、事件映射、缓存与并发隔离测试基础。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>

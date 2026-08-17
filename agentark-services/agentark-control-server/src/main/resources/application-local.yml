@@ -63,6 +63,8 @@ agentark:
       enabled: true
       # 单次 Skill Artifact 上传上限，避免内存和磁盘被无界请求占用。
       max-artifact-size: 10MB
+      # 本地 E2E 可使用未签名测试制品；生产配置默认强制签名、SBOM 和扫描证明。
+      skill-supply-chain-required: false
     # Knowledge 元数据和原始文档本地能力配置。
     knowledge:
       # 本地启用 Knowledge 元数据 API；摄取请求只记录描述，不执行向量化。

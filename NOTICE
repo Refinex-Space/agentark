@@ -6,3 +6,6 @@ This product is licensed under the Apache License, Version 2.0.
 Third-party dependency attribution is generated from the resolved build graph during the Maven
 verify lifecycle. Distribution artifacts must include the applicable license and notice material
 identified by that report and the generated CycloneDX software bill of materials.
+
+The repository-level attribution process and upstream reference boundary are documented in
+THIRD_PARTY_NOTICES.md. DeepSeek brand assets and plugin runtime are not distributed by AgentArk.

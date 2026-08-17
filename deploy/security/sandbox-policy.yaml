@@ -1,0 +1,218 @@
+# Sandbox 独立命名空间，和四个 AgentArk 服务的信任区分离。
+apiVersion: v1
+# 创建命名空间资源。
+kind: Namespace
+# 命名空间元数据。
+metadata:
+  # Sandbox 工作负载专用名称。
+  name: agentark-sandbox
+  # 启用 Kubernetes Pod Security Admission restricted 基线。
+  labels:
+    # 强制拒绝不满足 restricted 策略的 Pod。
+    pod-security.kubernetes.io/enforce: restricted
+    # 固定策略版本，升级 Kubernetes 时显式复核。
+    pod-security.kubernetes.io/enforce-version: latest
+    # 对潜在违规生成审计事件。
+    pod-security.kubernetes.io/audit: restricted
+    # 对潜在违规生成用户警告。
+    pod-security.kubernetes.io/warn: restricted
+---
+# 默认拒绝 Sandbox 所有入站和出站流量；授权出网必须新增受审查的窄化策略。
+apiVersion: networking.k8s.io/v1
+# 网络策略资源。
+kind: NetworkPolicy
+# 策略元数据。
+metadata:
+  # 稳定策略名称。
+  name: default-deny-all
+  # 只作用于 Sandbox 命名空间。
+  namespace: agentark-sandbox
+# 网络策略规则。
+spec:
+  # 空选择器覆盖命名空间内全部 Pod。
+  podSelector: {}
+  # 同时拒绝入站和出站。
+  policyTypes:
+    # 入站默认拒绝。
+    - Ingress
+    # 出站默认拒绝，包括 DNS 和云元数据服务。
+    - Egress
+---
+# 限制整个 Sandbox 信任区的聚合资源，防止成本耗尽。
+apiVersion: v1
+# 命名空间资源配额。
+kind: ResourceQuota
+# 配额元数据。
+metadata:
+  # 稳定配额名称。
+  name: sandbox-quota
+  # 只作用于 Sandbox 命名空间。
+  namespace: agentark-sandbox
+# 配额规则。
+spec:
+  # 硬限制值。
+  hard:
+    # 同时运行的 Pod 最多 50 个。
+    pods: "50"
+    # 总 CPU 请求最多 20 Core。
+    requests.cpu: "20"
+    # 总内存请求最多 40 GiB。
+    requests.memory: 40Gi
+    # 总 CPU Limit 最多 40 Core。
+    limits.cpu: "40"
+    # 总内存 Limit 最多 80 GiB。
+    limits.memory: 80Gi
+    # 临时磁盘请求最多 100 GiB。
+    requests.ephemeral-storage: 100Gi
+    # 临时磁盘 Limit 最多 200 GiB。
+    limits.ephemeral-storage: 200Gi
+---
+# 为遗漏资源字段的 Sandbox Pod 提供有界默认值和上限。
+apiVersion: v1
+# 命名空间默认限制。
+kind: LimitRange
+# LimitRange 元数据。
+metadata:
+  # 稳定限制名称。
+  name: sandbox-container-limits
+  # 只作用于 Sandbox 命名空间。
+  namespace: agentark-sandbox
+# 限制规则。
+spec:
+  # 容器限制列表。
+  limits:
+    # 对每个容器生效。
+    - type: Container
+      # 未声明请求时使用的最小容量。
+      defaultRequest:
+        # 默认请求 250 millicore。
+        cpu: 250m
+        # 默认请求 256 MiB 内存。
+        memory: 256Mi
+        # 默认请求 512 MiB 临时磁盘。
+        ephemeral-storage: 512Mi
+      # 未声明限制时使用的上限。
+      default:
+        # 默认限制 1 Core。
+        cpu: "1"
+        # 默认限制 512 MiB 内存。
+        memory: 512Mi
+        # 默认限制 1 GiB 临时磁盘。
+        ephemeral-storage: 1Gi
+      # 单容器最大值。
+      max:
+        # 单容器最多 8 Core。
+        cpu: "8"
+        # 单容器最多 16 GiB 内存。
+        memory: 16Gi
+        # 单容器最多 100 GiB 临时磁盘。
+        ephemeral-storage: 100Gi
+---
+# 仅用于验证安全字段的暂停 Job 模板；生产 Adapter 必须按 Snapshot 生成独立 Job。
+apiVersion: batch/v1
+# 一次性 Sandbox Job。
+kind: Job
+# 模板元数据。
+metadata:
+  # 不允许直接执行的基线名称。
+  name: sandbox-security-baseline
+  # 只存在于独立 Sandbox 命名空间。
+  namespace: agentark-sandbox
+# Job 运行规则。
+spec:
+  # 基线模板保持暂停，避免部署清单触发任意代码。
+  suspend: true
+  # 失败后不自动重试未知副作用。
+  backoffLimit: 0
+  # 最长执行 300 秒。
+  activeDeadlineSeconds: 300
+  # 完成后 60 秒自动清理。
+  ttlSecondsAfterFinished: 60
+  # Pod 模板。
+  template:
+    # Pod 标签。
+    metadata:
+      # 供默认拒绝和审计策略识别工作负载。
+      labels:
+        # 固定 AgentArk Sandbox 组件标签。
+        app.kubernetes.io/component: sandbox
+    # Pod 安全规则。
+    spec:
+      # 不挂载 ServiceAccount Token，避免访问 Kubernetes API。
+      automountServiceAccountToken: false
+      # 不允许失败容器自动重启。
+      restartPolicy: Never
+      # Pod 级安全上下文。
+      securityContext:
+        # 强制使用非 Root 用户。
+        runAsNonRoot: true
+        # 固定非特权 UID。
+        runAsUser: 65532
+        # 固定非特权 GID。
+        runAsGroup: 65532
+        # 工作目录文件的非特权组。
+        fsGroup: 65532
+        # 使用 RuntimeDefault Seccomp。
+        seccompProfile:
+          # 禁止 Unconfined。
+          type: RuntimeDefault
+      # Sandbox 主容器。
+      containers:
+        # 单一受限执行容器。
+        - name: sandbox
+          # 只允许内容寻址镜像；部署前由受信流水线替换为真实已签名摘要。
+          image: registry.invalid/agentark/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+          # 摘要已经固定，避免每次拉取可变标签。
+          imagePullPolicy: IfNotPresent
+          # 基线命令不执行用户输入。
+          command:
+            # 固定无副作用命令。
+            - /bin/true
+          # 容器级安全上下文。
+          securityContext:
+            # 禁止提权和 setuid。
+            allowPrivilegeEscalation: false
+            # 明确禁止 Privileged。
+            privileged: false
+            # 根文件系统只读。
+            readOnlyRootFilesystem: true
+            # 再次强制非 Root。
+            runAsNonRoot: true
+            # 删除全部 Linux Capability。
+            capabilities:
+              # 不保留默认 Capability。
+              drop:
+                # 删除全部 Capability。
+                - ALL
+          # 容器资源上下限。
+          resources:
+            # 调度请求。
+            requests:
+              # 请求 250 millicore。
+              cpu: 250m
+              # 请求 256 MiB 内存。
+              memory: 256Mi
+              # 请求 512 MiB 临时磁盘。
+              ephemeral-storage: 512Mi
+            # 强制限制。
+            limits:
+              # 最多使用 1 Core。
+              cpu: "1"
+              # 最多使用 512 MiB 内存。
+              memory: 512Mi
+              # 最多使用 1 GiB 临时磁盘。
+              ephemeral-storage: 1Gi
+          # 只挂载当前 Session 的临时工作区。
+          volumeMounts:
+            # 可写空间仅限 emptyDir。
+            - name: workspace
+              # 固定工作目录。
+              mountPath: /workspace
+      # Pod 临时卷。
+      volumes:
+        # Session 独享工作区。
+        - name: workspace
+          # 随 Pod 删除的有界临时卷。
+          emptyDir:
+            # 强制 1 GiB 大小上限。
+            sizeLimit: 1Gi

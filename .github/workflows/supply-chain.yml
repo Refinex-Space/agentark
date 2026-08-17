@@ -1,0 +1,139 @@
+# 发布供应链工作流：生成 SBOM、签发 GitHub Artifact Attestation，并对内容寻址镜像执行 Keyless 签名。
+name: Supply Chain
+
+# Tag 自动生成制品证明；镜像签名必须由受控人工输入摘要触发。
+on:
+  # 版本 Tag 生成仓库 SBOM 证明。
+  push:
+    # 只匹配语义版本 Tag。
+    tags:
+      # 例如 v0.1.0。
+      - "v*"
+  # 允许发布人员输入已构建镜像摘要执行扫描和签名。
+  workflow_dispatch:
+    # 手工参数。
+    inputs:
+      # 待签名镜像必须使用完整 sha256 摘要。
+      image:
+        # UI 参数说明。
+        description: "可选：registry/repository@sha256:<64-hex>"
+        # 生成 SBOM 时可以不提供镜像。
+        required: false
+        # 固定字符串输入。
+        type: string
+
+# OIDC 和 Attestation 权限只授予本工作流。
+permissions:
+  # Checkout 和读取公开包。
+  contents: read
+  # GitHub OIDC Keyless 签名。
+  id-token: write
+  # 写入 GitHub Artifact Attestation。
+  attestations: write
+  # 拉取 GHCR 镜像所需最小权限。
+  packages: read
+
+# 同一提交只保留最新供应链任务。
+concurrency:
+  # 按 Git 引用隔离。
+  group: supply-chain-${{ github.ref }}
+  # 新任务取消过期任务。
+  cancel-in-progress: true
+
+# 供应链任务。
+jobs:
+  # 生成仓库级 CycloneDX SBOM 并签发证明。
+  attest-sbom:
+    # 对外展示任务名称。
+    name: Generate and attest SBOM
+    # 使用带 Docker 的 GitHub 托管 Ubuntu。
+    runs-on: ubuntu-latest
+    # 构建、扫描和证明上限。
+    timeout-minutes: 30
+    # 生成步骤。
+    steps:
+      # 获取当前提交；固定 Action Commit。
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # 安装 JDK 21 并恢复 Maven 缓存。
+      - name: Set up JDK 21
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          # 与 Reactor 一致的发行版。
+          distribution: temurin
+          # 固定 Java 21。
+          java-version: "21"
+          # 复用 Maven 缓存。
+          cache: maven
+      # 生成 Maven 聚合 CycloneDX 与许可证清单。
+      - name: Generate Maven evidence
+        run: ./mvnw -B -ntp -DskipTests verify
+      # 生成包含 Web 与 IaC 的仓库级 CycloneDX。
+      - name: Generate repository SBOM
+        run: ./tools/security/generate-sbom.sh target/security
+      # 保存 SBOM 供离线审查；Action 固定到 v4.6.2 Commit。
+      - name: Upload SBOM
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          # 稳定制品名称。
+          name: agentark-sbom
+          # 同时保存 Maven 与仓库级 CycloneDX。
+          path: |
+            target/bom.json
+            target/security/agentark-repository.cdx.json
+          # 任一文件缺失都使发布失败。
+          if-no-files-found: error
+          # 证明和 SBOM 保留 90 天。
+          retention-days: 90
+      # 使用 GitHub OIDC 为仓库级 CycloneDX 签发不可变 SBOM Attestation。
+      - name: Attest SBOM
+        uses: actions/attest-sbom@c604332985a26aa8cf1bdc465b92731239ec6b9e # v4.1.0
+        with:
+          # 被证明的构建制品为四个后端部署单元 JAR。
+          subject-path: agentark-services/*/target/*.jar
+          # 附加 Maven 实际解析图作为 CycloneDX Predicate。
+          sbom-path: target/bom.json
+  # 对人工指定的内容寻址镜像执行扫描、Keyless 签名和构建来源证明。
+  sign-image:
+    # 只有手工输入镜像摘要时执行，Tag 不会猜测镜像名称。
+    if: github.event_name == 'workflow_dispatch' && inputs.image != ''
+    # 对外展示任务名称。
+    name: Scan, sign, and attest image
+    # 使用 GitHub 托管 Ubuntu。
+    runs-on: ubuntu-latest
+    # 镜像拉取、扫描和签名上限。
+    timeout-minutes: 20
+    # 镜像引用只通过环境变量传递，避免 Shell 插值执行。
+    env:
+      # 用户输入仍须先由 scan-image.sh 的摘要正则校验。
+      TARGET_IMAGE: ${{ inputs.image }}
+    # 签名步骤。
+    steps:
+      # 获取安全脚本；固定 Action Commit。
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # 使用固定摘要的 Trivy 容器阻断镜像漏洞和 Secret。
+      - name: Scan image
+        run: ./tools/security/scan-image.sh "${TARGET_IMAGE}"
+      # 安装固定版本 Cosign；Action 固定到 v4.1.2 Commit。
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@6f9f17788090df1f26f669e9d70d6ae9567deba6 # v4.1.2
+      # 使用 GitHub OIDC Keyless 身份签名内容寻址镜像。
+      - name: Sign image
+        run: cosign sign --yes "${TARGET_IMAGE}"
+      # 在已通过摘要校验后拆分名称和摘要，供 Provenance Action 使用。
+      - name: Resolve image subject
+        # 后续步骤通过稳定 ID 读取输出。
+        id: image_subject
+        # 参数展开只处理已经由 scan-image.sh 验证的固定格式值。
+        run: |
+          echo "name=${TARGET_IMAGE%@*}" >> "${GITHUB_OUTPUT}"
+          echo "digest=${TARGET_IMAGE##*@}" >> "${GITHUB_OUTPUT}"
+      # 为相同镜像摘要签发 GitHub Build Provenance。
+      - name: Attest image provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          # 使用已验证引用中的镜像名称。
+          subject-name: ${{ steps.image_subject.outputs.name }}
+          # 使用已验证引用中保留 sha256 前缀的完整摘要。
+          subject-digest: ${{ steps.image_subject.outputs.digest }}

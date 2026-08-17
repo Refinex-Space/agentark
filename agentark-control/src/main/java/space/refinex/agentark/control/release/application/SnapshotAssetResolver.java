@@ -105,8 +105,9 @@ public final class SnapshotAssetResolver {
         SnapshotId snapshotId,
         long revisionNumber,
         Instant now) {
-        PermissionSpec permission = permission(projectId, draft.permissionPolicy());
-        ModelSpec model = model(projectId, draft.model(), draft.requiredCapabilities());
+        PermissionResolution permission = permission(projectId, draft.permissionPolicy());
+        ModelSpec model = model(
+            projectId, draft.model(), draft.requiredCapabilities(), permission);
         List<PromptSpec> prompts = draft.prompts().stream()
             .map(binding -> prompt(projectId, binding)).toList();
         List<McpSpec> mcp = mcp(projectId, draft.mcpServers(), permission);
@@ -129,21 +130,26 @@ public final class SnapshotAssetResolver {
             model, prompts, mcp, skills, knowledge,
             new MemorySpec(draft.profiles().memoryVersionId(), memory),
             new WorkspaceSpec(draft.profiles().workspaceVersionId(), workspace),
-            new SandboxSpec(draft.profiles().sandboxVersionId(), sandbox), permission,
+            new SandboxSpec(draft.profiles().sandboxVersionId(), sandbox), permission.spec(),
             new RuntimeLimits(Duration.ofSeconds(draft.limits().turnTimeoutSeconds()),
                 draft.limits().maxToolCalls(), draft.limits().maxSubAgents()));
     }
 
     /**
-     * @param projectId 项目标识 @param binding 模型绑定 @param requiredCapabilities 必需能力 @return 模型规范
+     * @param projectId 项目标识 @param binding 模型绑定 @param requiredCapabilities 必需能力
+     * @param permission 发布数据边界 @return 模型规范
      */
     private ModelSpec model(
-        ProjectId projectId, ModelBinding binding, List<String> requiredCapabilities) {
+        ProjectId projectId,
+        ModelBinding binding,
+        List<String> requiredCapabilities,
+        PermissionResolution permission) {
         CatalogAsset provider = asset(CatalogAssetKind.MODEL_PROVIDER, projectId, binding.providerId());
         CatalogVersion profile = version(
             CatalogAssetKind.MODEL_PROVIDER, projectId, binding.providerId(), binding.profileId());
         Map<String, Object> metadata = json(provider.metadataJson());
         Map<String, Object> payload = json(profile.payloadJson());
+        requireAllowedRegion(payload, permission, "model profile");
         Set<String> capabilities = strings(payload.get("capabilities"), "model capabilities");
         Map<String, String> requiredModel = Map.of(
             "tool-calling", "TOOL", "vision", "VISION",
@@ -176,16 +182,17 @@ public final class SnapshotAssetResolver {
     }
 
     /**
-     * @param projectId 项目标识 @param bindings MCP 绑定 @param permission 权限规范 @return MCP 规范
+     * @param projectId 项目标识 @param bindings MCP 绑定 @param permission 权限与数据边界 @return MCP 规范
      */
     private List<McpSpec> mcp(
-        ProjectId projectId, List<McpBinding> bindings, PermissionSpec permission) {
+        ProjectId projectId, List<McpBinding> bindings, PermissionResolution permission) {
         Set<String> globallyBoundTools = new HashSet<>();
         List<McpSpec> result = new ArrayList<>();
         for (McpBinding binding : bindings) {
             CatalogVersion version = version(
                 CatalogAssetKind.MCP_SERVER, projectId, binding.serverId(), binding.versionId());
             Map<String, Object> payload = json(version.payloadJson());
+            requireAllowedRegion(payload, permission, "MCP server");
             Map<String, McpToolDescriptorSnapshot> descriptors = new HashMap<>();
             for (McpToolDescriptorSnapshot descriptor
                 : catalogRepository.listToolDescriptors(projectId, binding.versionId())) {
@@ -202,7 +209,7 @@ public final class SnapshotAssetResolver {
                 if ("CRITICAL".equals(descriptor.riskLevel())) {
                     throw new IamConflictException("critical MCP tool cannot be published in Snapshot v1");
                 }
-                if ("HIGH".equals(descriptor.riskLevel()) && permission.rules().stream()
+                if ("HIGH".equals(descriptor.riskLevel()) && permission.spec().rules().stream()
                     .noneMatch(rule -> rule.resource().equals("tool:" + tool)
                         && rule.decision() == PermissionDecision.ASK)) {
                     throw new IamConflictException("high-risk MCP tool requires explicit ASK policy");
@@ -261,9 +268,9 @@ public final class SnapshotAssetResolver {
     }
 
     /**
-     * @param projectId 项目标识 @param binding 权限策略绑定 @return 权限规范
+     * @param projectId 项目标识 @param binding 权限策略绑定 @return 权限与数据边界
      */
-    private PermissionSpec permission(ProjectId projectId, PermissionBinding binding) {
+    private PermissionResolution permission(ProjectId projectId, PermissionBinding binding) {
         CatalogVersion version = version(
             CatalogAssetKind.PERMISSION_POLICY, projectId, binding.policyId(), binding.versionId());
         Map<String, Object> payload = json(version.payloadJson());
@@ -279,7 +286,60 @@ public final class SnapshotAssetResolver {
             rules.add(new PermissionRuleSpec(
                 string(rule, "resource"), PermissionDecision.valueOf(string(rule, "decision"))));
         }
-        return new PermissionSpec(defaultDecision, rules);
+        Object rawBoundary = payload.get("dataBoundary");
+        if (rawBoundary == null) {
+            return new PermissionResolution(
+                new PermissionSpec(defaultDecision, rules), false, Set.of());
+        }
+        Map<String, Object> boundary = map(rawBoundary, "permission data boundary");
+        boolean sensitive = "SENSITIVE".equals(string(boundary, "classification"));
+        Set<String> regions = Set.copyOf(strings(
+            boundary.get("allowedRegions"), "permission allowed regions"));
+        return new PermissionResolution(new PermissionSpec(defaultDecision, rules), sensitive, regions);
+    }
+
+    /**
+     * 敏感策略要求 Model/MCP 显式声明并命中允许区域，普通项目保持兼容。
+     *
+     * @param payload Model 或 MCP 版本载荷
+     * @param permission 权限与数据边界
+     * @param resource 诊断资源类型
+     */
+    private void requireAllowedRegion(
+        Map<String, Object> payload, PermissionResolution permission, String resource) {
+        if (!permission.sensitive()) {
+            return;
+        }
+        Object region = payload.get("dataRegion");
+        if (!(region instanceof String text) || !permission.allowedRegions().contains(text)) {
+            throw new IamConflictException(
+                resource + " data region is not allowed by sensitive project policy");
+        }
+    }
+
+    /**
+     * 表示发布期 Permission Snapshot 与敏感数据区域约束。
+     *
+     * @param spec 进入不可变 Snapshot 的 Permission 规范
+     * @param sensitive 是否启用敏感数据边界
+     * @param allowedRegions 允许的 Model/MCP 数据区域
+     * @author refinex
+     */
+    private record PermissionResolution(
+        PermissionSpec spec, boolean sensitive, Set<String> allowedRegions) {
+
+        /**
+         * 固化区域集合，避免发布校验期间被调用方修改。
+         */
+        private PermissionResolution {
+            Objects.requireNonNull(spec, "spec must not be null");
+            allowedRegions = Set.copyOf(Objects.requireNonNull(
+                allowedRegions, "allowedRegions must not be null"));
+            if (sensitive && allowedRegions.isEmpty()) {
+                throw new IllegalArgumentException(
+                    "sensitive permission policy must contain allowed regions");
+            }
+        }
     }
 
     /**

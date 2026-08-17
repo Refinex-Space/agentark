@@ -454,7 +454,7 @@ flowchart LR
 | 17 | DONE | 2026-08-17 | `docs/implementation/phase-17-web-foundation.md` | 独立 Web 工程、设计系统、生成式 API Client、可靠 SSE Client、CI 与浏览器验收已完成 |
 | 18 | DONE | 2026-08-17 | `docs/implementation/phase-18-web-features.md` | 真实 API 核心产品流程、Web-readiness Contract、四服务 E2E 与可访问性验收已完成 |
 | 19 | DONE | 2026-08-17 | `docs/implementation/phase-19-observability-governance.md` | OTel、Audit、Usage/Cost、Quota、Evaluation、Web 与观测部署已完成验收 |
-| 20 | NOT_STARTED | — | `docs/implementation/phase-20-security-hardening.md` | |
+| 20 | DONE | 2026-08-17 | `docs/implementation/phase-20-security-hardening.md` | Threat Model、Vault、MCP/Skill、Sandbox、RAG 信任与供应链门禁已验收 |
 | 21 | NOT_STARTED | — | `docs/implementation/phase-21-aistio-strangler.md` | |
 | 22 | NOT_STARTED | — | `docs/implementation/phase-22-production.md` | |
 | 23 | NOT_STARTED | — | `docs/implementation/phase-23-release-readiness.md` | |
@@ -3254,109 +3254,109 @@ $DEEPSEEK_HARNESS_ROOT/AGENTS.md
 
 #### Threat Model
 
-- [ ] 资产与数据分类；
-- [ ] Trust Boundary；
-- [ ] Actor/Abuse Case；
-- [ ] STRIDE 或等价分析；
-- [ ] 租户越权；
-- [ ] Secret 泄漏；
-- [ ] SSRF/DNS Rebinding；
-- [ ] Prompt Injection；
-- [ ] Tool Side Effect；
-- [ ] Sandbox Escape；
-- [ ] Skill/MCP 供应链；
-- [ ] Event/Log/Data Exfiltration；
-- [ ] DoS/Cost Exhaustion；
-- [ ] Webhook Replay；
-- [ ] Internal API Spoofing。
+- [x] 资产与数据分类；
+- [x] Trust Boundary；
+- [x] Actor/Abuse Case；
+- [x] STRIDE 或等价分析；
+- [x] 租户越权；
+- [x] Secret 泄漏；
+- [x] SSRF/DNS Rebinding；
+- [x] Prompt Injection；
+- [x] Tool Side Effect；
+- [x] Sandbox Escape；
+- [x] Skill/MCP 供应链；
+- [x] Event/Log/Data Exfiltration；
+- [x] DoS/Cost Exhaustion；
+- [x] Webhook Replay；
+- [x] Internal API Spoofing。
 
 #### Secret
 
-- [ ] 生产 Secret Manager/KMS Adapter 至少实现一种或提供可验证集成；
-- [ ] Local Provider 仅 Dev；
-- [ ] Rotation；
-- [ ] Disable/Revoke；
-- [ ] Access Audit；
-- [ ] Secret Scan；
-- [ ] Error/Log/Trace/Event 脱敏测试。
+- [x] 生产 Secret Manager/KMS Adapter 至少实现一种或提供可验证集成；
+- [x] Local Provider 仅 Dev；
+- [x] Rotation；
+- [x] Disable/Revoke；
+- [x] Access Audit；
+- [x] Secret Scan；
+- [x] Error/Log/Trace/Event 脱敏测试。
 
 #### MCP/Tool
 
-- [ ] Endpoint Allowlist；
-- [ ] DNS/IP/Metadata Endpoint 阻断；
-- [ ] TLS；
-- [ ] Timeout/Size；
-- [ ] Egress Policy；
-- [ ] Tool Risk/Read/Write/Idempotency；
-- [ ] Permission 层级；
-- [ ] 参数 Schema；
-- [ ] Approval 参数 Hash；
-- [ ] Tool 返回作为不可信内容；
-- [ ] 写副作用 Provider Idempotency。
+- [x] Endpoint Allowlist；
+- [x] DNS/IP/Metadata Endpoint 阻断；
+- [x] TLS；
+- [x] Timeout/Size；
+- [x] Egress Policy；
+- [x] Tool Risk/Read/Write/Idempotency；
+- [x] Permission 层级；
+- [x] 参数 Schema；
+- [x] Approval 参数 Hash；
+- [x] Tool 返回作为不可信内容；
+- [x] 写副作用 Provider Idempotency。
 
 #### Skill
 
-- [ ] 来源；
-- [ ] Artifact Hash；
-- [ ] 签名；
-- [ ] License；
-- [ ] SBOM；
-- [ ] 兼容要求；
-- [ ] 扫描；
-- [ ] 不可信 Skill 在 Sandbox；
-- [ ] 禁止未知/无 Hash Artifact。
+- [x] 来源；
+- [x] Artifact Hash；
+- [x] 签名；
+- [x] License；
+- [x] SBOM；
+- [x] 兼容要求；
+- [x] 扫描；
+- [x] 不可信 Skill 在 Sandbox；
+- [x] 禁止未知/无 Hash Artifact。
 
 #### Sandbox
 
-- [ ] 独立 Trust Zone；
-- [ ] Non-root；
-- [ ] Read-only Root FS；
-- [ ] CPU/Memory/PID/Disk/Time/Output Limit；
-- [ ] Network Default Deny；
-- [ ] 无 Docker Socket；
-- [ ] 租户 Workspace；
-- [ ] Image Digest；
-- [ ] Scan/Signature；
-- [ ] Artifact/Secret/PII 检查；
-- [ ] Cleanup；
-- [ ] Kubernetes NetworkPolicy/SecurityContext。
+- [x] 独立 Trust Zone；
+- [x] Non-root；
+- [x] Read-only Root FS；
+- [x] CPU/Memory/PID/Disk/Time/Output Limit；
+- [x] Network Default Deny；
+- [x] 无 Docker Socket；
+- [x] 租户 Workspace；
+- [x] Image Digest；
+- [x] Scan/Signature；
+- [x] Artifact/Secret/PII 检查；
+- [x] Cleanup；
+- [x] Kubernetes NetworkPolicy/SecurityContext。
 
 #### RAG/Prompt Injection
 
-- [ ] System/User/RAG/Tool 信任标签；
-- [ ] 文档指令不提升权限；
-- [ ] 检索 ACL；
-- [ ] Context Budget；
-- [ ] 数据外传 Tool Allowlist；
-- [ ] 敏感项目模型/MCP 区域策略；
-- [ ] 安全事件但不泄露规则细节。
+- [x] System/User/RAG/Tool 信任标签；
+- [x] 文档指令不提升权限；
+- [x] 检索 ACL；
+- [x] Context Budget；
+- [x] 数据外传 Tool Allowlist；
+- [x] 敏感项目模型/MCP 区域策略；
+- [x] 安全事件但不泄露规则细节。
 
 #### Supply Chain
 
-- [ ] CycloneDX SBOM；
-- [ ] License/NOTICE；
-- [ ] Dependency/Container/IaC Scan；
-- [ ] Image Signing；
-- [ ] Provenance；
-- [ ] Secret Scan；
-- [ ] 上游迁移来源清单完整；
-- [ ] DeepSeek 借鉴没有品牌/许可问题。
+- [x] CycloneDX SBOM；
+- [x] License/NOTICE；
+- [x] Dependency/Container/IaC Scan；
+- [x] Image Signing；
+- [x] Provenance；
+- [x] Secret Scan；
+- [x] 上游迁移来源清单完整；
+- [x] DeepSeek 借鉴没有品牌/许可问题。
 
 ### 安全测试
 
-- [ ] 跨租户 SQL/API/Qdrant/Object/SSE；
-- [ ] JWT Confusion/Audience/Expired/Unknown Key；
-- [ ] API Key 泄漏/吊销；
-- [ ] SSRF；
-- [ ] Webhook Replay；
-- [ ] Approval 参数替换；
-- [ ] Lease/Fencing 绕过；
-- [ ] Prompt Injection + Tool；
-- [ ] Malicious Document；
-- [ ] Zip Bomb；
-- [ ] Sandbox Egress/Privilege；
-- [ ] Secret in Log/Trace/Event；
-- [ ] Dependency/Container 漏洞门禁。
+- [x] 跨租户 SQL/API/Qdrant/Object/SSE；
+- [x] JWT Confusion/Audience/Expired/Unknown Key；
+- [x] API Key 泄漏/吊销；
+- [x] SSRF；
+- [x] Webhook Replay；
+- [x] Approval 参数替换；
+- [x] Lease/Fencing 绕过；
+- [x] Prompt Injection + Tool；
+- [x] Malicious Document；
+- [x] Zip Bomb；
+- [x] Sandbox Egress/Privilege；
+- [x] Secret in Log/Trace/Event；
+- [x] Dependency/Container 漏洞门禁。
 
 ### 产物
 
@@ -3373,17 +3373,17 @@ docs/implementation/phase-20-security-hardening.md
 
 ### 验收条件
 
-- [ ] Threat Model 有 Owner、严重度、缓解和验证；
-- [ ] Critical/High 风险无未解释开放项；
-- [ ] 生产 Profile 不能使用不安全 Dev Secret/Token；
-- [ ] MCP SSRF 测试通过；
-- [ ] Approval 参数替换失败；
-- [ ] Sandbox 默认网络拒绝和资源限制生效；
-- [ ] 无 Secret 泄漏到任何输出；
-- [ ] Skill/MCP 来源和 Hash 可审计；
-- [ ] SBOM、镜像签名/Provenance 流程可运行；
-- [ ] License/NOTICE 完整；
-- [ ] 安全 Runbook 和应急吊销流程完成。
+- [x] Threat Model 有 Owner、严重度、缓解和验证；
+- [x] Critical/High 风险无未解释开放项；
+- [x] 生产 Profile 不能使用不安全 Dev Secret/Token；
+- [x] MCP SSRF 测试通过；
+- [x] Approval 参数替换失败；
+- [x] Sandbox 默认网络拒绝和资源限制生效；
+- [x] 无 Secret 泄漏到任何输出；
+- [x] Skill/MCP 来源和 Hash 可审计；
+- [x] SBOM、镜像签名/Provenance 流程可运行；
+- [x] License/NOTICE 完整；
+- [x] 安全 Runbook 和应急吊销流程完成。
 
 ### 验收命令
 

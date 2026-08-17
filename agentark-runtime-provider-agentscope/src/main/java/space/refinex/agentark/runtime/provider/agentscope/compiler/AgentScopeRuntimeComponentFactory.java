@@ -19,6 +19,7 @@ package space.refinex.agentark.runtime.provider.agentscope.compiler;
 import io.agentscope.harness.agent.HarnessAgent;
 import space.refinex.agentark.runtime.provider.agentscope.knowledge.KnowledgeBinding;
 import space.refinex.agentark.runtime.provider.agentscope.mcp.McpBinding;
+import space.refinex.agentark.runtime.provider.agentscope.mcp.McpEndpointGuard.ConnectionPermit;
 import space.refinex.agentark.runtime.provider.agentscope.memory.MemoryBinding;
 import space.refinex.agentark.runtime.provider.agentscope.permission.PermissionBinding;
 import space.refinex.agentark.runtime.provider.agentscope.sandbox.SandboxBinding;
@@ -42,12 +43,14 @@ public interface AgentScopeRuntimeComponentFactory {
      *
      * @param builder        Harness Builder
      * @param bindings       MCP 绑定
+     * @param permits        SSRF 与 DNS 校验后的固定连接许可
      * @param secretResolver 按需 Secret 解析端口
      * @param resources      RuntimeHandle 关闭时需释放的资源
      */
     void configureMcp(
         HarnessAgent.Builder builder,
         List<McpBinding> bindings,
+        List<ConnectionPermit> permits,
         SecretResolver secretResolver,
         List<AutoCloseable> resources);
 

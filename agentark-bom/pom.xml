@@ -16,6 +16,24 @@
 
     <dependencyManagement>
         <dependencies>
+            <!-- 导入 MCP Java SDK 安全版本 BOM，覆盖 AgentScope 2.0.2 的 0.17.0 传递版本。 -->
+            <dependency>
+                <groupId>io.modelcontextprotocol.sdk</groupId>
+                <artifactId>mcp-bom</artifactId>
+                <version>${mcp-java-sdk.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!-- 导入 Netty 安全修复 BOM，必须位于 Spring Boot BOM 前取得 Maven 管理优先级。 -->
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-bom</artifactId>
+                <version>${netty.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
             <!-- 导入 Spring Boot BOM，统一管理基础框架及其生态依赖版本。 -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
@@ -48,6 +66,13 @@
                 <groupId>io.agentscope</groupId>
                 <artifactId>agentscope-core</artifactId>
                 <version>${agentscope.version}</version>
+                <exclusions>
+                    <!-- 排除 AgentScope 固定版本传递的 MCP 0.17 聚合包，由 Provider 显式选择安全的 MCP 1.0 Jackson 2 模块。 -->
+                    <exclusion>
+                        <groupId>io.modelcontextprotocol.sdk</groupId>
+                        <artifactId>mcp</artifactId>
+                    </exclusion>
+                </exclusions>
             </dependency>
 
             <!-- 统一管理 AgentScope Harness Agent 执行框架版本。 -->

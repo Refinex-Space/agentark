@@ -151,6 +151,100 @@ public class SecretApplicationService {
     }
 
     /**
+     * 在不读取 Secret 值的前提下把元数据指针轮换到新的外部版本。
+     *
+     * @param principal 已认证主体
+     * @param projectId 项目标识
+     * @param metadataId Secret 元数据标识
+     * @param externalVersion 新的外部不可变版本
+     * @param expectedVersion 预期乐观锁版本
+     * @return 轮换后的元数据
+     */
+    @Transactional
+    public SecretMetadata rotateMetadata(
+        AgentArkPrincipal principal,
+        ProjectId projectId,
+        SecretMetadataId metadataId,
+        String externalVersion,
+        long expectedVersion) {
+        Project project = authorize(principal, projectId, PermissionRegistry.SECRET_MANAGE);
+        if (externalVersion == null || externalVersion.isBlank()
+            || externalVersion.length() > 255) {
+            throw new IllegalArgumentException("externalVersion must contain 1 to 255 characters");
+        }
+        SecretMetadata current = repository.findMetadata(projectId, metadataId)
+            .filter(value -> value.status() == SecretMetadataStatus.ENABLED)
+            .orElseThrow(() -> new IamNotFoundException("secret metadata is not rotatable"));
+        if (current.externalVersion().equals(externalVersion)) {
+            throw new IamConflictException("secret external version is unchanged");
+        }
+        Instant now = Instant.now(clock);
+        if (repository.updateMetadata(
+            projectId, metadataId, SecretMetadataStatus.ENABLED.name(),
+            SecretMetadataStatus.ENABLED.name(), externalVersion, expectedVersion,
+            principal.subject(), now) != 1) {
+            throw new IamConflictException("secret rotation precondition failed");
+        }
+        auditPublisher.append(new IamAuditRecord(
+            "secret.metadata.rotate", principal.subject(), "secret-metadata",
+            metadataId.asString(), Optional.of(project.organizationId()), Optional.of(projectId),
+            "SUCCEEDED", now));
+        return repository.findMetadata(projectId, metadataId)
+            .orElseThrow(() -> new IllegalStateException("rotated secret metadata is missing"));
+    }
+
+    /**
+     * 以乐观锁启用、禁用或永久吊销 Secret 元数据，使新解析请求立即失败关闭。
+     *
+     * @param principal 已认证主体
+     * @param projectId 项目标识
+     * @param metadataId Secret 元数据标识
+     * @param targetStatus 目标状态，只能为 ENABLED、DISABLED 或 REVOKED
+     * @param expectedVersion 预期乐观锁版本
+     * @return 状态变更后的元数据
+     */
+    @Transactional
+    public SecretMetadata changeMetadataStatus(
+        AgentArkPrincipal principal,
+        ProjectId projectId,
+        SecretMetadataId metadataId,
+        SecretMetadataStatus targetStatus,
+        long expectedVersion) {
+        Project project = authorize(principal, projectId, PermissionRegistry.SECRET_MANAGE);
+        Objects.requireNonNull(targetStatus, "targetStatus must not be null");
+        if (targetStatus != SecretMetadataStatus.ENABLED
+            && targetStatus != SecretMetadataStatus.DISABLED
+            && targetStatus != SecretMetadataStatus.REVOKED) {
+            throw new IllegalArgumentException("targetStatus is not supported");
+        }
+        SecretMetadata current = repository.findMetadata(projectId, metadataId)
+            .orElseThrow(() -> new IamNotFoundException("secret metadata is not visible"));
+        if (current.status() == targetStatus) {
+            return current;
+        }
+        if (current.status() == SecretMetadataStatus.REVOKED) {
+            throw new IamConflictException("revoked secret metadata cannot be re-enabled");
+        }
+        Instant now = Instant.now(clock);
+        if (repository.updateMetadata(
+            projectId, metadataId, current.status().name(), targetStatus.name(),
+            current.externalVersion(), expectedVersion, principal.subject(), now) != 1) {
+            throw new IamConflictException("secret status precondition failed");
+        }
+        String action = switch (targetStatus) {
+            case ENABLED -> "secret.metadata.enable";
+            case DISABLED -> "secret.metadata.disable";
+            case REVOKED -> "secret.metadata.revoke";
+        };
+        auditPublisher.append(new IamAuditRecord(
+            action,
+            principal.subject(), "secret-metadata", metadataId.asString(),
+            Optional.of(project.organizationId()), Optional.of(projectId), "SUCCEEDED", now));
+        return repository.findMetadata(projectId, metadataId)
+            .orElseThrow(() -> new IllegalStateException("updated secret metadata is missing"));
+    }
+
+    /**
      * @param principal     已认证主体
      * @param projectId     项目标识
      * @param environmentId 环境标识

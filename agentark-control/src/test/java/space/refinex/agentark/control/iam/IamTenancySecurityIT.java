@@ -62,6 +62,7 @@ import space.refinex.agentark.control.catalog.domain.*;
 import space.refinex.agentark.control.iam.application.AuthorizationCacheKey;
 import space.refinex.agentark.control.iam.application.IamAccessDeniedException;
 import space.refinex.agentark.control.iam.application.IamApiKeyService;
+import space.refinex.agentark.control.iam.application.IamConflictException;
 import space.refinex.agentark.control.iam.application.IamApplicationService;
 import space.refinex.agentark.control.iam.application.IamAuthorizationService;
 import space.refinex.agentark.control.iam.application.PermissionRegistry;
@@ -107,6 +108,7 @@ import tools.jackson.databind.json.JsonMapper;
         "agentark.foundation.storage.enabled=true",
         "agentark.foundation.storage.authority=catalog-it",
         "agentark.control.catalog.enabled=true",
+        "agentark.control.catalog.skill-supply-chain-required=false",
         "spring.flyway.enabled=true",
         "spring.flyway.create-schemas=false",
         "spring.flyway.clean-disabled=true",
@@ -460,6 +462,30 @@ class IamTenancySecurityIT {
                 "sourceUri", "https://source.example.test/skills/example",
                 "license", "Apache-2.0", "compatibility", java.util.Map.of("agentark", ">=0.1")),
             CatalogVersionStatus.PUBLISHED);
+
+        SecretMetadata lifecycle = secretService.createMetadata(
+            ownerA, projectA.id(), "rotation-target", "轮换目标",
+            SecretProviderType.VAULT, "projects/rotation-target", "1", SecretScope.PROJECT);
+        lifecycle = secretService.rotateMetadata(
+            ownerA, projectA.id(), lifecycle.id(), "2", lifecycle.version());
+        assertThat(lifecycle.externalVersion()).isEqualTo("2");
+        lifecycle = secretService.changeMetadataStatus(
+            ownerA, projectA.id(), lifecycle.id(), SecretMetadataStatus.DISABLED,
+            lifecycle.version());
+        assertThat(lifecycle.status()).isEqualTo(SecretMetadataStatus.DISABLED);
+        lifecycle = secretService.changeMetadataStatus(
+            ownerA, projectA.id(), lifecycle.id(), SecretMetadataStatus.ENABLED,
+            lifecycle.version());
+        assertThat(lifecycle.status()).isEqualTo(SecretMetadataStatus.ENABLED);
+        lifecycle = secretService.changeMetadataStatus(
+            ownerA, projectA.id(), lifecycle.id(), SecretMetadataStatus.REVOKED,
+            lifecycle.version());
+        SecretMetadata revoked = lifecycle;
+        assertThatThrownBy(() -> secretService.changeMetadataStatus(
+            ownerA, projectA.id(), revoked.id(), SecretMetadataStatus.ENABLED,
+            revoked.version()))
+            .isInstanceOf(IamConflictException.class)
+            .hasMessageContaining("cannot be re-enabled");
 
         mockMvc.perform(get("/api/v1/projects/{projectId}/catalog/prompt", projectA.id().asString())
                 .with(authentication(springAuthentication(ownerB))))

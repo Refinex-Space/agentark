@@ -186,6 +186,20 @@ agentark:
     usage-governance-enabled: ${AGENTARK_RUNTIME_USAGE_GOVERNANCE_ENABLED:false}
     # Usage 汇聚 Worker 两轮扫描的固定延迟。
     usage-governance-delay: ${AGENTARK_RUNTIME_USAGE_GOVERNANCE_DELAY:5s}
+    # Runtime Provider 外部执行边界。
+    security:
+      # MCP 网络和进程白名单。
+      mcp:
+        # 远程主机白名单默认空；生产 Overlay 使用精确主机或 `*.example.com`。
+        allowed-remote-hosts: []
+        # STDIO 命令白名单默认空，禁止 Snapshot 执行任意本地命令。
+        allowed-stdio-commands: []
+        # TCP/TLS 连接最多等待三秒。
+        connect-timeout: 3s
+        # 单次 MCP 请求包含流式首包最多等待三十秒。
+        request-timeout: 30s
+        # 单次响应最多一 MiB，Transport 必须在继续读取前中止超限响应。
+        max-response-bytes: 1048576
   # Foundation Starter 配置。
   foundation:
     # JWT 安全失败默认：关闭时 Runtime API 全部拒绝，只开放健康端点。

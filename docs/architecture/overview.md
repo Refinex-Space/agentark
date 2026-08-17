@@ -2858,6 +2858,19 @@ Phase 19 按既有四平面落地，不新增 Governance 微服务：
 
 详细表、Contract、配置和验收证据见 [Phase 19 执行报告](../implementation/phase-19-observability-governance.md) 与 [Observability 运维](../guides/observability-operations.md)。
 
+### 15.9 Phase 20 安全加固边界
+
+Phase 20 不新增安全微服务，也不把安全责任集中到 Gateway：
+
+- Control 提供 Secret Metadata 轮换、禁用、不可逆吊销与 Vault KV v2 可验证集成；Local Provider 仍只允许 local Profile；
+- Catalog 在生产强制 Skill 的 Artifact Hash、Ed25519 签名、CycloneDX SBOM、扫描证明、许可证和信任根；
+- Runtime Provider 在 AgentScope Component Factory 前签发 MCP 固定地址 Permit，阻断私网、云元数据、越权 STDIO 和 DNS Rebinding；
+- Sandbox Snapshot 强制内容寻址镜像、非 Root、只读根、默认断网、无提权/Capability/Docker Socket 及六类资源上限；缺少生产 Adapter 时失败关闭；
+- RAG、Tool、MCP 与模型输出携带不可信语义，不能改变 Permission、Secret Scope 或审批条件；
+- Repository/Container 发布门禁执行 SCA、Secret、IaC、CodeQL、CycloneDX、License/NOTICE、Cosign 和 GitHub OIDC Provenance；Action/Scanner/镜像固定 Commit 或 Digest。
+
+Threat Owner、严重度、缓解和验证见 [Threat Model](../security/threat-model.md)，实现边界见 [安全架构](../security/security-architecture.md)。真实 Kubernetes、mTLS、Admission、HA/DR 和云工作负载身份仍由 Phase 22 做部署验收，不能用静态清单成功代替运行态证据。
+
 ---
 
 ## 16. 部署拓扑、扩缩容与容灾
@@ -3241,6 +3254,7 @@ Phase 17 建立独立 Web Foundation，Phase 18 建立真实产品主链路；�
 - [Phase 18 执行证据](../implementation/phase-18-web-features.md)：Web-readiness Contract、核心 Feature、真实四服务 E2E 和已知边界；
 - [Phase 18 交互证据](../frontend/phase-18-interactions.md)：主链路、截图生成、响应式、可访问性与安全展示约束。
 - [Phase 19 执行证据](../implementation/phase-19-observability-governance.md)：OTel、Audit、Usage/Cost、Quota、Evaluation、Web 与部署事实。
+- [Phase 20 执行证据](../implementation/phase-20-security-hardening.md)：Threat Model、Vault、MCP、Skill、Sandbox、RAG 与供应链安全事实。
 
 `agentark-web` 仍是独立 pnpm 构建，不进入 Maven Reactor，也不直接访问任何平面的数据库或 Internal API。浏览器只通过 Gateway Public API/SSE 工作，Tenant Context 只表达选择意图。Phase 19 的 `/observe` 从 Control Governance Public API 读取统一 Audit、Usage/Cost、Quota 与 Evaluation，不用前端本地状态伪造治理事实。
 

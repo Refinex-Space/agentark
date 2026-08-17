@@ -19,6 +19,7 @@ package space.refinex.agentark.control.secret.adapter.in.web;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.PositiveOrZero;
 
 /**
  * 集中定义 Secret Public API 请求，只接受非敏感定位和绑定信息。
@@ -59,5 +60,26 @@ public final class SecretApiModels {
     public record CreateSecretBindingRequest(
         @NotBlank String secretMetadataId,
         @NotBlank @Pattern(regexp = "[a-z][a-z0-9-]{1,62}") String bindingKey) {
+    }
+
+    /**
+     * Secret 外部版本轮换请求。
+     *
+     * @param externalVersion 新的外部不可变版本
+     * @param expectedVersion 预期乐观锁版本
+     * @author refinex
+     */
+    public record RotateSecretMetadataRequest(
+        @NotBlank @Size(max = 255) String externalVersion,
+        @PositiveOrZero long expectedVersion) {
+    }
+
+    /**
+     * Secret 生命周期状态变更请求。
+     *
+     * @param expectedVersion 预期乐观锁版本
+     * @author refinex
+     */
+    public record ChangeSecretStatusRequest(@PositiveOrZero long expectedVersion) {
     }
 }

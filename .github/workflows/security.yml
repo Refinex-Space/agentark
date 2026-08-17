@@ -1,0 +1,172 @@
+# 工作流名称用于分支保护展示安全门禁。
+name: Security
+
+# 在所有安全相关代码、配置、依赖和部署清单变化时执行。
+on:
+  # Pull Request 必须验证新增依赖和完整仓库安全状态。
+  pull_request:
+    # 限制到会改变攻击面的路径。
+    paths:
+      # Java 依赖和构建策略。
+      - "**/pom.xml"
+      # 前端依赖解析结果。
+      - "agentark-web/package.json"
+      - "agentark-web/pnpm-lock.yaml"
+      # 所有后端源码。
+      - "agentark-*/**"
+      # 前端源码和配置。
+      - "agentark-web/**"
+      # 部署与 IaC。
+      - "deploy/**"
+      # 安全扫描脚本和策略。
+      - "tools/security/**"
+      - ".trivy.yaml"
+      - "trivy-secret.yaml"
+      # 当前安全工作流。
+      - ".github/workflows/security.yml"
+  # 主分支使用同一门禁持续复核。
+  push:
+    # 只验证主分支推送。
+    branches:
+      # AgentArk 默认分支。
+      - main
+
+# 默认只允许读取仓库；需要上传安全结果的任务单独提权。
+permissions:
+  # Checkout 最小权限。
+  contents: read
+
+# 新提交取消同一引用上的过期扫描。
+concurrency:
+  # 按工作流与 Git 引用隔离。
+  group: security-${{ github.workflow }}-${{ github.ref }}
+  # 避免旧漏洞数据库任务继续占用资源。
+  cancel-in-progress: true
+
+# 安全门禁任务。
+jobs:
+  # Pull Request 新增依赖审查。
+  dependency-review:
+    # 只在 Pull Request 事件执行。
+    if: github.event_name == 'pull_request'
+    # 对外展示任务名称。
+    name: Dependency review
+    # 使用 GitHub 托管 Ubuntu。
+    runs-on: ubuntu-latest
+    # 防止远程 Advisory 异常无限阻塞。
+    timeout-minutes: 10
+    # 最小执行步骤。
+    steps:
+      # 获取当前提交；固定 Action Commit 防止标签替换。
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # 阻断新增 High/Critical 漏洞和 GPL/AGPL 类拒绝许可证。
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+        with:
+          # High 或 Critical 新增漏洞使任务失败。
+          fail-on-severity: high
+          # 明确拒绝与 AgentArk 分发边界冲突的许可证。
+          deny-licenses: GPL-2.0, GPL-3.0, AGPL-1.0, AGPL-3.0
+  # 文件系统依赖、Secret 和 IaC 扫描。
+  repository-scan:
+    # 对外展示任务名称。
+    name: SCA, secret, and IaC scan
+    # 使用带 Docker 的 GitHub 托管 Ubuntu。
+    runs-on: ubuntu-latest
+    # 漏洞数据库下载和多语言解析的上限。
+    timeout-minutes: 25
+    # 扫描步骤。
+    steps:
+      # 获取当前提交；固定 Action Commit。
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # 安装 JDK 21 并恢复 Maven 缓存，避免扫描器重复请求 Maven Central。
+      - name: Set up JDK 21
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          # 与 Reactor 一致的 Temurin 发行版。
+          distribution: temurin
+          # 固定 Java 21 LTS。
+          java-version: "21"
+          # 复用 Maven 依赖缓存。
+          cache: maven
+      # 预解析完整 Maven Reactor，扫描阶段只读本地缓存。
+      - name: Resolve Maven dependencies
+        run: ./mvnw -B -ntp -DskipTests dependency:go-offline
+      # 使用固定摘要的官方 Trivy 容器执行统一安全策略。
+      - name: Scan repository
+        run: ./tools/security/scan-repository.sh
+  # Java CodeQL 静态分析。
+  codeql-java:
+    # 对外展示任务名称。
+    name: CodeQL Java
+    # 使用 GitHub 托管 Ubuntu。
+    runs-on: ubuntu-latest
+    # CodeQL 上传结果需要最小 security-events 权限。
+    permissions:
+      # Checkout 仅读取内容。
+      contents: read
+      # 上传 SARIF 到仓库 Security 页面。
+      security-events: write
+    # 编译 Reactor 与分析的总上限。
+    timeout-minutes: 35
+    # CodeQL 步骤。
+    steps:
+      # 获取当前提交；固定 Action Commit。
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # 安装 JDK 21。
+      - name: Set up JDK 21
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          # 与生产构建一致的 Temurin。
+          distribution: temurin
+          # 固定 Java 21。
+          java-version: "21"
+          # 恢复 Maven 缓存。
+          cache: maven
+      # 初始化 Java/Kotlin CodeQL 数据库并使用手工构建模式。
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
+        with:
+          # AgentArk 当前只包含 Java，不扫描上游 Worktree。
+          languages: java-kotlin
+          # 使用仓库真实 Maven 编译命令。
+          build-mode: manual
+      # 编译全部手工维护 Java 源码供 CodeQL 捕获。
+      - name: Compile Java sources
+        run: ./mvnw -B -ntp -DskipTests package
+      # 分析并上传 SARIF。
+      - name: Analyze Java
+        uses: github/codeql-action/analyze@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
+  # TypeScript/JavaScript CodeQL 静态分析。
+  codeql-web:
+    # 对外展示任务名称。
+    name: CodeQL Web
+    # 使用 GitHub 托管 Ubuntu。
+    runs-on: ubuntu-latest
+    # CodeQL 上传结果需要最小 security-events 权限。
+    permissions:
+      # Checkout 仅读取内容。
+      contents: read
+      # 上传 SARIF。
+      security-events: write
+    # Web 分析上限。
+    timeout-minutes: 20
+    # CodeQL 步骤。
+    steps:
+      # 获取当前提交；固定 Action Commit。
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # JavaScript/TypeScript 无需编译捕获，使用 none 模式。
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6
+        with:
+          # 只分析 AgentArk Web 与 Node 工具脚本。
+          languages: javascript-typescript
+          # 解释型语言由 CodeQL 直接提取源码。
+          build-mode: none
+      # 分析并上传 SARIF。
+      - name: Analyze Web
+        uses: github/codeql-action/analyze@0d579ffd059c29b07949a3cce3983f0780820c98 # v4.32.6

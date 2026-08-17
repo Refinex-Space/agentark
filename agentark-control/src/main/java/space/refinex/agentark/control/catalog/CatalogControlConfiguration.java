@@ -29,6 +29,7 @@ import space.refinex.agentark.control.catalog.adapter.out.persistence.CatalogMap
 import space.refinex.agentark.control.catalog.adapter.out.persistence.MybatisCatalogRepository;
 import space.refinex.agentark.control.catalog.application.CatalogApplicationService;
 import space.refinex.agentark.control.catalog.application.CatalogPayloadValidator;
+import space.refinex.agentark.control.catalog.application.SkillSupplyChainVerifier;
 import space.refinex.agentark.control.catalog.application.port.CatalogRepository;
 import space.refinex.agentark.control.iam.application.IamAuditPublisher;
 import space.refinex.agentark.control.iam.application.IamAuthorizationService;
@@ -37,6 +38,11 @@ import space.refinex.agentark.control.secret.SecretProperties;
 import space.refinex.agentark.control.secret.adapter.in.web.SecretController;
 import space.refinex.agentark.control.secret.adapter.in.web.SecretProblemDetailAdvice;
 import space.refinex.agentark.control.secret.adapter.out.local.LocalFileSecretResolver;
+import space.refinex.agentark.control.secret.adapter.out.vault.AuditedSecretResolver;
+import space.refinex.agentark.control.secret.adapter.out.vault.FileVaultTokenSource;
+import space.refinex.agentark.control.secret.adapter.out.vault.VaultKvV2SecretResolver;
+import space.refinex.agentark.control.secret.adapter.out.vault.VaultSecretProperties;
+import space.refinex.agentark.control.secret.adapter.out.vault.VaultTokenSource;
 import space.refinex.agentark.control.secret.adapter.out.persistence.MybatisSecretRepository;
 import space.refinex.agentark.control.secret.adapter.out.persistence.SecretMapper;
 import space.refinex.agentark.control.secret.application.SecretApplicationService;
@@ -49,6 +55,7 @@ import tools.jackson.databind.json.JsonMapper;
 import java.io.IOException;
 import java.time.Clock;
 import java.util.Optional;
+import java.net.http.HttpClient;
 
 /**
  * 装配 AI 资产目录、Secret Metadata、MyBatis 适配器、Public API 和开发 Local Provider。
@@ -61,7 +68,8 @@ import java.util.Optional;
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-@EnableConfigurationProperties({CatalogProperties.class, SecretProperties.class})
+@EnableConfigurationProperties({
+    CatalogProperties.class, SecretProperties.class, VaultSecretProperties.class})
 @MapperScan(basePackageClasses = {CatalogMapper.class, SecretMapper.class})
 public class CatalogControlConfiguration {
 
@@ -100,6 +108,17 @@ public class CatalogControlConfiguration {
     }
 
     /**
+     * @param properties Catalog 安全配置
+     * @param jsonMapper JSON 映射器
+     * @return Skill 供应链验证器
+     */
+    @Bean
+    public SkillSupplyChainVerifier skillSupplyChainVerifier(
+        CatalogProperties properties, JsonMapper jsonMapper) {
+        return new SkillSupplyChainVerifier(properties, jsonMapper);
+    }
+
+    /**
      * @param repository           Catalog Repository
      * @param tenantRepository     IAM 租户目录
      * @param authorizationService IAM 授权服务
@@ -108,6 +127,7 @@ public class CatalogControlConfiguration {
      * @param secretRepository     SecretRef 检查端口
      * @param objectStoreProvider  可选 ObjectStore
      * @param properties           Catalog 配置
+     * @param skillSupplyChainVerifier Skill 供应链验证器
      * @param clock                UTC 时钟
      * @param jsonMapper           JSON 映射器
      * @return Catalog 应用服务
@@ -122,12 +142,13 @@ public class CatalogControlConfiguration {
         SecretRepository secretRepository,
         ObjectProvider<ObjectStore> objectStoreProvider,
         CatalogProperties properties,
+        SkillSupplyChainVerifier skillSupplyChainVerifier,
         Clock clock,
         JsonMapper jsonMapper) {
         return new CatalogApplicationService(
             repository, tenantRepository, authorizationService, auditPublisher, payloadValidator,
             secretRepository, Optional.ofNullable(objectStoreProvider.getIfAvailable()),
-            properties, clock, jsonMapper);
+            properties, skillSupplyChainVerifier, clock, jsonMapper);
     }
 
     /**
@@ -202,5 +223,53 @@ public class CatalogControlConfiguration {
         havingValue = "true")
     public SecretResolver localFileSecretResolver(SecretProperties properties) throws IOException {
         return new LocalFileSecretResolver(properties.getLocalRoot());
+    }
+
+    /**
+     * 生产 Vault 集成按请求读取工作负载短期令牌文件，支持无重启轮换。
+     *
+     * @param properties Vault 配置
+     * @return 令牌来源
+     */
+    @Bean
+    @Profile("!local & !test")
+    @ConditionalOnProperty(
+        prefix = "agentark.control.secret.vault",
+        name = "enabled",
+        havingValue = "true")
+    public VaultTokenSource vaultTokenSource(VaultSecretProperties properties) {
+        return new FileVaultTokenSource(properties.getTokenFile());
+    }
+
+    /**
+     * 装配 HTTPS Vault KV v2 解析器与 Secret Access Audit 包装器。
+     *
+     * @param properties Vault 配置
+     * @param tokenSource 短期令牌来源
+     * @param jsonMapper JSON 映射器
+     * @param auditPublisher 审计发布器
+     * @param clock UTC 时钟
+     * @return 生产 Secret 解析器
+     */
+    @Bean
+    @Profile("!local & !test")
+    @ConditionalOnProperty(
+        prefix = "agentark.control.secret.vault",
+        name = "enabled",
+        havingValue = "true")
+    public SecretResolver vaultSecretResolver(
+        VaultSecretProperties properties,
+        VaultTokenSource tokenSource,
+        JsonMapper jsonMapper,
+        IamAuditPublisher auditPublisher,
+        Clock clock) {
+        HttpClient httpClient = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NEVER)
+            .connectTimeout(properties.getConnectTimeout())
+            .build();
+        SecretResolver vault = new VaultKvV2SecretResolver(
+            httpClient, properties.getAddress(), properties.getMount(),
+            properties.getNamespace(), tokenSource, jsonMapper, properties.getReadTimeout());
+        return new AuditedSecretResolver(vault, auditPublisher, clock);
     }
 }

@@ -442,7 +442,7 @@ The migration sequence is designed to avoid changing package names, modules, JDK
 | **D — Knowledge / RAG** | ingestion, Qdrant, Knowledge Revision, retrieval, citations | ✅ Complete — safe pipeline, fixed-Revision retrieval, citations, and Qdrant isolation verified |
 | **E — Scheduler & Integrations** | cron, webhook, channels, retry/dead-letter | ✅ Complete |
 | **F — AgentArk Web** | design system, Agent builder, runtime console, governance | ✅ Complete — Phase 17 foundation and Phase 18 real product flows verified |
-| **G — Production Hardening** | Kubernetes, HA, security, DR, quotas, cost, evaluation | 🟡 In progress — Phase 19 observability/governance baseline complete; security and production deployment remain |
+| **G — Production Hardening** | Kubernetes, HA, security, DR, quotas, cost, evaluation | 🟡 In progress — Phase 19 governance and Phase 20 security hardening complete; production deployment/HA/DR remain |
 
 The roadmap describes architectural sequencing rather than release dates.
 
@@ -499,6 +499,13 @@ pnpm --dir agentark-web test:e2e
 pnpm --dir agentark-web test:e2e:real
 ```
 
+Run the pinned repository security and SBOM gates:
+
+```bash
+./tools/security/scan-repository.sh
+./tools/security/generate-sbom.sh
+```
+
 The generated Control, Runtime, and Scheduler clients are committed under `agentark-web/src/shared/api/generated/` and must be regenerated from the repository Public OpenAPI contracts; they are not hand-maintained UI domain models. See [`agentark-web/README.md`](./agentark-web/README.md) for the development and security boundaries.
 
 Start the local Core infrastructure and current service implementations:
@@ -521,7 +528,7 @@ docker compose \
 
 See [`docs/guides/observability-operations.md`](./docs/guides/observability-operations.md) before starting or deleting its local volumes.
 
-All four Server JARs expose sanitized Actuator health, build information, and Prometheus metrics. Control, Runtime, and Scheduler contain the versioned business APIs implemented through Phase 19, while local security defaults fail closed. Phase 19 adds W3C OpenTelemetry propagation, bounded OTLP export, append-only Audit, versioned Usage/Cost, concurrency-safe Quota Reservation, deterministic Evaluation/Release Gates, and the Web governance view. Runtime execution and Scheduler Worker remain disabled until the required production Model/Component/Secret, ingestion, outbound endpoint, and channel Provider beans are supplied. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. The separate `deploy/observability/` stack is development-only. There is still no Helm chart, configured production identity provider, static production deployment, real external Model/Provider acceptance, or completed security/production hardening. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
+All four Server JARs expose sanitized Actuator health, build information, and Prometheus metrics. Control, Runtime, and Scheduler contain the versioned business APIs implemented through Phase 20, while local security defaults fail closed. Phase 19 adds W3C OpenTelemetry propagation, bounded OTLP export, append-only Audit, versioned Usage/Cost, concurrency-safe Quota Reservation, deterministic Evaluation/Release Gates, and the Web governance view. Phase 20 adds the threat model, Vault Secret lifecycle, MCP SSRF/DNS Rebinding guard, signed Skill/SBOM gate, restricted Sandbox contract, untrusted RAG/Tool/Model output labels, and pinned security/supply-chain workflows. Runtime execution and Scheduler Worker remain disabled until the required production Model/Component/Secret, ingestion, outbound endpoint, channel and Sandbox Provider beans are supplied. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. The separate `deploy/observability/` stack is development-only. There is still no Helm chart, configured production identity provider, production Kubernetes acceptance, real external Model/Provider acceptance, HA or DR validation. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
 
 ### Engineering Rules
 

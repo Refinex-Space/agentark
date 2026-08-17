@@ -37,6 +37,7 @@ import java.time.Clock;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -53,6 +54,7 @@ import space.refinex.agentark.runtime.provider.agentscope.compiler.*;
 import space.refinex.agentark.runtime.provider.agentscope.event.AgentScopeEventMapper;
 import space.refinex.agentark.runtime.provider.agentscope.knowledge.KnowledgeBinding;
 import space.refinex.agentark.runtime.provider.agentscope.mcp.McpBinding;
+import space.refinex.agentark.runtime.provider.agentscope.mcp.McpEndpointGuard;
 import space.refinex.agentark.runtime.provider.agentscope.memory.MemoryBinding;
 import space.refinex.agentark.runtime.provider.agentscope.permission.PermissionBinding;
 import space.refinex.agentark.runtime.provider.agentscope.sandbox.SandboxBinding;
@@ -118,6 +120,7 @@ class AgentScopeExecutionEngineTest {
             stateStore(),
             checkpointStore,
             new PromptMapper(),
+            new McpEndpointGuard(Set.of(), Set.of()),
             Clock.fixed(ProviderTestFixtures.NOW, ZoneOffset.UTC));
         return new AgentScopeExecutionEngine(
             materializer,
@@ -229,9 +232,11 @@ class AgentScopeExecutionEngineTest {
         public void configureMcp(
             HarnessAgent.Builder builder,
             List<McpBinding> bindings,
+            List<McpEndpointGuard.ConnectionPermit> permits,
             space.refinex.agentark.runtime.provider.agentscope.secret.SecretResolver resolver,
             List<AutoCloseable> resources) {
             assertThat(bindings).isEmpty();
+            assertThat(permits).isEmpty();
         }
 
         /** 验证 Golden Snapshot 未配置 Skill。 */
@@ -277,7 +282,10 @@ class AgentScopeExecutionEngineTest {
             HarnessAgent.Builder builder,
             SandboxBinding binding,
             List<AutoCloseable> resources) {
-            assertThat(binding.configuration()).containsEntry("network", "deny");
+            assertThat(binding.configuration())
+                .containsEntry("networkDefaultDeny", true)
+                .containsEntry("runAsNonRoot", true)
+                .containsEntry("readOnlyRootFilesystem", true);
         }
 
         /** 测试不注册 Tool，因此 DENY 默认策略无可执行对象。 */

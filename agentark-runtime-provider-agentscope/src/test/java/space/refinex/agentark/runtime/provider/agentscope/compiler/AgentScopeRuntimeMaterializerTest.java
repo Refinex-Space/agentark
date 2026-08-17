@@ -23,6 +23,7 @@ import static org.mockito.Mockito.mock;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Clock;
 import java.time.ZoneOffset;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import space.refinex.agentark.kernel.id.ProjectId;
 import space.refinex.agentark.runtime.domain.RuntimeModels.Session;
@@ -33,6 +34,7 @@ import space.refinex.agentark.runtime.provider.agentscope.RuntimeProviderDescrip
 import space.refinex.agentark.runtime.provider.agentscope.error.AgentScopeProviderException;
 import space.refinex.agentark.runtime.provider.agentscope.error.ProviderErrorCode;
 import space.refinex.agentark.runtime.provider.agentscope.prompt.PromptMapper;
+import space.refinex.agentark.runtime.provider.agentscope.mcp.McpEndpointGuard;
 
 /**
  * 验证 RuntimeHandle 物化阶段按需解析 Secret 且缺失时不会创建 AgentScope 组件。
@@ -91,6 +93,7 @@ class AgentScopeRuntimeMaterializerTest {
             mock(AgentStateStore.class),
             mock(CheckpointStore.class),
             new PromptMapper(),
+            new McpEndpointGuard(Set.of(), Set.of()),
             Clock.fixed(ProviderTestFixtures.NOW, ZoneOffset.UTC));
     }
 }

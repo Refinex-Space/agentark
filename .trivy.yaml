@@ -1,0 +1,50 @@
+# 任一 High 或 Critical 漏洞、Secret 或 IaC 错误都使门禁失败。
+exit-code: 1
+# 只阻断 High 和 Critical，Low/Medium 保留在报告中但不作为收官噪声。
+severity:
+  # 高危问题必须修复或形成带到期日的风险接受记录。
+  - HIGH
+  # 严重问题不得进入主分支。
+  - CRITICAL
+# 文件系统扫描范围。
+scan:
+  # 同时检查依赖漏洞、Secret 和 IaC 配置。
+  scanners:
+    # Java、Node 与容器清单依赖漏洞。
+    - vuln
+    # 源码、配置与历史输出中的 Secret 特征。
+    - secret
+    # Docker Compose、Kubernetes 与 GitHub Actions 配置错误。
+    - misconfig
+  # 排除不属于仓库事实的缓存、构建与第三方目录。
+  skip-dirs:
+    # 固定上游只读 Worktree，由上游自己的安全流程负责。
+    - .agentark/upstreams
+    # Maven 构建输出。
+    - target
+    # 所有模块 Maven 构建输出。
+    - "**/target"
+    # pnpm 安装目录。
+    - agentark-web/node_modules
+    # Vite 生产输出。
+    - agentark-web/dist
+    # Playwright 浏览器报告。
+    - agentark-web/playwright-report
+    # Playwright 临时结果。
+    - agentark-web/test-results
+  # 排除机器生成的锁文件 Secret 误报，依赖漏洞仍由包解析器读取锁文件。
+  skip-files:
+    # pnpm 锁文件只包含完整性摘要和公开 Registry URL。
+    - agentark-web/pnpm-lock.yaml
+# 漏洞判断配置。
+vulnerability:
+  # 已知高危问题即使尚无修复也必须显式解释，不静默忽略。
+  ignore-unfixed: false
+# Secret 扫描配置。
+secret:
+  # 启用内置规则。
+  config: trivy-secret.yaml
+# IaC 配置扫描。
+misconfiguration:
+  # 只报告失败项，避免成功项淹没安全证据。
+  include-non-failures: false

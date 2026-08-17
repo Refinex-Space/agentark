@@ -124,3 +124,11 @@ Phase 17 没有复制 AgentScope Service Frontend 或 DeepSeek Harness 的源码
 2026-08-17 对 `agentark-web/pnpm-lock.yaml` 的生产依赖执行 `pnpm --dir agentark-web licenses list --prod --json`，当前 SPDX 分类为 `0BSD`、`Apache-2.0`、`ISC`、`MIT`，`pnpm --dir agentark-web peers check` 无 Peer Dependency 问题。该结果只证明当前锁文件闭包，不是法律意见，也不替代 Phase 23 的 Web SBOM、第三方 NOTICE 和实际静态发布物检查。
 
 若后续把任一上游前端候选从 `REFERENCE` 提升为 `ADAPT/REUSE`，必须在迁入前记录源 Commit、源路径、目标路径、文件版权、许可证文本和修改范围；品牌或来源不明确的资产继续 `REJECT`，不能因代码仓库使用宽松许可证就推断商标或图片可复用。
+
+## 10. Phase 20 供应链与 Notice 收官
+
+Phase 20 新增根 `THIRD_PARTY_NOTICES.md`，它不手抄会漂移的依赖闭包，而是固定发布物必须重新生成和复核的证据位置：Maven License Report、Maven CycloneDX、Web Lockfile License Report 和 Trivy 仓库级 CycloneDX。发布流程通过 GitHub OIDC 签发 SBOM/Build Attestation；内容寻址镜像先扫描再由 Cosign Keyless 签名。
+
+安全工具本身只在构建/扫描流程使用，不进入 AgentArk Runtime 分发物。Trivy 容器固定官方多架构 Digest，GitHub Action 固定 Commit SHA；升级任一引用时必须重新核对上游发布和安全公告。若下游把扫描器或签名工具嵌入产品，必须另行携带其许可证与 Notice。
+
+本阶段再次核对固定 DeepSeek `THIRD_PARTY_NOTICES.md` 和品牌边界：没有复制其 Logo、商标、插件 Runtime、第三方源码、截图或特殊许可 Payload。AgentScope Permission/Sandbox/MCP/Skill 只作行为与限制参考，新增防腐和安全实现均为 AgentArk 独立代码，没有新增文件级 `REUSE`。

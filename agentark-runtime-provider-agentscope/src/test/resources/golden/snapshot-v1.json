@@ -44,7 +44,41 @@
   },
   "sandbox": {
     "profileVersionId": "0198a4b0-0012-7012-8012-000000000012",
-    "configuration": {"network": "deny"}
+    "configuration": {
+      "securityVersion": 1,
+      "trustZone": "UNTRUSTED",
+      "runtime": "KUBERNETES",
+      "imageDigest": "registry.example.com/agentark/sandbox@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "runAsNonRoot": true,
+      "readOnlyRootFilesystem": true,
+      "allowPrivilegeEscalation": false,
+      "privileged": false,
+      "capabilitiesDrop": ["ALL"],
+      "seccompProfile": "RuntimeDefault",
+      "networkDefaultDeny": true,
+      "mountDockerSocket": false,
+      "workspaceIsolation": "SESSION",
+      "resources": {
+        "cpuMillis": 1000,
+        "memoryBytes": 536870912,
+        "pids": 128,
+        "diskBytes": 1073741824,
+        "timeoutSeconds": 300,
+        "outputBytes": 1048576
+      },
+      "imageVerification": {
+        "signatureRequired": true,
+        "provenanceRequired": true,
+        "scanStatus": "PASSED"
+      },
+      "artifactInspection": {
+        "secretScanRequired": true,
+        "piiAction": "QUARANTINE",
+        "maxArtifactBytes": 1048576,
+        "allowedMediaTypes": ["text/plain", "application/json"]
+      },
+      "cleanupTtlSeconds": 60
+    }
   },
   "permissions": {"defaultDecision": "DENY", "rules": []},
   "limits": {"turnTimeoutSeconds": 30, "maxToolCalls": 4, "maxSubAgents": 0}

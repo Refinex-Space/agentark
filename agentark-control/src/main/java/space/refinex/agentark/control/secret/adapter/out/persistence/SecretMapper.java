@@ -21,12 +21,14 @@ import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 import space.refinex.agentark.control.secret.adapter.out.persistence.SecretPersistenceRows.BindingRow;
 import space.refinex.agentark.control.secret.adapter.out.persistence.SecretPersistenceRows.MetadataRow;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Instant;
 
 /**
  * 执行 Secret Metadata 与 Binding 的显式 Project Scope SQL。
@@ -68,6 +70,38 @@ public interface SecretMapper {
         """)
     Optional<MetadataRow> findMetadata(
         @Param("projectId") UUID projectId, @Param("id") UUID id);
+
+    /**
+     * 使用状态和版本双重前置条件轮换外部版本或改变生命周期。
+     *
+     * @param projectId 项目 UUIDv7
+     * @param id 元数据 UUIDv7
+     * @param currentStatus 预期当前状态
+     * @param targetStatus 目标状态
+     * @param externalVersion 外部版本
+     * @param expectedVersion 预期版本
+     * @param actor 操作主体
+     * @param updatedAt 更新时间
+     * @return 更新行数
+     */
+    @Update("""
+        UPDATE secret_metadata
+        SET external_version = NULLIF(#{externalVersion}, ''),
+            status = #{targetStatus}, version = version + 1,
+            updated_at = #{updatedAt}, updated_by = #{actor}
+        WHERE project_id = #{projectId,jdbcType=BINARY}
+          AND id = #{id,jdbcType=BINARY}
+          AND status = #{currentStatus} AND version = #{expectedVersion}
+        """)
+    int updateMetadata(
+        @Param("projectId") UUID projectId,
+        @Param("id") UUID id,
+        @Param("currentStatus") String currentStatus,
+        @Param("targetStatus") String targetStatus,
+        @Param("externalVersion") String externalVersion,
+        @Param("expectedVersion") long expectedVersion,
+        @Param("actor") String actor,
+        @Param("updatedAt") Instant updatedAt);
 
     /**
      * @param projectId 项目 UUIDv7
@@ -163,4 +197,3 @@ public interface SecretMapper {
         @Param("afterKey") String afterKey,
         @Param("limit") int limit);
 }
-

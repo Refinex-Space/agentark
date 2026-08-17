@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phases 07–10 established Control IAM, versioned AI and Knowledge assets, immutable Agent Revision/Snapshot, Deployment and Internal Contracts. Phases 11–13 established the provider-neutral Runtime domain, durable Event/Work/State persistence, AgentScope anti-corruption layer, Snapshot Compiler, managed Runtime API/SSE/HITL and recovery. Phase 14 established safe Knowledge ingestion and fixed-Revision RAG. Phase 15 established the independent Scheduler Plane with durable Trigger/Job/Attempt/Lease, Cron/Webhook/Channel, Retry/Dead Letter and versioned Runtime/Control clients. Phase 16 established the stateless public Gateway. Phases 17–18 established the independent AgentArk Web foundation and real product flow. Phase 19 established W3C OpenTelemetry, low-cardinality metrics, append-only Audit, versioned Usage/Cost, concurrency-safe Quota, deterministic Evaluation/Release Gates, the Web governance view, and a local observability stack. Production security hardening remains owned by Phase 20 and deployment/HA/DR by Phase 22.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phases 07–10 established Control IAM, versioned AI and Knowledge assets, immutable Agent Revision/Snapshot, Deployment and Internal Contracts. Phases 11–13 established the provider-neutral Runtime domain, durable Event/Work/State persistence, AgentScope anti-corruption layer, Snapshot Compiler, managed Runtime API/SSE/HITL and recovery. Phase 14 established safe Knowledge ingestion and fixed-Revision RAG. Phase 15 established the independent Scheduler Plane with durable Trigger/Job/Attempt/Lease, Cron/Webhook/Channel, Retry/Dead Letter and versioned Runtime/Control clients. Phase 16 established the stateless public Gateway. Phases 17–18 established the independent AgentArk Web foundation and real product flow. Phase 19 established W3C OpenTelemetry, low-cardinality metrics, append-only Audit, versioned Usage/Cost, concurrency-safe Quota, deterministic Evaluation/Release Gates, the Web governance view, and a local observability stack. Phase 20 established the threat model, Vault lifecycle integration, MCP SSRF/DNS guard, signed Skill supply-chain gate, restricted Sandbox contract, untrusted-content labels, and pinned SCA/SBOM/signing/provenance workflows. Production deployment, HA and DR remain owned by Phase 22.
 
 ## Authority
 
@@ -37,6 +37,8 @@ pnpm --dir agentark-web test
 pnpm --dir agentark-web build
 pnpm --dir agentark-web test:e2e
 pnpm --dir agentark-web test:e2e:real
+./tools/security/scan-repository.sh
+./tools/security/generate-sbom.sh
 python3 tools/harness/knowledge_gate.py
 python3 tools/harness/verify_upstreams.py --require-worktrees
 git diff HEAD --check

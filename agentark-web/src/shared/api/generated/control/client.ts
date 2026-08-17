@@ -19,6 +19,7 @@ import type {
   CatalogVersion,
   CatalogVersionDiff,
   ChangeDeploymentStatusRequest,
+  ChangeSecretStatusRequest,
   CompareAgentRevisionsParams,
   CreateAgentRequest,
   CreateApiKeyRequest,
@@ -109,6 +110,7 @@ import type {
   RevokeApiKeyRequest,
   RoleBindingListResponse,
   RoleListResponse,
+  RotateSecretMetadataRequest,
   RunEvaluationRequest,
   SaveReleaseGateRequest,
   SecretBinding,
@@ -1784,6 +1786,234 @@ export const createSecretMetadata = async (
 
   const data: createSecretMetadataResponse["data"] = body ? JSON.parse(body) : {};
   return { data, status: res.status, headers: res.headers } as createSecretMetadataResponse;
+};
+
+export type rotateSecretMetadataResponse200 = {
+  data: SecretMetadata;
+  status: 200;
+};
+
+export type rotateSecretMetadataResponse401 = {
+  data: ProblemResponseResponse;
+  status: 401;
+};
+
+export type rotateSecretMetadataResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type rotateSecretMetadataResponse409 = {
+  data: ProblemResponseResponse;
+  status: 409;
+};
+
+export type rotateSecretMetadataResponseSuccess = rotateSecretMetadataResponse200 & {
+  headers: Headers;
+};
+export type rotateSecretMetadataResponseError = (
+  | rotateSecretMetadataResponse401
+  | rotateSecretMetadataResponse403
+  | rotateSecretMetadataResponse409
+) & {
+  headers: Headers;
+};
+
+export type rotateSecretMetadataResponse =
+  rotateSecretMetadataResponseSuccess | rotateSecretMetadataResponseError;
+
+export const getRotateSecretMetadataUrl = (projectId: string, secretMetadataId: UuidV7) => {
+  return `/api/v1/projects/${projectId}/secrets/${secretMetadataId}:rotate`;
+};
+
+export const rotateSecretMetadata = async (
+  projectId: string,
+  secretMetadataId: UuidV7,
+  rotateSecretMetadataRequest: RotateSecretMetadataRequest,
+  options?: RequestInit,
+): Promise<rotateSecretMetadataResponse> => {
+  const res = await fetch(getRotateSecretMetadataUrl(projectId, secretMetadataId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(rotateSecretMetadataRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: rotateSecretMetadataResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as rotateSecretMetadataResponse;
+};
+
+export type disableSecretMetadataResponse200 = {
+  data: SecretMetadata;
+  status: 200;
+};
+
+export type disableSecretMetadataResponse401 = {
+  data: ProblemResponseResponse;
+  status: 401;
+};
+
+export type disableSecretMetadataResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type disableSecretMetadataResponse409 = {
+  data: ProblemResponseResponse;
+  status: 409;
+};
+
+export type disableSecretMetadataResponseSuccess = disableSecretMetadataResponse200 & {
+  headers: Headers;
+};
+export type disableSecretMetadataResponseError = (
+  | disableSecretMetadataResponse401
+  | disableSecretMetadataResponse403
+  | disableSecretMetadataResponse409
+) & {
+  headers: Headers;
+};
+
+export type disableSecretMetadataResponse =
+  disableSecretMetadataResponseSuccess | disableSecretMetadataResponseError;
+
+export const getDisableSecretMetadataUrl = (projectId: string, secretMetadataId: UuidV7) => {
+  return `/api/v1/projects/${projectId}/secrets/${secretMetadataId}:disable`;
+};
+
+export const disableSecretMetadata = async (
+  projectId: string,
+  secretMetadataId: UuidV7,
+  changeSecretStatusRequest: ChangeSecretStatusRequest,
+  options?: RequestInit,
+): Promise<disableSecretMetadataResponse> => {
+  const res = await fetch(getDisableSecretMetadataUrl(projectId, secretMetadataId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(changeSecretStatusRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: disableSecretMetadataResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as disableSecretMetadataResponse;
+};
+
+export type enableSecretMetadataResponse200 = {
+  data: SecretMetadata;
+  status: 200;
+};
+
+export type enableSecretMetadataResponse401 = {
+  data: ProblemResponseResponse;
+  status: 401;
+};
+
+export type enableSecretMetadataResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type enableSecretMetadataResponse409 = {
+  data: ProblemResponseResponse;
+  status: 409;
+};
+
+export type enableSecretMetadataResponseSuccess = enableSecretMetadataResponse200 & {
+  headers: Headers;
+};
+export type enableSecretMetadataResponseError = (
+  | enableSecretMetadataResponse401
+  | enableSecretMetadataResponse403
+  | enableSecretMetadataResponse409
+) & {
+  headers: Headers;
+};
+
+export type enableSecretMetadataResponse =
+  enableSecretMetadataResponseSuccess | enableSecretMetadataResponseError;
+
+export const getEnableSecretMetadataUrl = (projectId: string, secretMetadataId: UuidV7) => {
+  return `/api/v1/projects/${projectId}/secrets/${secretMetadataId}:enable`;
+};
+
+export const enableSecretMetadata = async (
+  projectId: string,
+  secretMetadataId: UuidV7,
+  changeSecretStatusRequest: ChangeSecretStatusRequest,
+  options?: RequestInit,
+): Promise<enableSecretMetadataResponse> => {
+  const res = await fetch(getEnableSecretMetadataUrl(projectId, secretMetadataId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(changeSecretStatusRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: enableSecretMetadataResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as enableSecretMetadataResponse;
+};
+
+export type revokeSecretMetadataResponse200 = {
+  data: SecretMetadata;
+  status: 200;
+};
+
+export type revokeSecretMetadataResponse401 = {
+  data: ProblemResponseResponse;
+  status: 401;
+};
+
+export type revokeSecretMetadataResponse403 = {
+  data: ProblemResponseResponse;
+  status: 403;
+};
+
+export type revokeSecretMetadataResponse409 = {
+  data: ProblemResponseResponse;
+  status: 409;
+};
+
+export type revokeSecretMetadataResponseSuccess = revokeSecretMetadataResponse200 & {
+  headers: Headers;
+};
+export type revokeSecretMetadataResponseError = (
+  | revokeSecretMetadataResponse401
+  | revokeSecretMetadataResponse403
+  | revokeSecretMetadataResponse409
+) & {
+  headers: Headers;
+};
+
+export type revokeSecretMetadataResponse =
+  revokeSecretMetadataResponseSuccess | revokeSecretMetadataResponseError;
+
+export const getRevokeSecretMetadataUrl = (projectId: string, secretMetadataId: UuidV7) => {
+  return `/api/v1/projects/${projectId}/secrets/${secretMetadataId}:revoke`;
+};
+
+export const revokeSecretMetadata = async (
+  projectId: string,
+  secretMetadataId: UuidV7,
+  changeSecretStatusRequest: ChangeSecretStatusRequest,
+  options?: RequestInit,
+): Promise<revokeSecretMetadataResponse> => {
+  const res = await fetch(getRevokeSecretMetadataUrl(projectId, secretMetadataId), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(changeSecretStatusRequest),
+  });
+
+  const body = [204, 205, 304].includes(res.status) ? null : await res.text();
+
+  const data: revokeSecretMetadataResponse["data"] = body ? JSON.parse(body) : {};
+  return { data, status: res.status, headers: res.headers } as revokeSecretMetadataResponse;
 };
 
 export type listSecretBindingsResponse200 = {

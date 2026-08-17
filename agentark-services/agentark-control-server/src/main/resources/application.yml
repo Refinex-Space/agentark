@@ -186,6 +186,40 @@ agentark:
     catalog:
       # 正常服务默认启用资产目录；无数据库测试必须显式关闭。
       enabled: true
+      # 生产强制 Skill 来源、Hash、Ed25519 签名、CycloneDX SBOM 和扫描证明。
+      skill-supply-chain-required: true
+      # 限制单个 CycloneDX SBOM 为 2 MiB，避免验证过程被大对象拖垮。
+      max-skill-sbom-size: 2MB
+      # 允许进入 Runtime 的 SPDX 许可证标识白名单。
+      allowed-skill-licenses:
+        # Apache License 2.0。
+        - Apache-2.0
+        # MIT License。
+        - MIT
+        # BSD 2-Clause License。
+        - BSD-2-Clause
+        # BSD 3-Clause License。
+        - BSD-3-Clause
+      # Key ID 到 Base64 X.509 Ed25519 公钥的部署信任根；生产由受保护配置覆盖。
+      trusted-skill-signing-keys: {}
+    # 生产 Secret Provider 只允许显式启用 Vault KV v2，不回退到本地文件。
+    secret:
+      # Vault KV v2 集成配置。
+      vault:
+        # 必须显式启用；未启用时只保留 Secret Metadata，不提供明文解析能力。
+        enabled: ${AGENTARK_VAULT_ENABLED:false}
+        # Vault HTTPS 地址；生产拒绝 HTTP、UserInfo、Query 和 Fragment。
+        address: ${AGENTARK_VAULT_ADDRESS:https://vault.invalid}
+        # Vault KV v2 Mount 名称。
+        mount: ${AGENTARK_VAULT_MOUNT:secret}
+        # 可选 Vault Enterprise Namespace；空值表示不发送命名空间 Header。
+        namespace: ${AGENTARK_VAULT_NAMESPACE:}
+        # 工作负载短期 Vault Token 文件，按请求读取以支持无重启轮换。
+        token-file: ${AGENTARK_VAULT_TOKEN_FILE:/var/run/secrets/agentark/vault-token}
+        # Vault TCP/TLS 连接超时。
+        connect-timeout: 3s
+        # Vault KV 读取总超时。
+        read-timeout: 5s
     # Knowledge 元数据、文档 ACL、不可变 Revision 和摄取描述由 Control 所有。
     knowledge:
       # 正常服务默认启用 Knowledge；真实向量摄取仍留在后续 Phase。

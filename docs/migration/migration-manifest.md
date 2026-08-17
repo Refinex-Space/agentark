@@ -296,6 +296,20 @@ Phase 18 没有迁入上游源码、资产、品牌或新运行时依赖。新�
 
 Phase 19 没有迁入上游源码或视觉资产。治理 Domain、Flyway、Contracts、Web 页面、Dashboard 和告警均为 AgentArk 独立实现；AgentScope 仍只通过既有 Provider 防腐层提供执行语义。
 
-## 20. 变更协议
+## 20. Phase 20 实际处置
+
+| 候选能力 | 分类 | AgentArk 落点 | 明确边界 |
+|---|---|---|---|
+| AgentScope Permission/HITL | `REFERENCE/ADAPT` | AgentArk Permission Policy、Approval 参数 Hash、Fencing Resume | 不复制 Permission 类型；生产不启用 BYPASS，文档/Tool 输出不能提升权限 |
+| AgentScope MCP Transport | `REFERENCE/ADAPT` | `McpEndpointGuard` 与 `ConnectionPermit` | 不复制 Transport；生产 Component Factory 必须消费固定地址 Permit，不能自行重解析绕过 SSRF |
+| AgentScope Sandbox Extensions | `REFERENCE/DEFER` | AgentArk Sandbox 安全合同与 Kubernetes 基线 | 不引入 Docker Socket、本地 Shell 或未审查 E2B/Daytona SDK；真实 Adapter 逐个评审 |
+| AgentScope Skill Security Scanner | `REFERENCE` | Artifact Hash、Ed25519、CycloneDX、扫描证明和许可证门禁 | 上游启发式扫描不能替代签名、SBOM 或 Sandbox，不复制实现 |
+| AgentScope State Backend | `REFERENCE/REJECT` | Runtime `runtime_agent_state`、Checkpoint、ObjectRef 与 Fencing | 禁止 Auto-DDL 和上游 Store 直接连接 Runtime DataSource |
+| DeepSeek `THIRD_PARTY_NOTICES` 生成实践 | `REFERENCE` | AgentArk 自身 Maven/Trivy SBOM、THIRD_PARTY_NOTICES 与 CI | 不复制 DeepSeek 品牌、插件闭包、特殊许可 Payload 或上游 Notice 内容 |
+| Trivy/Cosign/GitHub Attestation | `DEPENDENCY` | 固定 Digest/Commit 的 Security 与 Supply Chain Workflow | 不使用可变 Scanner/Action 标签；生产镜像必须固定 Digest |
+
+Phase 20 没有迁入 AgentScope 或 DeepSeek 源码、测试 Fixture、品牌和资产。新增安全实现、清单、测试和文档均为 AgentArk 独立代码；上游只提供固定 Commit 的行为与限制证据。
+
+## 21. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

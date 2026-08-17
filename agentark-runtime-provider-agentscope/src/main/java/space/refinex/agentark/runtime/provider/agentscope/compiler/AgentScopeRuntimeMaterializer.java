@@ -27,6 +27,7 @@ import space.refinex.agentark.runtime.provider.agentscope.error.AgentScopeProvid
 import space.refinex.agentark.runtime.provider.agentscope.error.ProviderErrorCode;
 import space.refinex.agentark.runtime.provider.agentscope.model.AgentScopeModelFactory;
 import space.refinex.agentark.runtime.provider.agentscope.model.RuntimeHandle;
+import space.refinex.agentark.runtime.provider.agentscope.mcp.McpEndpointGuard;
 import space.refinex.agentark.runtime.provider.agentscope.prompt.PromptMapper;
 import space.refinex.agentark.runtime.provider.agentscope.secret.ResolvedSecret;
 import space.refinex.agentark.runtime.provider.agentscope.secret.SecretResolver;
@@ -80,6 +81,11 @@ public final class AgentScopeRuntimeMaterializer {
     private final PromptMapper promptMapper;
 
     /**
+     * MCP SSRF、DNS Rebinding 与命令白名单守卫。
+     */
+    private final McpEndpointGuard mcpEndpointGuard;
+
+    /**
      * State 和 Checkpoint 写入时钟。
      */
     private final Clock clock;
@@ -92,6 +98,7 @@ public final class AgentScopeRuntimeMaterializer {
      * @param stateStore       AgentArk State Store
      * @param checkpointStore  AgentArk Checkpoint Store
      * @param promptMapper     Prompt 映射器
+     * @param mcpEndpointGuard MCP 连接目标守卫
      * @param clock            UTC 时钟
      */
     public AgentScopeRuntimeMaterializer(
@@ -102,6 +109,7 @@ public final class AgentScopeRuntimeMaterializer {
         space.refinex.agentark.runtime.port.AgentStateStore stateStore,
         CheckpointStore checkpointStore,
         PromptMapper promptMapper,
+        McpEndpointGuard mcpEndpointGuard,
         Clock clock) {
         this.compiler = Objects.requireNonNull(compiler, "compiler must not be null");
         this.modelFactory = Objects.requireNonNull(modelFactory, "modelFactory must not be null");
@@ -113,6 +121,8 @@ public final class AgentScopeRuntimeMaterializer {
         this.checkpointStore = Objects.requireNonNull(
             checkpointStore, "checkpointStore must not be null");
         this.promptMapper = Objects.requireNonNull(promptMapper, "promptMapper must not be null");
+        this.mcpEndpointGuard = Objects.requireNonNull(
+            mcpEndpointGuard, "mcpEndpointGuard must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
@@ -165,8 +175,10 @@ public final class AgentScopeRuntimeMaterializer {
             if (plan.skills().isEmpty()) {
                 builder.disableDynamicSkills().disableDefaultWorkspaceSkills();
             }
+            List<McpEndpointGuard.ConnectionPermit> mcpPermits =
+                mcpEndpointGuard.authorize(plan.mcpServers());
             componentFactory.configureMcp(
-                builder, plan.mcpServers(), secretResolver, resources);
+                builder, plan.mcpServers(), mcpPermits, secretResolver, resources);
             componentFactory.configureSkills(builder, plan.skills(), resources);
             componentFactory.configureKnowledge(builder, plan.knowledge(), resources);
             componentFactory.configureMemory(builder, plan.memory());

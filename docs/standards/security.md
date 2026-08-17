@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-16
+updated: 2026-08-17
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -17,6 +17,16 @@ referenced_by: AGENTS.md#knowledge-map
 - Webhook 验证签名、时间窗、Nonce 和重放；外部副作用没有 Provider 幂等键时默认不自动重试。
 - 依赖、镜像和上游源码固定版本/Digest/SHA，保留许可证、SBOM、来源和签名证据。
 - 安全逻辑、权限、身份、Secret、CI/CD 或生产配置变更必须单独评审风险和回滚。
+
+## Phase 20 强制控制
+
+- 威胁登记、严重度、Owner、缓解和验证以 [Threat Model](../security/threat-model.md) 为准；Critical/High 不允许无解释开放。
+- 生产 Secret Provider 至少使用经验证的 Vault KV v2 集成或同等受审 Adapter；Local Provider 只允许 local Profile。Secret Metadata 必须支持轮换、临时禁用和不可逆吊销，访问只记录脱敏 Audit。
+- 远程 MCP 只允许部署主机白名单中的 HTTPS 443；必须解析并检查全部地址，阻断回环、私网、链路本地、IPv6 ULA、CGNAT、云元数据和 DNS Rebinding。组件实现只能消费已签发的固定地址 Permit。
+- Skill Version 在生产必须具备来源、SHA-256、Ed25519 签名、CycloneDX SBOM、扫描证明、许可证和兼容性；签名覆盖全部供应链字段。通过签名不代表可以绕过 Sandbox。
+- Sandbox 必须使用内容寻址镜像、非 Root、只读根、禁止提权/Privileged、drop ALL、Seccomp、默认断网、无 Docker Socket、Session Workspace 和 CPU/内存/PID/磁盘/时间/输出上限。缺少安全 Adapter 时失败关闭。
+- RAG、Tool、MCP 与模型输出始终是不可信内容，不能改变 Permission、Secret Scope、Tool Allowlist 或审批要求。
+- GitHub Action 固定 Commit SHA，Scanner/镜像固定 Digest；发布生成 CycloneDX、SCA/Secret/IaC/CodeQL 结果、Cosign 签名和 OIDC Provenance。
 
 ## Gateway 边缘安全
 

@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-16
+updated: 2026-08-17
 status: active
 referenced_by: docs/README.md
 ---
@@ -22,6 +22,8 @@ AgentArk Phase 12 的编译目标是 Maven Central 发布的 `io.agentscope:agen
 | Maven Harness | `io.agentscope:agentscope-harness:2.0.2` | `HarnessAgent`、Builder、Workspace、Skill、Memory、Sandbox 与编排 |
 | Snapshot Schema | `1` | Provider 可接受的 AgentArk Snapshot 契约 |
 | Compiler Version | `1.0.0` | 缓存与运行记录使用的编译语义版本 |
+| MCP Java SDK | `mcp-core` + `mcp-json-jackson2` `1.0.0` | 覆盖 AgentScope 2.0.2 的 0.17.0 聚合传递依赖，修复 DNS Rebinding；保持 Jackson 2 二进制边界 |
+| Netty | `4.2.16.Final` | 覆盖 Spring Boot 4.1.0 管理的 4.2.15.Final，修复当前 High 拒绝服务漏洞 |
 
 ## API 与行为矩阵
 
@@ -35,7 +37,7 @@ AgentArk Phase 12 的编译目标是 Maven Central 发布的 `io.agentscope:agen
 | Transcript | 固定源码 Builder 含 `disableTranscript()` | 发布 JAR Builder 不含该方法 | 当前不能调用；使用 `disableSessionPersistence()`，Runtime API/Event Store 仍是唯一平台事实；升级后再单独评估 Transcript 关闭语义 |
 | Message | `Msg`、`UserMessage`、`TextBlock`、`ToolUseBlock` | 已验证 | AgentArk `RuntimePayload` 在边界转换；公共 API、数据库和 Runtime Domain 不保存 AgentScope 类型 |
 | Event | Core Typed Events | 已验证文本、模型、工具、审批、结果和失败类型 | 逐类构造 AgentArk Signal；Thinking Start/Delta/End 全部丢弃；未知类型只输出上游枚举名和来源 |
-| MCP | Core MCP 与 Harness `McpServerRegistrar` | 运行 API 可用 | Snapshot 编译为 Transport、Endpoint、SecretRef、解析策略和 Tool 白名单；具体 Client/Auth 装配通过受控组件工厂注入，禁止从工作区自动读取 `tools.json` |
+| MCP | Core MCP 与 Harness `McpServerRegistrar` | AgentScope 发布 JAR 原始传递版本为 MCP 0.17.0；AgentArk 排除该聚合包并显式使用 MCP 1.0.0 Core/Jackson 2 | Snapshot 编译为 Transport、Endpoint、SecretRef、解析策略和 Tool 白名单；`McpEndpointGuard` 签发固定地址/超时/大小 Permit；组件工厂禁止自行重解析或从工作区读取 `tools.json`；完整 Provider 测试验证二进制兼容 |
 | Skill | Core/Harness Skill Repository | 运行 API 可用 | Snapshot 编译为 `ObjectRef`；进入 Repository 前必须通过 Size、Media Type、SHA-256 校验；实际解包和执行安全门禁仍归 Phase 20 |
 | Workspace/Memory/Sandbox | Harness Builder 与对应 Manager | 运行 API可用 | Profile 完整配置已冻结进 Snapshot；组件工厂映射到 Builder；不得从 Control Catalog 回读或采用 Harness 默认本地持久目录 |
 | Knowledge/RAG | Core 旧 RAG 与 Extensions | 部分 API 可用 | Phase 12 只映射固定 Knowledge Revision 与 Retrieval Profile；实际 AgentArk Retriever 适配和 Qdrant 属于 Phase 14 |

@@ -124,6 +124,7 @@ public final class CatalogPayloadValidator {
             throw new IllegalArgumentException("capabilities contains unsupported values");
         }
         requireMap(payload.get("parameters"), "parameters");
+        optionalRegion(payload, "dataRegion");
         optionalSecretRef(payload, "credentialSecretRef");
         return List.of();
     }
@@ -148,6 +149,7 @@ public final class CatalogPayloadValidator {
             }
         }
         requireMap(payload.get("transportConfig"), "transportConfig");
+        optionalRegion(payload, "dataRegion");
         optionalSecretRef(payload, "tlsSecretRef");
         optionalSecretRef(payload, "authSecretRef");
         Map<String, Object> policy = requireMap(payload.get("ssrfPolicy"), "ssrfPolicy");
@@ -190,7 +192,33 @@ public final class CatalogPayloadValidator {
         requiredString(payload, "license", 255);
         Object signature = payload.get("signature");
         if (signature != null) {
-            requireMap(signature, "signature");
+            Map<String, Object> signatureMap = requireMap(signature, "signature");
+            requiredEnum(signatureMap, "algorithm", Set.of("ED25519"));
+            requiredString(signatureMap, "keyId", 255);
+            requiredString(signatureMap, "value", 4096);
+        }
+        Object sbom = payload.get("sbom");
+        if (sbom != null) {
+            Map<String, Object> sbomMap = requireMap(sbom, "sbom");
+            ObjectRef.of(
+                requiredString(sbomMap, "uri", 2048),
+                new space.refinex.agentark.kernel.ref.Checksum(
+                    requiredString(sbomMap, "checksum", 71)),
+                requiredLong(sbomMap, "size", 1),
+                requiredString(sbomMap, "mediaType", 255));
+        }
+        Object scan = payload.get("scanAttestation");
+        if (scan != null) {
+            Map<String, Object> scanMap = requireMap(scan, "scanAttestation");
+            requiredString(scanMap, "scanner", 255);
+            requiredEnum(scanMap, "status", Set.of("PASSED", "FAILED"));
+            new space.refinex.agentark.kernel.ref.Checksum(
+                requiredString(scanMap, "artifactChecksum", 71));
+            try {
+                java.time.Instant.parse(requiredString(scanMap, "scannedAt", 64));
+            } catch (java.time.format.DateTimeParseException exception) {
+                throw new IllegalArgumentException("scanAttestation.scannedAt is invalid", exception);
+            }
         }
         requireMap(payload.get("compatibility"), "compatibility");
         return List.of();
@@ -216,7 +244,38 @@ public final class CatalogPayloadValidator {
         requiredList(payload, "rules");
         requiredList(payload, "scopes");
         requireMap(payload.get("approvalPolicy"), "approvalPolicy");
+        Object dataBoundary = payload.get("dataBoundary");
+        if (dataBoundary != null) {
+            Map<String, Object> boundary = requireMap(dataBoundary, "dataBoundary");
+            requiredEnum(boundary, "classification", Set.of("STANDARD", "SENSITIVE"));
+            List<?> regions = requiredList(boundary, "allowedRegions");
+            if (regions.isEmpty() || regions.stream().anyMatch(
+                region -> !(region instanceof String text) || !isRegion(text))) {
+                throw new IllegalArgumentException("dataBoundary.allowedRegions is invalid");
+            }
+        }
         return List.of();
+    }
+
+    /**
+     * 校验可选部署数据区域标识。
+     *
+     * @param payload 资产版本载荷
+     * @param key 区域字段名
+     */
+    private void optionalRegion(Map<String, Object> payload, String key) {
+        Object value = payload.get(key);
+        if (value != null && (!(value instanceof String text) || !isRegion(text))) {
+            throw new IllegalArgumentException(key + " is invalid");
+        }
+    }
+
+    /**
+     * @param value 区域候选值
+     * @return 满足稳定小写区域格式时为 true
+     */
+    private boolean isRegion(String value) {
+        return value != null && value.matches("[a-z][a-z0-9-]{1,62}");
     }
 
     /**

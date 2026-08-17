@@ -52,6 +52,10 @@
         <project.build.outputTimestamp>2026-08-15T00:00:00Z</project.build.outputTimestamp>
         <agentark.version>${project.version}</agentark.version>
         <agentscope.version>2.0.2</agentscope.version>
+        <!-- MCP Java SDK 1.0.0 修复固定 AgentScope 传递版本中的 DNS Rebinding 漏洞。 -->
+        <mcp-java-sdk.version>1.0.0</mcp-java-sdk.version>
+        <!-- Netty 4.2.16.Final 修复 4.2.15.Final 的 HTTP/2、HTTP/3 与压缩拒绝服务漏洞。 -->
+        <netty.version>4.2.16.Final</netty.version>
         <!-- ArchUnit 仅用于验证模块与包依赖边界。 -->
         <archunit.version>1.5.0</archunit.version>
         <!-- json-sKema 仅用于执行 JSON Schema Draft 2020-12 契约测试。 -->

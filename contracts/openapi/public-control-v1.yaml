@@ -852,6 +852,206 @@ paths:
         "403": { $ref: "#/components/responses/ProblemResponse" }
         # 冲突。
         "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Secret 外部版本轮换命令；请求和响应均不包含 Secret 值。
+  /api/v1/projects/{projectId}/secrets/{secretMetadataId}:rotate:
+    # 路径参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Secret Metadata 标识。
+      - name: secretMetadataId
+        # 参数位于路径中。
+        in: path
+        # 路径参数必填。
+        required: true
+        # 参数说明。
+        description: Secret Metadata UUIDv7
+        # 参数结构。
+        schema: { $ref: "#/components/schemas/UuidV7" }
+    # 执行轮换。
+    post:
+      # 稳定操作标识。
+      operationId: rotateSecretMetadata
+      # Secret 功能分组。
+      tags: [Secret]
+      # 乐观锁轮换请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 轮换契约。
+            schema: { $ref: "#/components/schemas/RotateSecretMetadataRequest" }
+      # 轮换结果。
+      responses:
+        # 成功更新版本指针。
+        "200":
+          # 成功说明。
+          description: Secret 外部版本指针已轮换
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 非敏感 Metadata。
+              schema: { $ref: "#/components/schemas/SecretMetadata" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 乐观锁或状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Secret 临时禁用命令。
+  /api/v1/projects/{projectId}/secrets/{secretMetadataId}:disable:
+    # 路径参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Secret Metadata 标识。
+      - name: secretMetadataId
+        # 参数位于路径中。
+        in: path
+        # 路径参数必填。
+        required: true
+        # 参数说明。
+        description: Secret Metadata UUIDv7
+        # 参数结构。
+        schema: { $ref: "#/components/schemas/UuidV7" }
+    # 执行禁用。
+    post:
+      # 稳定操作标识。
+      operationId: disableSecretMetadata
+      # Secret 功能分组。
+      tags: [Secret]
+      # 乐观锁请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 状态变更契约。
+            schema: { $ref: "#/components/schemas/ChangeSecretStatusRequest" }
+      # 禁用结果。
+      responses:
+        # 禁用成功。
+        "200":
+          # 成功说明。
+          description: Secret Metadata 已禁用
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 非敏感 Metadata。
+              schema: { $ref: "#/components/schemas/SecretMetadata" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 乐观锁或状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Secret 重新启用命令；已吊销元数据不能重新启用。
+  /api/v1/projects/{projectId}/secrets/{secretMetadataId}:enable:
+    # 路径参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Secret Metadata 标识。
+      - name: secretMetadataId
+        # 参数位于路径中。
+        in: path
+        # 路径参数必填。
+        required: true
+        # 参数说明。
+        description: Secret Metadata UUIDv7
+        # 参数结构。
+        schema: { $ref: "#/components/schemas/UuidV7" }
+    # 执行启用。
+    post:
+      # 稳定操作标识。
+      operationId: enableSecretMetadata
+      # Secret 功能分组。
+      tags: [Secret]
+      # 乐观锁请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 状态变更契约。
+            schema: { $ref: "#/components/schemas/ChangeSecretStatusRequest" }
+      # 启用结果。
+      responses:
+        # 启用成功。
+        "200":
+          # 成功说明。
+          description: Secret Metadata 已启用
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 非敏感 Metadata。
+              schema: { $ref: "#/components/schemas/SecretMetadata" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 乐观锁或状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # Secret 永久吊销命令。
+  /api/v1/projects/{projectId}/secrets/{secretMetadataId}:revoke:
+    # 路径参数。
+    parameters:
+      # 项目标识。
+      - { $ref: "#/components/parameters/ProjectId" }
+      # Secret Metadata 标识。
+      - name: secretMetadataId
+        # 参数位于路径中。
+        in: path
+        # 路径参数必填。
+        required: true
+        # 参数说明。
+        description: Secret Metadata UUIDv7
+        # 参数结构。
+        schema: { $ref: "#/components/schemas/UuidV7" }
+    # 执行永久吊销。
+    post:
+      # 稳定操作标识。
+      operationId: revokeSecretMetadata
+      # Secret 功能分组。
+      tags: [Secret]
+      # 乐观锁请求。
+      requestBody:
+        # 请求不可省略。
+        required: true
+        # 请求媒体类型。
+        content:
+          # 固定 JSON 请求。
+          application/json:
+            # 状态变更契约。
+            schema: { $ref: "#/components/schemas/ChangeSecretStatusRequest" }
+      # 吊销结果。
+      responses:
+        # 吊销成功。
+        "200":
+          # 成功说明。
+          description: Secret Metadata 已永久吊销
+          # JSON 响应。
+          content:
+            # 固定 JSON 媒体类型。
+            application/json:
+              # 非敏感 Metadata。
+              schema: { $ref: "#/components/schemas/SecretMetadata" }
+        # 未认证。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 越权。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 乐观锁或状态冲突。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
   # Environment Secret Binding 集合端点。
   /api/v1/projects/{projectId}/environments/{environmentId}/secret-bindings:
     # 复用项目和环境参数。
@@ -2436,6 +2636,14 @@ components:
     CreateSecretMetadataRequest:
       # 引用版本化资产公共契约。
       $ref: ../schemas/catalog-public/v1.json#/$defs/CreateSecretMetadataRequest
+    # Secret 外部版本轮换请求。
+    RotateSecretMetadataRequest:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/RotateSecretMetadataRequest
+    # Secret 生命周期状态命令请求。
+    ChangeSecretStatusRequest:
+      # 引用版本化资产公共契约。
+      $ref: ../schemas/catalog-public/v1.json#/$defs/ChangeSecretStatusRequest
     # 环境 Secret Binding 非敏感元数据。
     SecretBinding:
       # 引用版本化资产公共契约。

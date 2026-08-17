@@ -63,7 +63,10 @@ class AgentScopeSnapshotCompilerTest {
         assertThat(plan.model().provider()).isEqualTo("fake");
         assertThat(plan.memory().configuration()).containsEntry("strategy", "session");
         assertThat(plan.workspace().configuration()).containsEntry("mode", "isolated");
-        assertThat(plan.sandbox().configuration()).containsEntry("network", "deny");
+        assertThat(plan.sandbox().configuration())
+            .containsEntry("networkDefaultDeny", true)
+            .containsEntry("runAsNonRoot", true)
+            .containsEntry("readOnlyRootFilesystem", true);
         assertThat(plan.permission().defaultDecision()).isEqualTo("DENY");
         assertThat(plan.permission().rules()).isEmpty();
         assertThat(plan.toString()).contains("secret://project/model-test");

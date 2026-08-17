@@ -37,5 +37,6 @@ public record SandboxBinding(String versionId, Map<String, Object> configuration
         }
         configuration = Map.copyOf(Objects.requireNonNull(
             configuration, "configuration must not be null"));
+        SandboxSecurityPolicy.validate(configuration);
     }
 }

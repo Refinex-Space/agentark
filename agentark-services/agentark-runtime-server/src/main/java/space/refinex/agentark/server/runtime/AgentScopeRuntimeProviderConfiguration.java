@@ -20,6 +20,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import space.refinex.agentark.runtime.adapter.out.engine.UnavailableAgentExecutionEngine;
 import space.refinex.agentark.runtime.domain.RuntimeModels.RuntimeProviderMetadata;
 import space.refinex.agentark.runtime.port.*;
@@ -32,6 +33,7 @@ import space.refinex.agentark.runtime.provider.agentscope.compiler.SnapshotCompi
 import space.refinex.agentark.runtime.provider.agentscope.event.AgentScopeEventMapper;
 import space.refinex.agentark.runtime.provider.agentscope.model.AgentScopeModelFactory;
 import space.refinex.agentark.runtime.provider.agentscope.model.RuntimeInputMapper;
+import space.refinex.agentark.runtime.provider.agentscope.mcp.McpEndpointGuard;
 import space.refinex.agentark.runtime.provider.agentscope.prompt.PromptMapper;
 import space.refinex.agentark.runtime.provider.agentscope.secret.SecretResolver;
 import space.refinex.agentark.foundation.observability.AgentArkTelemetry;
@@ -44,6 +46,7 @@ import java.time.Clock;
  * @author refinex
  */
 @Configuration(proxyBeanMethods = false)
+@EnableConfigurationProperties(McpEndpointSecurityProperties.class)
 public class AgentScopeRuntimeProviderConfiguration {
 
     /**
@@ -119,6 +122,21 @@ public class AgentScopeRuntimeProviderConfiguration {
     }
 
     /**
+     * 创建 MCP SSRF、DNS Rebinding 与 STDIO 命令白名单守卫。
+     *
+     * @param properties 部署级 MCP 安全配置
+     * @return MCP Endpoint 守卫
+     */
+    @Bean
+    public McpEndpointGuard mcpEndpointGuard(McpEndpointSecurityProperties properties) {
+        return new McpEndpointGuard(
+            properties.getAllowedRemoteHosts(), properties.getAllowedStdioCommands(),
+            java.net.InetAddress::getAllByName, Clock.systemUTC(),
+            properties.getConnectTimeout(), properties.getRequestTimeout(),
+            properties.getMaxResponseBytes());
+    }
+
+    /**
      * 创建 Runtime 输入 Mapper。
      *
      * @param objectMapper Jackson 2 Mapper
@@ -152,6 +170,7 @@ public class AgentScopeRuntimeProviderConfiguration {
      * @param stateStore       Agent State Store
      * @param checkpointStore  Checkpoint Store
      * @param promptMapper     Prompt Mapper
+     * @param mcpEndpointGuard MCP Endpoint 守卫
      * @param clock            UTC 时钟
      * @return Runtime Materializer
      */
@@ -166,10 +185,11 @@ public class AgentScopeRuntimeProviderConfiguration {
         AgentStateStore stateStore,
         CheckpointStore checkpointStore,
         PromptMapper promptMapper,
+        McpEndpointGuard mcpEndpointGuard,
         Clock clock) {
         return new AgentScopeRuntimeMaterializer(
             compiler, modelFactory, componentFactory, secretResolver,
-            stateStore, checkpointStore, promptMapper, clock);
+            stateStore, checkpointStore, promptMapper, mcpEndpointGuard, clock);
     }
 
     /**

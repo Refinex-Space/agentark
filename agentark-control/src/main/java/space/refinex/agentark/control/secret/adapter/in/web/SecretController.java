@@ -24,11 +24,14 @@ import org.springframework.web.bind.annotation.*;
 import space.refinex.agentark.control.iam.application.IamAccessDeniedException;
 import space.refinex.agentark.control.secret.adapter.in.web.SecretApiModels.CreateSecretBindingRequest;
 import space.refinex.agentark.control.secret.adapter.in.web.SecretApiModels.CreateSecretMetadataRequest;
+import space.refinex.agentark.control.secret.adapter.in.web.SecretApiModels.RotateSecretMetadataRequest;
+import space.refinex.agentark.control.secret.adapter.in.web.SecretApiModels.ChangeSecretStatusRequest;
 import space.refinex.agentark.control.secret.application.SecretApplicationService;
 import space.refinex.agentark.control.secret.domain.SecretBinding;
 import space.refinex.agentark.control.secret.domain.SecretMetadata;
 import space.refinex.agentark.control.secret.domain.SecretProviderType;
 import space.refinex.agentark.control.secret.domain.SecretScope;
+import space.refinex.agentark.control.secret.domain.SecretMetadataStatus;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
 import space.refinex.agentark.foundation.web.CursorPage;
 import space.refinex.agentark.kernel.id.EnvironmentId;
@@ -95,6 +98,90 @@ public class SecretController {
         @RequestParam(defaultValue = "50") int limit) {
         return service.listMetadata(
             principal(authentication), ProjectId.parse(projectId), cursor, limit);
+    }
+
+    /**
+     * 轮换 Secret 外部版本指针，不接收或回显 Secret 值。
+     *
+     * @param authentication 已认证安全上下文
+     * @param projectId 项目 UUIDv7
+     * @param secretMetadataId Secret 元数据 UUIDv7
+     * @param request 轮换请求
+     * @return 轮换后的元数据
+     */
+    @PostMapping("/secrets/{secretMetadataId}:rotate")
+    public SecretMetadata rotateMetadata(
+        Authentication authentication,
+        @PathVariable String projectId,
+        @PathVariable String secretMetadataId,
+        @Valid @RequestBody RotateSecretMetadataRequest request) {
+        return service.rotateMetadata(
+            principal(authentication), ProjectId.parse(projectId),
+            SecretMetadataId.parse(secretMetadataId), request.externalVersion(),
+            request.expectedVersion());
+    }
+
+    /**
+     * 紧急禁用 Secret 元数据，使后续解析失败关闭。
+     *
+     * @param authentication 已认证安全上下文
+     * @param projectId 项目 UUIDv7
+     * @param secretMetadataId Secret 元数据 UUIDv7
+     * @param request 状态前置条件
+     * @return 禁用后的元数据
+     */
+    @PostMapping("/secrets/{secretMetadataId}:disable")
+    public SecretMetadata disableMetadata(
+        Authentication authentication,
+        @PathVariable String projectId,
+        @PathVariable String secretMetadataId,
+        @Valid @RequestBody ChangeSecretStatusRequest request) {
+        return service.changeMetadataStatus(
+            principal(authentication), ProjectId.parse(projectId),
+            SecretMetadataId.parse(secretMetadataId), SecretMetadataStatus.DISABLED,
+            request.expectedVersion());
+    }
+
+    /**
+     * 重新启用已完成外部修复的 Secret 元数据。
+     *
+     * @param authentication 已认证安全上下文
+     * @param projectId 项目 UUIDv7
+     * @param secretMetadataId Secret 元数据 UUIDv7
+     * @param request 状态前置条件
+     * @return 启用后的元数据
+     */
+    @PostMapping("/secrets/{secretMetadataId}:enable")
+    public SecretMetadata enableMetadata(
+        Authentication authentication,
+        @PathVariable String projectId,
+        @PathVariable String secretMetadataId,
+        @Valid @RequestBody ChangeSecretStatusRequest request) {
+        return service.changeMetadataStatus(
+            principal(authentication), ProjectId.parse(projectId),
+            SecretMetadataId.parse(secretMetadataId), SecretMetadataStatus.ENABLED,
+            request.expectedVersion());
+    }
+
+    /**
+     * 永久吊销 Secret 元数据；吊销后不能重新启用。
+     *
+     * @param authentication 已认证安全上下文
+     * @param projectId 项目 UUIDv7
+     * @param secretMetadataId Secret 元数据 UUIDv7
+     * @param request 状态前置条件
+     * @return 吊销后的元数据
+     */
+    @PostMapping("/secrets/{secretMetadataId}:revoke")
+    public SecretMetadata revokeMetadata(
+        Authentication authentication,
+        @PathVariable String projectId,
+        @PathVariable String secretMetadataId,
+        @Valid @RequestBody ChangeSecretStatusRequest request) {
+        return service.changeMetadataStatus(
+            principal(authentication), ProjectId.parse(projectId),
+            SecretMetadataId.parse(secretMetadataId), SecretMetadataStatus.REVOKED,
+            request.expectedVersion());
     }
 
     /**

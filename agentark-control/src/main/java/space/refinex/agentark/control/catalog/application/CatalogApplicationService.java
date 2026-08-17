@@ -92,6 +92,11 @@ public class CatalogApplicationService {
     private final CatalogProperties properties;
 
     /**
+     * Skill 签名、SBOM、扫描和许可证供应链验证器。
+     */
+    private final SkillSupplyChainVerifier skillSupplyChainVerifier;
+
+    /**
      * UTC 时钟。
      */
     private final Clock clock;
@@ -110,6 +115,7 @@ public class CatalogApplicationService {
      * @param secretRepository     SecretRef 检查端口
      * @param objectStore          可选对象存储
      * @param properties           Catalog 配置
+     * @param skillSupplyChainVerifier Skill 供应链验证器
      * @param clock                UTC 时钟
      * @param jsonMapper           JSON 映射器
      */
@@ -122,6 +128,7 @@ public class CatalogApplicationService {
         SecretRepository secretRepository,
         Optional<ObjectStore> objectStore,
         CatalogProperties properties,
+        SkillSupplyChainVerifier skillSupplyChainVerifier,
         Clock clock,
         JsonMapper jsonMapper) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
@@ -137,6 +144,8 @@ public class CatalogApplicationService {
             secretRepository, "secretRepository must not be null");
         this.objectStore = Objects.requireNonNull(objectStore, "objectStore must not be null");
         this.properties = Objects.requireNonNull(properties, "properties must not be null");
+        this.skillSupplyChainVerifier = Objects.requireNonNull(
+            skillSupplyChainVerifier, "skillSupplyChainVerifier must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
         this.jsonMapper = Objects.requireNonNull(jsonMapper, "jsonMapper must not be null");
     }
@@ -389,6 +398,7 @@ public class CatalogApplicationService {
                 || !metadata.contentType().equals(ref.mediaType())) {
                 throw new IamConflictException("artifact metadata does not match object store");
             }
+            skillSupplyChainVerifier.verify(payload, store);
         } catch (IOException exception) {
             throw new IamConflictException("artifact is missing or inaccessible");
         }

@@ -25,6 +25,7 @@ import space.refinex.agentark.kernel.ref.SecretRef;
 
 import java.util.List;
 import java.util.Optional;
+import java.time.Instant;
 
 /**
  * 定义 Secret 非敏感元数据与 Environment Binding 的显式 Project Scope 持久化端口。
@@ -45,6 +46,29 @@ public interface SecretRepository {
      * @return 同项目元数据
      */
     Optional<SecretMetadata> findMetadata(ProjectId projectId, SecretMetadataId id);
+
+    /**
+     * 使用项目范围、当前状态和乐观锁更新外部版本或生命周期状态。
+     *
+     * @param projectId 项目标识
+     * @param id 元数据标识
+     * @param currentStatus 预期当前状态
+     * @param targetStatus 目标状态
+     * @param externalVersion 目标外部版本；保持不变时传当前值
+     * @param expectedVersion 预期乐观锁版本
+     * @param actor 操作主体
+     * @param updatedAt 更新时间
+     * @return 更新行数，前置条件不满足时为零
+     */
+    int updateMetadata(
+        ProjectId projectId,
+        SecretMetadataId id,
+        String currentStatus,
+        String targetStatus,
+        String externalVersion,
+        long expectedVersion,
+        String actor,
+        Instant updatedAt);
 
     /**
      * @param projectId 项目标识
@@ -93,4 +117,3 @@ public interface SecretRepository {
      */
     boolean existsReference(ProjectId projectId, SecretRef ref);
 }
-

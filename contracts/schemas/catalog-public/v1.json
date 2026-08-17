@@ -251,6 +251,40 @@
         "scope": { "type": "string", "enum": ["PROJECT", "ENVIRONMENT"] }
       }
     },
+    "RotateSecretMetadataRequest": {
+      "title": "Secret 外部版本轮换请求",
+      "description": "只更新外部不可变版本指针，不接收 Secret 值。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["externalVersion", "expectedVersion"],
+      "properties": {
+        "externalVersion": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 255,
+          "description": "外部 Secret Manager 中新的不可变版本。"
+        },
+        "expectedVersion": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Secret Metadata 乐观锁版本。"
+        }
+      }
+    },
+    "ChangeSecretStatusRequest": {
+      "title": "Secret 生命周期状态变更请求",
+      "description": "为启用、禁用或永久吊销命令提供乐观锁前置条件。",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["expectedVersion"],
+      "properties": {
+        "expectedVersion": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Secret Metadata 乐观锁版本。"
+        }
+      }
+    },
     "SecretBinding": {
       "type": "object",
       "additionalProperties": false,

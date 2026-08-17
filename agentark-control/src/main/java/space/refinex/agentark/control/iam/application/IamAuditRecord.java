@@ -69,7 +69,7 @@ public record IamAuditRecord(
             throw new IllegalArgumentException("project audit scope requires organization");
         }
         if (!SetHolder.OUTCOMES.contains(outcome)) {
-            throw new IllegalArgumentException("outcome must be SUCCEEDED or DENIED");
+            throw new IllegalArgumentException("outcome must be SUCCEEDED, DENIED or FAILED");
         }
         Objects.requireNonNull(occurredAt, "occurredAt must not be null");
     }
@@ -113,7 +113,8 @@ public record IamAuditRecord(
         /**
          * 允许的审计结果代码。
          */
-        private static final java.util.Set<String> OUTCOMES = java.util.Set.of("SUCCEEDED", "DENIED");
+        private static final java.util.Set<String> OUTCOMES = java.util.Set.of(
+            "SUCCEEDED", "DENIED", "FAILED");
 
         /**
          * 禁止实例化常量持有类。
