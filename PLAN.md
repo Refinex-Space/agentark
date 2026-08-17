@@ -451,7 +451,7 @@ flowchart LR
 | 14 | DONE | 2026-08-16 | `docs/implementation/phase-14-knowledge-rag.md` | 安全异步摄取、Qdrant、固定 Revision 检索、Citation/Trace、AgentScope 防腐层与完整验收已完成 |
 | 15 | DONE | 2026-08-16 | `docs/implementation/phase-15-scheduler.md` | 持久 Job、Cron、Webhook、Channel、重试、Fencing、Dead Letter 与跨平面契约已验收 |
 | 16 | DONE | 2026-08-16 | `docs/implementation/phase-16-gateway.md` | 无业务状态 Gateway、公共认证、精确 CORS、限流、SSE 代理与安全门禁已验收 |
-| 17 | NOT_STARTED | — | `docs/implementation/phase-17-web-foundation.md` | |
+| 17 | DONE | 2026-08-17 | `docs/implementation/phase-17-web-foundation.md` | 独立 Web 工程、设计系统、生成式 API Client、可靠 SSE Client、CI 与浏览器验收已完成 |
 | 18 | NOT_STARTED | — | `docs/implementation/phase-18-web-features.md` | |
 | 19 | NOT_STARTED | — | `docs/implementation/phase-19-observability-governance.md` | |
 | 20 | NOT_STARTED | — | `docs/implementation/phase-20-security-hardening.md` | |
@@ -2770,21 +2770,21 @@ $DEEPSEEK_HARNESS_ROOT/THIRD_PARTY_NOTICES.md
 
 #### 工程
 
-- [ ] 建立 `agentark-web`；
-- [ ] Node.js 24 LTS；
-- [ ] pnpm 11 精确 `packageManager`；
-- [ ] React 19.2；
-- [ ] TypeScript 6.x；
-- [ ] Vite 8.x；
-- [ ] Tailwind CSS 4；
-- [ ] Radix UI；
-- [ ] TanStack Query；
-- [ ] React Router；
-- [ ] Lucide；
-- [ ] Vitest/Testing Library/Playwright；
-- [ ] ESLint/Formatter/Type Check；
-- [ ] Lockfile 入库；
-- [ ] CI 前端任务。
+- [x] 建立 `agentark-web`；
+- [x] Node.js 24 LTS；
+- [x] pnpm 11 精确 `packageManager`；
+- [x] React 19.2；
+- [x] TypeScript 6.x；
+- [x] Vite 8.x；
+- [x] Tailwind CSS 4；
+- [x] Radix UI；
+- [x] TanStack Query；
+- [x] React Router；
+- [x] Lucide；
+- [x] Vitest/Testing Library/Playwright；
+- [x] ESLint/Formatter/Type Check；
+- [x] Lockfile 入库；
+- [x] CI 前端任务。
 
 #### 结构
 
@@ -2797,53 +2797,53 @@ agentark-web/src/
 └── widgets/
 ```
 
-- [ ] App Router；
-- [ ] Provider；
-- [ ] Error Boundary；
-- [ ] Auth Session；
-- [ ] Organization/Project/Environment Context；
-- [ ] Feature Flags；
-- [ ] Route Guard；
-- [ ] Lazy Loading；
-- [ ] Global ProblemDetail 展示。
+- [x] App Router；
+- [x] Provider；
+- [x] Error Boundary；
+- [x] Auth Session；
+- [x] Organization/Project/Environment Context；
+- [x] Feature Flags；
+- [x] Route Guard；
+- [x] Lazy Loading；
+- [x] Global ProblemDetail 展示。
 
 #### Design System
 
-- [ ] AgentArk 独立 Design Token；
-- [ ] Light/Dark Theme；
-- [ ] Typography；
-- [ ] Surface/Border/Status；
-- [ ] Button/Input/Dialog/Popover/Menu/Tabs/Table；
-- [ ] Split Pane/Inspector/Timeline/Code/Json Viewer；
-- [ ] Loading/Empty/Error/Skeleton；
-- [ ] Toast/Notification；
-- [ ] Keyboard/Focus/Reduced Motion；
-- [ ] WCAG 2.2 AA 基线；
-- [ ] 不复制 DeepSeek 品牌资产。
+- [x] AgentArk 独立 Design Token；
+- [x] Light/Dark Theme；
+- [x] Typography；
+- [x] Surface/Border/Status；
+- [x] Button/Input/Dialog/Popover/Menu/Tabs/Table；
+- [x] Split Pane/Inspector/Timeline/Code/Json Viewer；
+- [x] Loading/Empty/Error/Skeleton；
+- [x] Toast/Notification；
+- [x] Keyboard/Focus/Reduced Motion；
+- [x] WCAG 2.2 AA 基线；
+- [x] 不复制 DeepSeek 品牌资产。
 
 #### API
 
-- [ ] 从 Public OpenAPI 生成 Type/基础 Client；
-- [ ] Feature 层封装 Query/Mutation；
-- [ ] 不把 Generated Client 当 UI Domain；
-- [ ] ProblemDetail 解析；
-- [ ] ETag/If-Match；
-- [ ] Idempotency-Key；
-- [ ] Cursor Pagination；
-- [ ] Auth Token/API Key 安全传递。
+- [x] 从 Public OpenAPI 生成 Type/基础 Client；
+- [x] Feature 层封装 Query/Mutation；
+- [x] 不把 Generated Client 当 UI Domain；
+- [x] ProblemDetail 解析；
+- [x] ETag/If-Match；
+- [x] Idempotency-Key；
+- [x] Cursor Pagination；
+- [x] Auth Token/API Key 安全传递。
 
 #### SSE
 
-- [ ] Runtime Event v1 解析；
-- [ ] `Last-Event-ID`；
-- [ ] 自动重连和退避；
-- [ ] Event ID 去重；
-- [ ] Schema Version；
-- [ ] 有界本地 Event Store；
-- [ ] 页面隐藏/恢复；
-- [ ] 连接状态；
-- [ ] 终态停止；
-- [ ] 不在浏览器持久化敏感全量 Event。
+- [x] Runtime Event v1 解析；
+- [x] `Last-Event-ID`；
+- [x] 自动重连和退避；
+- [x] Event ID 去重；
+- [x] Schema Version；
+- [x] 有界本地 Event Store；
+- [x] 页面隐藏/恢复；
+- [x] 连接状态；
+- [x] 终态停止；
+- [x] 不在浏览器持久化敏感全量 Event。
 
 ### 产物
 
@@ -2857,16 +2857,16 @@ docs/implementation/phase-17-web-foundation.md
 
 ### 验收条件
 
-- [ ] `pnpm install --frozen-lockfile` 通过；
-- [ ] Lint、Typecheck、Unit、Build 通过；
-- [ ] OpenAPI Client 可重生成且无脏 Diff；
-- [ ] SSE Client 重连/去重测试通过；
-- [ ] Theme/核心组件有 Story/测试页或视觉基线；
-- [ ] 键盘、Focus、对比度基础检查通过；
-- [ ] 无 DeepSeek/AgentScope 品牌残留；
-- [ ] 无 Plugin Runtime 依赖；
-- [ ] 不提交 Token/Secret；
-- [ ] Web 目录和 README 与架构一致。
+- [x] `pnpm install --frozen-lockfile` 通过；
+- [x] Lint、Typecheck、Unit、Build 通过；
+- [x] OpenAPI Client 可重生成且无脏 Diff；
+- [x] SSE Client 重连/去重测试通过；
+- [x] Theme/核心组件有 Story/测试页或视觉基线；
+- [x] 键盘、Focus、对比度基础检查通过；
+- [x] 无 DeepSeek/AgentScope 品牌残留；
+- [x] 无 Plugin Runtime 依赖；
+- [x] 不提交 Token/Secret；
+- [x] Web 目录和 README 与架构一致。
 
 ### 验收命令
 

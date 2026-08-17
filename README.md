@@ -411,7 +411,7 @@ Repository instructions route contributors to the normative source for each deci
 
 ## Development Status
 
-AgentArk currently follows an **architecture-first migration strategy**. Phases 02–06 provide the fixed upstream evidence baseline, Maven build foundation, framework-free Kernel, focused Foundation Starters, four Spring Boot deployment units, isolated MySQL ownership, and reproducible contract gates. Phases 07–10 provide Control IAM, versioned AI assets, Knowledge metadata, immutable Agent revisions/snapshots, and Deployment pointers. Phases 11–13 provide the provider-neutral Runtime domain and MySQL facts, the AgentScope Java 2 anti-corruption adapter, and managed Runtime APIs for Session, Turn, Event/SSE, HITL, cancellation, fencing, and recovery. Scheduling behavior, Gateway routing, the Web console, real RAG ingestion, and production provider/deployment hardening are not implemented yet.
+AgentArk currently follows an **architecture-first migration strategy**. Phases 02–06 provide the fixed upstream evidence baseline, Maven build foundation, framework-free Kernel, focused Foundation Starters, four Spring Boot deployment units, isolated MySQL ownership, and reproducible contract gates. Phases 07–10 provide Control IAM, versioned AI assets, Knowledge metadata, immutable Agent revisions/snapshots, and Deployment pointers. Phases 11–16 provide the provider-neutral Runtime domain, AgentScope Java 2 anti-corruption adapter, managed Runtime APIs, safe RAG ingestion, durable Scheduler, and stateless public Gateway. Phase 17 provides the independent Web build, application shell, design system, generated Public API clients, and reliable Runtime SSE client. Complete Web product workflows and production hardening are not implemented yet.
 
 The initial implementation will be derived from the useful service-plane capabilities in AgentScope Java's `agentscope-service`, while deliberately reshaping module boundaries and gradually replacing the Go control plane with Java.
 
@@ -441,7 +441,7 @@ The migration sequence is designed to avoid changing package names, modules, JDK
 | **C — Runtime MVP** | Session, Turn, Run, events, SSE, AgentScope compiler, HITL, recovery | ✅ Complete — neutral domain, AgentScope adapter, managed API, durable execution, HITL, and recovery verified |
 | **D — Knowledge / RAG** | ingestion, Qdrant, Knowledge Revision, retrieval, citations | ✅ Complete — safe pipeline, fixed-Revision retrieval, citations, and Qdrant isolation verified |
 | **E — Scheduler & Integrations** | cron, webhook, channels, retry/dead-letter | ✅ Complete |
-| **F — AgentArk Web** | design system, Agent builder, runtime console, governance | ⚪ Planned |
+| **F — AgentArk Web** | design system, Agent builder, runtime console, governance | 🟡 In progress — Phase 17 foundation complete; product flows remain |
 | **G — Production Hardening** | Kubernetes, HA, security, DR, quotas, cost, evaluation | ⚪ Planned |
 
 The roadmap describes architectural sequencing rather than release dates.
@@ -486,6 +486,20 @@ Install the current reactor into the local Maven repository without running test
 ./mvnw -DskipTests install
 ```
 
+Install and validate the independent Web console:
+
+```bash
+pnpm --dir agentark-web install --frozen-lockfile
+pnpm --dir agentark-web api:check
+pnpm --dir agentark-web lint
+pnpm --dir agentark-web typecheck
+pnpm --dir agentark-web test
+pnpm --dir agentark-web build
+pnpm --dir agentark-web test:e2e
+```
+
+The generated Control, Runtime, and Scheduler clients are committed under `agentark-web/src/shared/api/generated/` and must be regenerated from the repository Public OpenAPI contracts; they are not hand-maintained UI domain models. See [`agentark-web/README.md`](./agentark-web/README.md) for the development and security boundaries.
+
 Start the local Core infrastructure and current service implementations:
 
 ```bash
@@ -495,7 +509,7 @@ Start the local Core infrastructure and current service implementations:
 ./tools/dev-down.sh
 ```
 
-All four Server JARs expose sanitized Actuator health and build information. Control, Runtime, and Scheduler contain the versioned business APIs implemented through Phase 15, while local security defaults fail closed. Phase 16 adds the stateless Gateway route table, OIDC/JWK JWT validation, Control-backed API Key pre-authentication, exact-origin CORS, Redis rate limiting, and SSE proxy/replay behavior. Runtime execution and Scheduler Worker remain disabled until the required production Model/Component/Secret, ingestion, outbound endpoint, and channel Provider beans are supplied. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. Scheduler V2 owns durable Trigger, Job, Attempt, Lease, Delivery, Dead Letter, idempotency, and Outbox facts and calls Runtime/Control only through versioned internal contracts. There is still no `agentark-web` build, Helm chart, configured production identity provider, or end-to-end product workflow. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
+All four Server JARs expose sanitized Actuator health and build information. Control, Runtime, and Scheduler contain the versioned business APIs implemented through Phase 15, while local security defaults fail closed. Phase 16 adds the stateless Gateway route table, OIDC/JWK JWT validation, Control-backed API Key pre-authentication, exact-origin CORS, Redis rate limiting, and SSE proxy/replay behavior. Runtime execution and Scheduler Worker remain disabled until the required production Model/Component/Secret, ingestion, outbound endpoint, and channel Provider beans are supplied. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. Scheduler V2 owns durable Trigger, Job, Attempt, Lease, Delivery, Dead Letter, idempotency, and Outbox facts and calls Runtime/Control only through versioned internal contracts. Phase 17 adds a reproducible `agentark-web` build and tested frontend foundation, but there is still no Helm chart, configured production identity provider, static production deployment, or end-to-end product workflow. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
 
 ### Engineering Rules
 

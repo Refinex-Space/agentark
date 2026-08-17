@@ -1,0 +1,5 @@
+<!-- AgentArk 自有几何标记，仅用于浏览器标签页，不包含上游品牌资产。 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="AgentArk">
+  <rect width="64" height="64" rx="14" fill="#2457d6" />
+  <path d="M17 45 31.8 15 47 45h-8l-2.7-6H27l3-7h3.2l-2-5-8.4 18Z" fill="#fff" />
+</svg>

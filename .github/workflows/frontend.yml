@@ -1,0 +1,87 @@
+# 工作流名称用于 GitHub Actions 状态和分支保护展示。
+name: Frontend
+
+# 只在 Web、公共契约或本工作流变化时执行，避免无关后端提交消耗浏览器资源。
+on:
+  # Pull Request 必须通过前端完整门禁。
+  pull_request:
+    # 限定影响前端结果的路径。
+    paths:
+      - "agentark-web/**"
+      - "contracts/openapi/public-*-v1.yaml"
+      - "contracts/schemas/**"
+      - ".github/workflows/frontend.yml"
+  # Main 分支同路径变更用于持续验证。
+  push:
+    # 只验证主分支推送。
+    branches:
+      - main
+    # 限定影响前端结果的路径。
+    paths:
+      - "agentark-web/**"
+      - "contracts/openapi/public-*-v1.yaml"
+      - "contracts/schemas/**"
+      - ".github/workflows/frontend.yml"
+
+# 工作流只需要读取仓库内容，不授予写入或发布权限。
+permissions:
+  # Checkout 所需最小权限。
+  contents: read
+
+# 同一引用的新任务会取消旧任务，避免过期 E2E 占用资源。
+concurrency:
+  # 按工作流和 Git 引用隔离并发组。
+  group: frontend-${{ github.workflow }}-${{ github.ref }}
+  # 新提交到达时取消旧任务。
+  cancel-in-progress: true
+
+# 前端只有一个可复现验证任务。
+jobs:
+  # 验证安装、生成、静态检查、单测、构建和真实浏览器交互。
+  validate-test-build:
+    # 对外展示的任务名称。
+    name: Validate, test, build, and E2E (Node 24)
+    # 使用 GitHub 托管的最新稳定 Ubuntu 镜像。
+    runs-on: ubuntu-latest
+    # 防止浏览器依赖或网络异常无限占用执行器。
+    timeout-minutes: 25
+    # 按严格顺序执行，后一步只在前一步成功后开始。
+    steps:
+      # 获取当前提交；Action 固定到 v4.4.0 Commit。
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # 安装 `.node-version` 锁定的 Node.js 24；Action 固定到 v6 Commit。
+      - name: Set up Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          # 与本地 Web 工具链使用同一版本文件。
+          node-version-file: agentark-web/.node-version
+      # 启用 Node 自带 Corepack 并激活 packageManager 锁定的 pnpm 11。
+      - name: Activate pnpm 11
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.22.0 --activate
+      # 严格按提交的锁文件安装，不允许 CI 更新解析结果。
+      - name: Install dependencies
+        run: pnpm --dir agentark-web install --frozen-lockfile
+      # 临时生成客户端并与提交内容逐文件比较，禁止 Contract 漂移。
+      - name: Verify generated OpenAPI clients
+        run: pnpm --dir agentark-web api:check
+      # 执行 ESLint 和 Prettier 检查，不在 CI 自动修复源码。
+      - name: Lint and format check
+        run: pnpm --dir agentark-web lint
+      # 执行 TypeScript 6 Project Reference 类型检查。
+      - name: Type check
+        run: pnpm --dir agentark-web typecheck
+      # 执行 Vitest、Testing Library、SSE 和可访问性单元测试。
+      - name: Unit tests
+        run: pnpm --dir agentark-web test
+      # 生成生产静态资源并验证 Lazy Route 编译结果。
+      - name: Production build
+        run: pnpm --dir agentark-web build
+      # 安装与 Playwright 版本匹配的 Chromium 和 Linux 系统依赖。
+      - name: Install Playwright Chromium
+        run: pnpm --dir agentark-web exec playwright install --with-deps chromium
+      # 在 Vite Preview 生产构建上验证主题、键盘、响应式和 WCAG 基线。
+      - name: Browser E2E
+        run: pnpm --dir agentark-web test:e2e

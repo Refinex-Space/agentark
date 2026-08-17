@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-16
+updated: 2026-08-17
 status: active
 referenced_by: docs/README.md#上游迁移审计
 ---
@@ -258,6 +258,19 @@ Phase 15 新增源码、SQL 和 Contract 均为 AgentArk 独立实现，没有�
 
 Phase 16 没有复制上游源码或资产。Gateway 只新增边缘 Adapter、配置与测试；Control 仅新增版本化 API Key 自省响应，不改变 API Key 表、摘要算法或 IAM Owner。
 
-## 17. 变更协议
+## 17. Phase 17 实际处置
+
+| 候选能力 | 分类 | AgentArk 落点 | 明确边界 |
+|---|---|---|---|
+| AgentScope Agent/Environment/Session/Event/HITL/Team | `REFERENCE` | Web IA、Feature 语义、Runtime Timeline/Approval 需求 | 不复制页面、DTO、Client、状态管理、样式或品牌；业务流程归 Phase 18 |
+| AgentScope TanStack/Router/Radix/Tailwind 工程经验 | `REFERENCE` | AgentArk 独立依赖选择、Provider/Router 和 Design System | 不把上游目录或生成模型作为 UI Domain，不引入 Service 私有协议 |
+| DeepSeek Web Entry/Shell/Layout | `REFERENCE` | Sidebar/Header/Command/Panel 和 Lazy Shell 的交互层级 | 不迁入 Cordis/Plugin 装配，不复制 React/CSS 源码或测试 Snapshot |
+| DeepSeek Theme/Terminal/Timeline/Inspector | `REFERENCE` | AgentArk 自有 Token、主题、Split Pane、Timeline、Inspector | 不复制 `--dsw-*` 数值、Logo、favicon、图片、Glyph、文案或像素资产 |
+| DeepSeek Native/Python/Plugin Runtime | `REJECT` | 无落点 | 不进入 Web Package、Lockfile、应用内核或构建流程 |
+| AgentArk Public OpenAPI/Runtime Event v1 | `ADAPT` | Orval Fetch Client、Feature Query 封装、Fetch SSE Client | 只允许仓库内 Schema 引用；Provider Event、Control Entity 和明文 Secret 不进入浏览器模型 |
+
+Phase 17 新增源码、SVG、文案和 Token 均为 AgentArk 独立实现。上游固定 Worktree 保持只读，Web Lockfile 不含 AgentScope Service、DeepSeek Harness、Cordis 或 Plugin Runtime Package；完整证据见 [Web 上游参考边界](../frontend/source-reference.md)。
+
+## 18. 变更协议
 
 后续 Phase 改变任何分类时，必须同时更新：本清单、对应阶段报告、行为测试引用和 [许可清单](license-and-notice.md)。从 `REFERENCE/DEFER/REJECT` 提升到 `REUSE` 属于显著风险变化，必须给出文件级来源、目标路径、许可证和回滚证据。

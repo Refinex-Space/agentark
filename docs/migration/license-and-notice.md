@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-15
+updated: 2026-08-17
 status: active
 referenced_by: docs/README.md#上游迁移审计
 ---
@@ -116,3 +116,11 @@ Phase 02 机械迁入开始前同时满足才是 Go：
 5. 实际 Core/Harness JAR 已检查，确认它们没有打包 `LICENSE`/`NOTICE`，这被记录为上游发布包装风险而非静默忽略。
 
 该 GO 不等于发布审批。AgentArk 可分发 Artifact 仍必须对实际 Runtime Classpath 生成 SBOM/License Report，并随发布物携带 AgentArk 与第三方适用的 LICENSE/NOTICE。Phase 02 只锁定 Core/Harness 依赖，不引入整个 Extensions 聚合。
+
+## 9. Phase 17 Web 许可基线
+
+Phase 17 没有复制 AgentScope Service Frontend 或 DeepSeek Harness 的源码、组件、Token、品牌、Logo、favicon、图片、Glyph、Snapshot 或产品文案。AgentArk favicon、CSS Token、React 组件和页面 Fixture 均为独立实现；Lucide 图标通过 AgentArk 自己锁定的 npm 依赖使用。
+
+2026-08-17 对 `agentark-web/pnpm-lock.yaml` 的生产依赖执行 `pnpm --dir agentark-web licenses list --prod --json`，当前 SPDX 分类为 `0BSD`、`Apache-2.0`、`ISC`、`MIT`，`pnpm --dir agentark-web peers check` 无 Peer Dependency 问题。该结果只证明当前锁文件闭包，不是法律意见，也不替代 Phase 23 的 Web SBOM、第三方 NOTICE 和实际静态发布物检查。
+
+若后续把任一上游前端候选从 `REFERENCE` 提升为 `ADAPT/REUSE`，必须在迁入前记录源 Commit、源路径、目标路径、文件版权、许可证文本和修改范围；品牌或来源不明确的资产继续 `REJECT`，不能因代码仓库使用宽松许可证就推断商标或图片可复用。

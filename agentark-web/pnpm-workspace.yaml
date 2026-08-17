@@ -1,0 +1,7 @@
+# 将当前目录声明为独立 pnpm 工作区，避免继承仓库外部配置。
+packages:
+  - .
+
+# 仅允许 Vite/测试工具间接依赖的 esbuild 安装平台二进制。
+allowBuilds:
+  esbuild: true

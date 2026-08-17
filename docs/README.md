@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-16
+updated: 2026-08-17
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -30,6 +30,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 14 执行证据 | [Knowledge Ingestion 与 RAG](implementation/phase-14-knowledge-rag.md) | 复核安全异步摄取、Qdrant、固定 Revision 检索、Citation/Trace 与 AgentScope Tool 防腐层 |
 | Phase 15 执行证据 | [Scheduler 与持久 Job](implementation/phase-15-scheduler.md) | 复核 Trigger、Job/Attempt/Lease、Cron/Webhook、Channel、Retry/Dead Letter 与 Internal Client |
 | Phase 16 执行证据 | [Gateway 公共入口](implementation/phase-16-gateway.md) | 复核路由、OIDC/JWT、API Key、CORS、限流、SSE 代理与安全边界 |
+| Phase 17 执行证据 | [Web 工程基础](implementation/phase-17-web-foundation.md) | 复核独立工程、设计系统、生成式 API Client、SSE Client、CI 与浏览器验收 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |
@@ -44,6 +45,9 @@ referenced_by: AGENTS.md#knowledge-map
 | 编码 | [编码标准](standards/coding.md) | Java/模块/异常/并发实现与评审 |
 | API/Event | [契约标准](standards/api.md) | Public/Internal API、Event、幂等和兼容性 |
 | 契约文件 | [OpenAPI](../contracts/openapi/)、[AsyncAPI](../contracts/asyncapi/)、[JSON Schema](../contracts/schemas/) | 修改跨平面 API、Runtime Event、Snapshot 或通用 Error |
+| Web 信息架构 | [Web IA](frontend/information-architecture.md) | 增减控制台导航、路由、Feature 或跨页面上下文 |
+| Web 设计系统 | [Design System](frontend/design-system.md) | 修改 Token、主题、通用组件、可访问性或视觉基线 |
+| Web 上游参考 | [Frontend Source Reference](frontend/source-reference.md) | 借鉴 AgentScope/DeepSeek 前端或评估复制、品牌和许可边界 |
 | 安全 | [安全标准](standards/security.md) | 身份、权限、Secret、租户、Sandbox 或供应链 |
 | 术语 | [领域术语](domain/glossary.md) | 命名聚合、接口、表、事件或 UI 文案 |
 | 运维与 Loop | [当前 Runbook](guides/runbook.md) | 本地检查、故障定位、回滚和 Loop 就绪性 |
