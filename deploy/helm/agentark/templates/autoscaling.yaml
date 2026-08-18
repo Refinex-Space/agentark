@@ -1,0 +1,65 @@
+{{- range $component := list "gateway" "control" "runtime" "scheduler" "web" }}
+{{- $service := index $.Values.services $component }}
+{{- if and $service.autoscaling.enabled (not $service.autoscaling.keda.enabled) }}
+# {{ $component }} 使用 CPU HPA；队列/连接指标可切换到 KEDA。
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "agentark.componentName" (dict "root" $ "component" $component) }}
+  labels:
+    {{- include "agentark.labels" (dict "root" $ "component" $component) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "agentark.componentName" (dict "root" $ "component" $component) }}
+  minReplicas: {{ $service.autoscaling.minReplicas }}
+  maxReplicas: {{ $service.autoscaling.maxReplicas }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: 30
+      policies:
+        - type: Percent
+          value: 100
+          periodSeconds: 60
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Percent
+          value: 25
+          periodSeconds: 60
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ $service.autoscaling.targetCPUUtilizationPercentage }}
+---
+{{- end }}
+{{- if $service.autoscaling.keda.enabled }}
+# {{ $component }} 可选使用 Prometheus Queue/SSE/Event Lag 指标扩容。
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "agentark.componentName" (dict "root" $ "component" $component) }}
+  labels:
+    {{- include "agentark.labels" (dict "root" $ "component" $component) | nindent 4 }}
+spec:
+  scaleTargetRef:
+    name: {{ include "agentark.componentName" (dict "root" $ "component" $component) }}
+  minReplicaCount: {{ $service.autoscaling.minReplicas }}
+  maxReplicaCount: {{ $service.autoscaling.maxReplicas }}
+  pollingInterval: 15
+  cooldownPeriod: 300
+  triggers:
+    - type: prometheus
+      metadata:
+        serverAddress: {{ required "KEDA serverAddress is required" $service.autoscaling.keda.serverAddress | quote }}
+        metricName: {{ printf "agentark_%s_scale" $component | quote }}
+        query: {{ required "KEDA query is required" $service.autoscaling.keda.query | quote }}
+        threshold: {{ $service.autoscaling.keda.threshold | quote }}
+---
+{{- end }}
+{{- end }}
+

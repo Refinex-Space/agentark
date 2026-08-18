@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-18
 status: active
 referenced_by: PLAN.md#phase-21--go-aistio-strangler数据迁移与-java-control-全量切换
 ---
@@ -58,7 +58,7 @@ AgentArk 默认 Compose 从创建时就是 Java-only，没有运行 Go `aistiod`
 
 - 不新增 Maven 业务模块、数据库 Schema、部署单元或跨库连接。
 - 迁移工具只读 PostgreSQL 导出，写入仅调用 Java Public/Internal API；Secret 只迁引用，大对象单独进入 Object Store 清单。
-- 默认 Compose 保持 Java-only；AgentArk 目前没有 Helm Chart，Phase 22 创建 Chart 时必须通过相同 Java-only Gate。
+- 默认 Compose 与 `deploy/helm/agentark/` 保持 Java-only；Helm 生产门禁通过相同规则拒绝 Aistio/Go 依赖回流。
 - Team/CRD/ASDP 不阻塞 C1–C8 核心切换，但进入明确 Backlog，后续提升分类必须新增或修订 ADR。
 
 ## 验证

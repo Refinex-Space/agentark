@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-18
 status: active
 referenced_by: PLAN.md#phase-21--go-aistio-strangler数据迁移与-java-control-全量切换
 ---
@@ -25,7 +25,7 @@ Phase 21 已完成仓库侧收官：固定 Aistio 源码、Go API/表/Auth/Sessi
 - Session/Run/Event/Approval/State/Instance 归 Java Runtime，Trigger/Job/Delivery 归 Java Scheduler；
 - 活动来源 Session 固定 `GO_UNTIL_TERMINAL`，终态历史只读归档，新 Session 只用 Java Snapshot；
 - Team/Task/Message、CRD、ASDP/BYO 为 `DEFER`，Hosted Store、Go 本地认证、Aistio UI 为 `REJECT`；
-- 当前无 Helm Chart；Phase 22 创建 Chart 时必须保持 Java-only。
+- `deploy/helm/agentark/` 已在 Phase 22 建立并保持 Java-only，生产门禁拒绝 Aistio/Go 依赖回流。
 
 ## Contract Freeze
 

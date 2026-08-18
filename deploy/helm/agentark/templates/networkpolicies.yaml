@@ -1,0 +1,114 @@
+{{- if .Values.networkPolicy.enabled }}
+# AgentArk 应用 Pod 默认拒绝全部入站和出站。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "agentark.fullname" . }}-default-deny
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "network") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: agentark
+  policyTypes: ["Ingress", "Egress"]
+---
+# 只允许 Ingress Controller 访问 Gateway/Web，并允许同 Namespace 受控平面协作。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "agentark.fullname" . }}-ingress
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "network") | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values: ["gateway", "web"]
+  policyTypes: ["Ingress"]
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.ingressNamespaceSelector | nindent 14 }}
+          podSelector:
+            matchLabels:
+              {{- toYaml .Values.networkPolicy.ingressPodSelector | nindent 14 }}
+      ports:
+        - protocol: TCP
+          port: 8080
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/part-of: agentark
+---
+# 同一 Release 的四平面可按 Service DNS 通信；不允许其他 Namespace 横向访问。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "agentark.fullname" . }}-internal
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "network") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: agentark
+  policyTypes: ["Ingress", "Egress"]
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+  egress:
+    - to:
+        - podSelector:
+            matchLabels:
+              app.kubernetes.io/instance: {{ .Release.Name }}
+---
+# 所有应用 Pod 只允许访问 kube-system DNS。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "agentark.fullname" . }}-dns
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "network") | nindent 4 }}
+spec:
+  podSelector:
+    matchLabels:
+      app.kubernetes.io/part-of: agentark
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+{{- if .Values.global.externalEgressCidrs }}
+---
+# Backend 外部出口只允许平台批准的 Managed Service/Provider CIDR。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "agentark.fullname" . }}-external-egress
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "network") | nindent 4 }}
+spec:
+  podSelector:
+    matchExpressions:
+      - key: app.kubernetes.io/component
+        operator: In
+        values: ["gateway", "control", "runtime", "scheduler", "control-migration", "runtime-migration", "scheduler-migration", "otel-collector"]
+  policyTypes: ["Egress"]
+  egress:
+    - to:
+        {{- range .Values.global.externalEgressCidrs }}
+        - ipBlock:
+            cidr: {{ . }}
+        {{- end }}
+{{- end }}
+{{- end }}
+

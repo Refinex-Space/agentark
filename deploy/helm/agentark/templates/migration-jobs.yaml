@@ -1,0 +1,83 @@
+{{- if .Values.migrations.enabled }}
+{{- $fullname := include "agentark.fullname" . -}}
+{{- range $index, $plane := list "control" "runtime" "scheduler" }}
+{{- $schemaKey := printf "%sSchema" $plane -}}
+# {{ $plane }} 独占 Flyway Hook Job；应用副本在迁移成功后才滚动。
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ printf "%s-migrate-%s" $fullname $plane }}
+  labels:
+    {{- include "agentark.labels" (dict "root" $ "component" (printf "%s-migration" $plane)) | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: {{ printf "-%d" (sub 30 $index) | quote }}
+    helm.sh/hook-delete-policy: before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ $.Values.migrations.backoffLimit }}
+  activeDeadlineSeconds: {{ $.Values.migrations.activeDeadlineSeconds }}
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "agentark.selectorLabels" (dict "root" $ "component" (printf "%s-migration" $plane)) | nindent 8 }}
+        app.kubernetes.io/part-of: agentark
+    spec:
+      restartPolicy: Never
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: flyway
+          image: {{ include "agentark.image" (dict "root" $ "image" $.Values.migrations.image) | quote }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          args:
+            - {{ printf "-locations=filesystem:/flyway/sql/%s" $plane | quote }}
+            - {{ printf "-schemas=%s" (index $.Values.global.external.mysql $schemaKey) | quote }}
+            - {{ printf "-defaultSchema=%s" (index $.Values.global.external.mysql $schemaKey) | quote }}
+            - "-table=flyway_schema_history"
+            - "-validateMigrationNaming=true"
+            - "-cleanDisabled=true"
+            - "migrate"
+          env:
+            - name: FLYWAY_URL
+              value: {{ printf "jdbc:mysql://%s:%v/%s?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8&useUnicode=true&sslMode=%s&allowPublicKeyRetrieval=%t" $.Values.global.external.mysql.host $.Values.global.external.mysql.port (index $.Values.global.external.mysql $schemaKey) $.Values.global.external.mysql.sslMode $.Values.global.external.mysql.allowPublicKeyRetrieval | quote }}
+            - name: FLYWAY_USER
+              value: {{ index $.Values.global.external.mysql.usernames $plane | quote }}
+            - name: FLYWAY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentark.secretName" $ }}
+                  key: {{ index $.Values.secretManagement.keys (printf "%sDatabasePassword" $plane) }}
+          resources:
+            # Flyway Job 调度请求。
+            requests:
+              # 最小 CPU。
+              cpu: 100m
+              # 最小内存。
+              memory: 256Mi
+            # Flyway Job 容器上限。
+            limits:
+              # 最大 CPU。
+              cpu: "1"
+              # 最大内存。
+              memory: 1Gi
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 64Mi
+---
+{{- end }}
+{{- end }}

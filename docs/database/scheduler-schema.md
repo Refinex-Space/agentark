@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-16
+updated: 2026-08-18
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -9,7 +9,7 @@ referenced_by: AGENTS.md#knowledge-map
 
 Schema：`agentark_scheduler`。唯一写入者是 Scheduler Server。它不保存 Control Catalog、Knowledge Metadata 或 Runtime Session/Run 事实。
 
-Phase 15 已通过 `V2__phase_15_scheduler.sql` 创建下列表、Repository 和多实例/幂等测试；Phase 14 的 Ingestion Worker 继续只定义中立处理与结果契约，不拥有 Scheduler 数据。
+Phase 15 已通过 `V2__phase_15_scheduler.sql` 创建下列表、Repository 和多实例/幂等测试；Phase 22 的真实 Trigger 演练发现 `trigger.created` 与 Outbox 聚合约束漂移，已通过前向 `V3__phase_22_trigger_outbox_contract.sql` 将 `trigger` 纳入合法聚合类型。Phase 14 的 Ingestion Worker 继续只定义中立处理与结果契约，不拥有 Scheduler 数据。
 
 Trigger 只允许通过 Audience 受限的 `/internal/v1/scheduler/triggers` 登记。Cron 登记在同一事务中创建首个 Cursor 和 `trigger.created` Outbox；同租户同 Key 的完全相同定义幂等复用，不同定义返回冲突。`config_json` 是目标 Job Payload 的非敏感字符串字段，点火时补充平台保留的 `_triggerId`、`_triggerScheduledAt`、`_triggerContract`；疑似 Secret、Token、Password、Credential 或 API Key 的配置键被应用层拒绝，Webhook 密钥只保存合法 `SecretRef`。
 
@@ -21,6 +21,7 @@ Trigger 只允许通过 Audience 受限的 `/internal/v1/scheduler/triggers` 登
 | 14 | 无 Scheduler 业务表 | 只定义 Knowledge Ingestion Handler 与结果契约 |
 | 15 | Trigger、Cursor、Job、Attempt、Lease、Delivery、Dead Letter、Idempotency、Outbox | 完整调度事实、重试与多实例一致性 |
 | 16 | 只允许经本模型评审后的 Channel 兼容增量 | Channel 不能拥有 Runtime Session 或 Control Catalog |
+| 22 | Scheduler Outbox Trigger 契约前向修正 | 允许 `trigger/job/dead_letter/audit`，不改写 V2 历史 |
 
 调度处理器不得以实现便利提前创建表；任何 Owner 或状态模型变化必须先更新本文档。
 
@@ -34,7 +35,7 @@ Trigger 只允许通过 Audience 受限的 `/internal/v1/scheduler/triggers` 登
 | `delivery` | id, job_id, channel/endpoint identity, provider_idempotency_key, status, response summary/ref | Provider key 唯一；不保存 Credential |
 | `dead_letter` | id, job_id, final_attempt_id, reason, redrive_count, status, created_at | 状态/time 索引；Redrive 授权审计 |
 | `scheduler_idempotency_record` | scope type/id, idempotency_key, request_hash, result_ref, status, expires_at | Scope 内 key 唯一 |
-| `scheduler_outbox` | event_id, aggregate type/id, type, payload/ref, status, available_at, attempts | event_id 唯一；Claim 索引 |
+| `scheduler_outbox` | event_id, aggregate type/id, type, payload/ref, status, available_at, attempts | `aggregate_type` 仅允许 `trigger/job/dead_letter/audit`；event_id 唯一；Claim 索引 |
 
 ## 状态和副作用
 

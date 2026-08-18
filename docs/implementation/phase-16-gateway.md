@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-16
+updated: 2026-08-18
 status: active
 referenced_by: docs/README.md
 ---
@@ -77,7 +77,7 @@ Health 与边缘 Internal 拒绝路径不消耗公共额度。Redis Starter 与 
 
 SSE 路由保留 `Last-Event-ID`，不改变 Runtime 已持久化 Event ID；设置 `Cache-Control: no-store` 和 `X-Accel-Buffering: no`，并通过负 Route Response Timeout 禁用普通响应超时。普通 API 仍受 30 秒响应超时约束，不因 SSE 放宽全局策略。
 
-Gateway 使用 Spring Boot Graceful Shutdown 和 20 秒关闭阶段。连接关闭不取消 Run；滚动重启或网络中断后，客户端以最后持久 Event ID 重新连接，由 Runtime 回放后追平实时流。Phase 16 的真实 HTTP 集成测试证明 `Last-Event-ID` 和有限 SSE Body 穿过 Gateway；无限流、慢客户端和跨副本长期压力演练仍属于 Phase 22。
+Gateway 使用 Spring Boot Graceful Shutdown 和 20 秒关闭阶段。连接关闭不取消 Run；滚动重启或网络中断后，客户端以最后持久 Event ID 重新连接，由 Runtime 回放后追平实时流。Phase 16 的真实 HTTP 集成测试证明 `Last-Event-ID` 和有限 SSE Body 穿过 Gateway；Phase 22 又验证了真实首事件延迟、20 个并发回放连接、节点 Drain 和滚动升级。更高连接规模仍需目标环境容量测试。
 
 ## 配置与部署边界
 
@@ -116,7 +116,7 @@ Gateway 使用 Spring Boot Graceful Shutdown 和 20 秒关闭阶段。连接关�
 
 - 仓库没有真实生产 OIDC Provider、TLS/mTLS、Ingress 或 NetworkPolicy；配置和测试只证明应用边界。
 - API Key 正缓存是单实例可丢失缓存，吊销最坏窗口等于 TTL；跨实例主动失效属于后续可靠性增强，不能扩大 30 秒上限。
-- Redis 固定窗口不是全局严格平滑限流；跨区域、突发整形和容量压力由 Phase 22 验证。
+- Redis 固定窗口不是全局严格平滑限流；Phase 22 只完成本机容量和 Redis 重建语义，跨区域与真实突发整形仍需目标环境验证。
 - Scheduler Webhook 的 HMAC、时间窗、Nonce 和重放保护仍由 Scheduler 完成；Gateway 只限制方法、请求体和来源速率。
 - 前端可靠 SSE Client、指数重连、去重和可见状态属于 Phase 17。
 

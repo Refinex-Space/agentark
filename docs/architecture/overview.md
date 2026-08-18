@@ -2869,7 +2869,7 @@ Phase 20 不新增安全微服务，也不把安全责任集中到 Gateway：
 - RAG、Tool、MCP 与模型输出携带不可信语义，不能改变 Permission、Secret Scope 或审批条件；
 - Repository/Container 发布门禁执行 SCA、Secret、IaC、CodeQL、CycloneDX、License/NOTICE、Cosign 和 GitHub OIDC Provenance；Action/Scanner/镜像固定 Commit 或 Digest。
 
-Threat Owner、严重度、缓解和验证见 [Threat Model](../security/threat-model.md)，实现边界见 [安全架构](../security/security-architecture.md)。真实 Kubernetes、mTLS、Admission、HA/DR 和云工作负载身份仍由 Phase 22 做部署验收，不能用静态清单成功代替运行态证据。
+Threat Owner、严重度、缓解和验证见 [Threat Model](../security/threat-model.md)，实现边界见 [安全架构](../security/security-architecture.md)。Phase 22 已提供 Kubernetes/Helm、NetworkPolicy、SecurityContext、三节点 HA、备份恢复和故障演练基线；mTLS、Admission、云工作负载身份和目标生产环境容量仍必须由部署平台做独立验收，不能用本机演练代替。
 
 ---
 
@@ -3012,6 +3012,8 @@ flowchart TB
     RT --> OTEL
     SCH --> OTEL
 ```
+
+该拓扑由 `deploy/helm/agentark/` 实现：五个无状态工作负载使用独立 ServiceAccount、PDB、HPA/KEDA、Topology Spread、非 Root/只读根安全上下文和 Startup/Readiness/Liveness；三套 Flyway Hook Job 只连接各自 Schema。MySQL、Redis、Object Store、Qdrant 和 IdP 均为外部 HA 服务，Chart 不创建生产数据库。运行证据、恢复顺序和容量边界分别见 [Phase 22 报告](../implementation/phase-22-production.md)、[恢复 Runbook](../runbooks/backup-restore.md) 和 [容量报告](../operations/phase-22-capacity-rpo-rto.md)。
 
 ### 16.4 服务发现与配置
 
@@ -3736,7 +3738,7 @@ flowchart LR
 - 临时兼容代理只允许 GET、只绑定 Loopback，Go Fallback 最长 24 小时且 `JAVA_ONLY` 缺映射时失败关闭；
 - UserIdentity、Secret 和 Webhook 必须显式映射，不迁密码摘要、密文、旧 Token 或伪造外部 Secret 路径；
 - Team/Task、CRD、ASDP/BYO 明确 `DEFER`，Hosted Store、Go 本地认证和 Aistio UI 明确 `REJECT`；
-- 当前没有 Helm Chart；Phase 22 创建 Chart 时必须保持 Java-only，不能把 Go 作为“兼容依赖”带回生产。
+- `deploy/helm/agentark/` 已保持 Java-only；生产模板和门禁拒绝把 Go 作为“兼容依赖”带回部署。
 
 详细边界见 [ADR-0006](decisions/0006-aistio-cutover-scope.md)，迁移与回滚分别遵循 [Cutover Runbook](../runbooks/aistio-cutover.md) 和 [Rollback Runbook](../runbooks/aistio-rollback.md)。真实外部 Aistio 数据和流量未提供，因此仓库验收只证明工具、Fixture、Contract 和默认部署门禁，不声称完成某个生产租户的迁移。
 

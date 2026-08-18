@@ -1,7 +1,9 @@
-# 将当前目录声明为独立 pnpm 工作区，避免继承仓库外部配置。
+# 单包 Workspace 使 pnpm 11 的供应链设置可版本化。
 packages:
-  - .
+  # Web 根包自身是唯一 Workspace Package。
+  - "."
 
-# 仅允许 Vite/测试工具间接依赖的 esbuild 安装平台二进制。
+# pnpm 11 使用显式 Map 审批依赖构建脚本，未列入项默认拒绝。
 allowBuilds:
+  # 允许 Vite 锁定的 esbuild 执行平台二进制安装脚本。
   esbuild: true

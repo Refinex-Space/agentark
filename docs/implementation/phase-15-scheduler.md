@@ -72,7 +72,7 @@ Channel Domain 只携带组织、项目、Channel、Conversation、Recipient、�
 
 ## 数据库
 
-Scheduler Flyway V2 创建九张业务表，所有表和字段具有 MySQL 原生中文 `COMMENT`；状态/类型字段注释列出全部合法值并与 `CHECK` 和 Java Enum 一致。迁移从 V1 空基线升级，不使用 JPA/Hibernate、共享 BaseMapper、跨 Schema SQL 或应用 Auto-DDL。
+Scheduler Flyway V2 创建九张业务表，所有表和字段具有 MySQL 原生中文 `COMMENT`；状态/类型字段注释列出全部合法值并与 `CHECK` 和 Java Enum 一致。Phase 22 真实 Trigger 演练发现应用写入的 `aggregate_type='trigger'` 未包含在 V2 Outbox CHECK 中，已新增前向 V3 迁移把合法集合修正为 `trigger/job/dead_letter/audit`，并保留 V2 不可变。迁移从 V1 空基线升级，不使用 JPA/Hibernate、共享 BaseMapper、跨 Schema SQL 或应用 Auto-DDL。
 
 完整字段、索引和 Owner 见 [Scheduler Schema](../database/scheduler-schema.md)。
 

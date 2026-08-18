@@ -1,0 +1,6 @@
+# syntax=docker/dockerfile:1.7
+
+# 接受已经构建或拉取的固定来源镜像。
+ARG SOURCE_IMAGE
+# 重新导出当前 kind 节点平台的单一 Docker Manifest，不修改文件层和运行配置。
+FROM ${SOURCE_IMAGE}

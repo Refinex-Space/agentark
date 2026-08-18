@@ -42,6 +42,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.IntStream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -106,6 +108,72 @@ class KnowledgeIngestionWorkerTest {
         assertThat(result.status()).isEqualTo(ResultStatus.FAILED);
         assertThat(result.failureCode()).isEqualTo("VECTOR_UPSERT_FAILED");
         assertThat(vectorStore.verified).isFalse();
+    }
+
+    /**
+     * 验证大文档形成四千个 Chunk 时仍严格按固定批次 Embedding，不生成无界 Provider 请求。
+     */
+    @Test
+    void batchesLargeDocumentChunkSet() {
+        Phase14Fixtures.Fixture fixture = Phase14Fixtures.create(
+            KnowledgeRevisionStatus.INGESTING);
+        IngestionCommand command = Phase14Fixtures.command(fixture);
+        RecordingVectorStore vectorStore = new RecordingVectorStore(true);
+        AtomicInteger batchCount = new AtomicInteger();
+        AtomicInteger largestBatch = new AtomicInteger();
+        int chunkCount = 4096;
+        int batchSize = 64;
+        KnowledgeIngestionWorker worker = new KnowledgeIngestionWorker(
+            requestId -> CompletableFuture.completedFuture(Phase14Fixtures.plan(fixture)),
+            CompletableFuture::completedFuture,
+            revision -> new ByteArrayInputStream("large document".getBytes()),
+            (revision, resolver) -> CompletableFuture.completedFuture(null),
+            (revision, profile, resolver) -> CompletableFuture.completedFuture(
+                new ParsedDocument(revision.id(), "large document", Map.of(
+                    "source_trust", "UNTRUSTED_EXTERNAL"))),
+            (document, profile) -> CompletableFuture.completedFuture(
+                IntStream.range(0, chunkCount)
+                    .mapToObj(index -> new KnowledgeChunk(
+                        document.documentRevisionId().asString() + ":c" + index,
+                        document.documentRevisionId(), "chunk-" + index, document.metadata()))
+                    .toList()),
+            new ChunkArtifactStore() {
+                /**
+                 * 返回代表大 Chunk 清单的固定内容寻址制品。
+                 */
+                @Override
+                public CompletionStage<ObjectRef> put(
+                    space.refinex.agentark.kernel.id.KnowledgeRevisionId revisionId,
+                    List<KnowledgeChunk> chunks) {
+                    return CompletableFuture.completedFuture(ObjectRef.of(
+                        "object://knowledge/large-chunks.ndjson",
+                        Checksum.sha256("large-chunks"), chunks.size(),
+                        "application/x-ndjson"));
+                }
+
+                /**
+                 * 当前批次测试不执行制品删除。
+                 */
+                @Override
+                public CompletionStage<Void> delete(ObjectRef ref) {
+                    return CompletableFuture.completedFuture(null);
+                }
+            },
+            (chunks, profile) -> {
+                batchCount.incrementAndGet();
+                largestBatch.accumulateAndGet(chunks.size(), Math::max);
+                return CompletableFuture.completedFuture(chunks.stream()
+                    .map(chunk -> new EmbeddedChunk(chunk, new float[]{1, 0, 0})).toList());
+            },
+            vectorStore, Runnable::run, Clock.fixed(fixture.now(), ZoneOffset.UTC),
+            batchSize, 3, Duration.ZERO);
+
+        IngestionResult result = worker.execute(command).toCompletableFuture().join();
+
+        assertThat(result.status()).isEqualTo(ResultStatus.SUCCEEDED);
+        assertThat(result.chunkCount()).isEqualTo(chunkCount);
+        assertThat(batchCount).hasValue(chunkCount / batchSize);
+        assertThat(largestBatch).hasValue(batchSize);
     }
 
     /**

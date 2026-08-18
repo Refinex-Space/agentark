@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-18
 status: active
 referenced_by: docs/README.md#安全架构
 ---
@@ -26,7 +26,7 @@ Internet
 - Public API 使用 OIDC/JWK 或只保存摘要的 API Key；Issuer、Audience、Algorithm 均精确匹配。
 - Gateway 删除客户端伪造身份 Header，Tenant Header 只表达选择意图。
 - Organization → Project → Environment 由服务端资源关系和 Principal 权限共同解析。
-- Internal API 不经过公共 Gateway；服务身份必须面向目标服务 Audience。生产 mTLS 和 NetworkPolicy 是 Phase 22 的额外纵深防御，不替代当前 JWT 验证。
+- Internal API 不经过公共 Gateway；服务身份必须面向目标服务 Audience。Phase 22 已验证 NetworkPolicy 运行边界；生产 mTLS 仍由目标平台验收，二者都不替代当前 JWT 验证。
 - API Key 只在创建时展示，数据库保存摘要，吊销后短 TTL 缓存受控失效。
 
 ## Secret 生命周期
@@ -67,7 +67,7 @@ Provider Component Factory 必须使用 Permit 中的固定地址集合建立连
 
 Snapshot Sandbox Contract 强制 `UNTRUSTED/KUBERNETES`、内容寻址镜像、非 Root、只读根、禁止提权/Privileged、drop ALL、RuntimeDefault Seccomp、默认断网、无 Docker Socket、Session Workspace 和 CPU/内存/PID/磁盘/时间/输出六类上限。
 
-`deploy/security/sandbox-policy.yaml` 提供 restricted Namespace、default-deny NetworkPolicy、ResourceQuota、LimitRange 和暂停的安全 Job 基线。缺少生产 Sandbox Adapter 时 Runtime 不执行不可信代码；不会回退宿主 Shell。真实集群的 NetworkPolicy CNI、Pod Security Admission、镜像签名 Admission 和逃逸测试在 Phase 22 再做运行态验收。
+`deploy/security/sandbox-policy.yaml` 提供 restricted Namespace、default-deny NetworkPolicy、ResourceQuota、LimitRange 和暂停的安全 Job 基线。缺少生产 Sandbox Adapter 时 Runtime 不执行不可信代码；不会回退宿主 Shell。Phase 22 已用 Calico 验证主应用 NetworkPolicy CNI，Helm 提供 Sandbox Namespace/RuntimeClass；Pod Security Admission、镜像签名 Admission 和逃逸测试仍必须在安装真实隔离 Runtime 的目标集群验收。
 
 ## RAG 与 Prompt Injection
 
@@ -91,4 +91,4 @@ Snapshot Sandbox Contract 强制 `UNTRUSTED/KUBERNETES`、内容寻址镜像、�
 
 生产缺少 OIDC、Vault/Runtime Secret Resolver、Model/Component Factory、恶意文件扫描器或 Sandbox Adapter 时，对应能力不可用，不使用 Dev/Fake 实现维持“看似可用”。OTel Backend 不可用可以降级，因为 Audit/Event/Usage 权威事实仍在 MySQL；安全认证、授权、Fencing、供应链和 Secret 校验不可降级。
 
-本架构不声称已经完成真实云 Vault 工作负载身份、Kubernetes Admission、mTLS、镜像 Registry 权限、HA/DR 或第三方渗透。这些是 Phase 22–23 的部署验收，不是允许绕过当前安全边界的开放项。
+本架构不声称已经完成真实云 Vault 工作负载身份、Kubernetes Admission、mTLS、镜像 Registry 权限、托管服务 HA/DR 或第三方渗透。Phase 22 已完成仓库级 HA/恢复基线；上述外部能力仍由目标环境和 Phase 23 验收，不是允许绕过当前安全边界的开放项。

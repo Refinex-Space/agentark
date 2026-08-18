@@ -200,8 +200,6 @@ agentark:
         - BSD-2-Clause
         # BSD 3-Clause License。
         - BSD-3-Clause
-      # Key ID 到 Base64 X.509 Ed25519 公钥的部署信任根；生产由受保护配置覆盖。
-      trusted-skill-signing-keys: {}
     # 生产 Secret Provider 只允许显式启用 Vault KV v2，不回退到本地文件。
     secret:
       # Vault KV v2 集成配置。

@@ -1,22 +1,48 @@
-# 默认拒绝将仓库内容发送到 Docker 构建上下文。
-**
-
-# 只允许共用 Server 镜像模板进入构建上下文。
-!deploy/
-!deploy/compose/
-!deploy/compose/Dockerfile.service
-
-# 只允许四个 Maven 可执行 JAR 进入构建上下文。
-!agentark-services/
-!agentark-services/agentark-gateway-server/
-!agentark-services/agentark-gateway-server/target/
-!agentark-services/agentark-gateway-server/target/agentark-gateway-server-*.jar
-!agentark-services/agentark-control-server/
-!agentark-services/agentark-control-server/target/
-!agentark-services/agentark-control-server/target/agentark-control-server-*.jar
-!agentark-services/agentark-runtime-server/
-!agentark-services/agentark-runtime-server/target/
-!agentark-services/agentark-runtime-server/target/agentark-runtime-server-*.jar
-!agentark-services/agentark-scheduler-server/
-!agentark-services/agentark-scheduler-server/target/
-!agentark-services/agentark-scheduler-server/target/agentark-scheduler-server-*.jar
+# Git 与 Harness 元数据不进入镜像构建上下文。
+.git
+.agentark
+# IDE、本机环境和临时文件不进入镜像。
+.idea
+.DS_Store
+*.iml
+# Maven 构建输出由容器构建阶段重新生成。
+**/target
+# Web 依赖和产物由固定 pnpm Lockfile 重新生成。
+agentark-web/node_modules
+agentark-web/dist
+agentark-web/playwright-report
+agentark-web/test-results
+# 本地 Secret、运行数据和环境覆盖禁止进入镜像。
+**/.env
+**/.env.*
+!**/.env.example
+deploy/compose/secrets
+**/.secrets
+secrets/local
+**/*-password
+**/application-secret.yml
+**/application-secret.yaml
+**/application-secret.properties
+config/local
+config/secret
+**/local.properties
+**/*.secret
+**/*.secrets
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.jks
+**/*.keystore
+**/id_rsa
+**/id_rsa.*
+**/id_ed25519
+**/id_ed25519.*
+**/credentials.json
+**/service-account.json
+**/*-service-account.json
+**/.aws
+**/.azure
+**/.gcp
+**/*.log
+**/logs
+**/log

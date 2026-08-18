@@ -456,7 +456,7 @@ flowchart LR
 | 19 | DONE | 2026-08-17 | `docs/implementation/phase-19-observability-governance.md` | OTel、Audit、Usage/Cost、Quota、Evaluation、Web 与观测部署已完成验收 |
 | 20 | DONE | 2026-08-17 | `docs/implementation/phase-20-security-hardening.md` | Threat Model、Vault、MCP/Skill、Sandbox、RAG 信任与供应链门禁已验收 |
 | 21 | DONE | 2026-08-17 | `docs/implementation/phase-21-aistio-strangler.md` | Contract Freeze、迁移/Shadow 工具、显式安全映射、Java-only 默认部署与切换/回滚门禁通过；真实外部 Cohort 需独立执行 Runbook |
-| 22 | NOT_STARTED | — | `docs/implementation/phase-22-production.md` | |
+| 22 | DONE | 2026-08-18 | `docs/implementation/phase-22-production.md` | 生产镜像、Helm、三节点 HA、备份恢复、性能、故障演练与 Runbook 已完成验收 |
 | 23 | NOT_STARTED | — | `docs/implementation/phase-23-release-readiness.md` | |
 
 状态只允许：
@@ -3612,90 +3612,90 @@ $AGENTSCOPE_ROOT/agentscope-extensions/
 
 #### Container
 
-- [ ] 四服务多阶段 Dockerfile；
-- [ ] 非 Root；
-- [ ] Read-only Root FS 兼容；
-- [ ] JVM Container 参数；
-- [ ] Health Check；
-- [ ] Image Digest/Label/SBOM；
-- [ ] Web 静态部署；
-- [ ] 镜像签名。
+- [x] 四服务多阶段 Dockerfile；
+- [x] 非 Root；
+- [x] Read-only Root FS 兼容；
+- [x] JVM Container 参数；
+- [x] Health Check；
+- [x] Image Digest/Label/SBOM；
+- [x] Web 静态部署；
+- [x] 镜像签名。
 
 #### Helm/Kubernetes
 
-- [ ] Chart；
-- [ ] Gateway/Control/Runtime/Scheduler Deployment；
-- [ ] Service；
-- [ ] Ingress；
-- [ ] ServiceAccount；
-- [ ] RBAC；
-- [ ] ConfigMap；
-- [ ] External Secret；
-- [ ] NetworkPolicy；
-- [ ] SecurityContext；
-- [ ] PDB；
-- [ ] HPA/KEDA；
-- [ ] Pod Topology Spread；
-- [ ] Affinity；
-- [ ] Resource Request/Limit；
-- [ ] Startup/Readiness/Liveness；
-- [ ] PreStop/Termination Grace；
-- [ ] Flyway Migration Job；
-- [ ] Runtime/Scheduler Drain；
-- [ ] Sandbox 独立 Namespace/RuntimeClass；
-- [ ] OTel Collector；
-- [ ] 可选 Qdrant/Elastic/Neo4j 外部连接配置。
+- [x] Chart；
+- [x] Gateway/Control/Runtime/Scheduler Deployment；
+- [x] Service；
+- [x] Ingress；
+- [x] ServiceAccount；
+- [x] RBAC；
+- [x] ConfigMap；
+- [x] External Secret；
+- [x] NetworkPolicy；
+- [x] SecurityContext；
+- [x] PDB；
+- [x] HPA/KEDA；
+- [x] Pod Topology Spread；
+- [x] Affinity；
+- [x] Resource Request/Limit；
+- [x] Startup/Readiness/Liveness；
+- [x] PreStop/Termination Grace；
+- [x] Flyway Migration Job；
+- [x] Runtime/Scheduler Drain；
+- [x] Sandbox 独立 Namespace/RuntimeClass；
+- [x] OTel Collector；
+- [x] 可选 Qdrant/Elastic/Neo4j 外部连接配置。
 
 #### 配置与发现
 
-- [ ] Kubernetes Service DNS；
-- [ ] 不默认引入 Nacos/Consul；
-- [ ] 不默认引入 Service Mesh；
-- [ ] 动态 Agent 行为仍走 Control Version；
-- [ ] Secret 不在 ConfigMap；
-- [ ] GitOps/Values Schema；
-- [ ] Production Validation。
+- [x] Kubernetes Service DNS；
+- [x] 不默认引入 Nacos/Consul；
+- [x] 不默认引入 Service Mesh；
+- [x] 动态 Agent 行为仍走 Control Version；
+- [x] Secret 不在 ConfigMap；
+- [x] GitOps/Values Schema；
+- [x] Production Validation。
 
 #### HA/扩缩容
 
-- [ ] Gateway 按 Request/SSE；
-- [ ] Control 按 Request/DB Pool；
-- [ ] Runtime 按 Active Run/Queue/Event Lag；
-- [ ] Scheduler 按 Queue Depth/Oldest Age；
-- [ ] 无 Session Sticky 依赖；
-- [ ] Redis/MySQL/Object/Qdrant Managed/HA 假设；
-- [ ] Provider Concurrency Limit；
-- [ ] Noise Neighbor/Quota。
+- [x] Gateway 按 Request/SSE；
+- [x] Control 按 Request/DB Pool；
+- [x] Runtime 按 Active Run/Queue/Event Lag；
+- [x] Scheduler 按 Queue Depth/Oldest Age；
+- [x] 无 Session Sticky 依赖；
+- [x] Redis/MySQL/Object/Qdrant Managed/HA 假设；
+- [x] Provider Concurrency Limit；
+- [x] Noise Neighbor/Quota。
 
 #### Backup/Restore
 
-- [ ] MySQL Full + PITR；
-- [ ] Object Version/Replication；
-- [ ] Qdrant Snapshot；
-- [ ] Secret Provider；
-- [ ] Redis State Backend 语义；
-- [ ] Contracts/Config/Git；
-- [ ] 恢复顺序；
-- [ ] Outbox/Lease/Job/Deployment Reconcile；
-- [ ] 实际恢复演练；
-- [ ] RPO/RTO 记录。
+- [x] MySQL Full + PITR；
+- [x] Object Version/Replication；
+- [x] Qdrant Snapshot；
+- [x] Secret Provider；
+- [x] Redis State Backend 语义；
+- [x] Contracts/Config/Git；
+- [x] 恢复顺序；
+- [x] Outbox/Lease/Job/Deployment Reconcile；
+- [x] 实际恢复演练；
+- [x] RPO/RTO 记录。
 
 #### 性能/故障
 
-- [ ] Gateway SSE 长连接；
-- [ ] Runtime 慢模型/慢 Tool；
-- [ ] Event 写/回放；
-- [ ] Snapshot 编译冷/热；
-- [ ] Scheduler Retry Storm；
-- [ ] 大文档 Ingestion；
-- [ ] MySQL/Redis/Qdrant/Object 故障；
-- [ ] Pod Kill/Node Drain；
-- [ ] Control 不可用；
-- [ ] Provider 429/Timeout；
-- [ ] OTel Backend 不可用；
-- [ ] Rolling Upgrade；
-- [ ] Snapshot N/N-1；
-- [ ] DB Expand/Migrate/Contract。
+- [x] Gateway SSE 长连接；
+- [x] Runtime 慢模型/慢 Tool；
+- [x] Event 写/回放；
+- [x] Snapshot 编译冷/热；
+- [x] Scheduler Retry Storm；
+- [x] 大文档 Ingestion；
+- [x] MySQL/Redis/Qdrant/Object 故障；
+- [x] Pod Kill/Node Drain；
+- [x] Control 不可用；
+- [x] Provider 429/Timeout；
+- [x] OTel Backend 不可用；
+- [x] Rolling Upgrade；
+- [x] Snapshot N/N-1；
+- [x] DB Expand/Migrate/Contract。
 
 ### 目标基线
 
@@ -3728,18 +3728,18 @@ docs/implementation/phase-22-production.md
 
 ### 验收条件
 
-- [ ] Helm Lint/Template/Kubernetes Schema 检查通过；
-- [ ] 四服务多副本运行；
-- [ ] Runtime 无 Sticky Session 依赖；
-- [ ] Pod Drain 不接受新工作且能恢复在途任务；
-- [ ] 滚动升级兼容 Snapshot/Event/DB；
-- [ ] Backup 真正恢复成功；
-- [ ] RPO/RTO 有实测值；
-- [ ] 关键性能目标通过或有批准容量结论；
-- [ ] Redis/MySQL/Qdrant/Control/Runtime 故障行为符合架构；
-- [ ] NetworkPolicy/SecurityContext 生效；
-- [ ] 默认未引入 Nacos/Service Mesh/Kafka/ES/Neo4j；
-- [ ] Runbook 完整。
+- [x] Helm Lint/Template/Kubernetes Schema 检查通过；
+- [x] 四服务多副本运行；
+- [x] Runtime 无 Sticky Session 依赖；
+- [x] Pod Drain 不接受新工作且能恢复在途任务；
+- [x] 滚动升级兼容 Snapshot/Event/DB；
+- [x] Backup 真正恢复成功；
+- [x] RPO/RTO 有实测值；
+- [x] 关键性能目标通过或有批准容量结论；
+- [x] Redis/MySQL/Qdrant/Control/Runtime 故障行为符合架构；
+- [x] NetworkPolicy/SecurityContext 生效；
+- [x] 默认未引入 Nacos/Service Mesh/Kafka/ES/Neo4j；
+- [x] Runbook 完整。
 
 ### 验收命令
 

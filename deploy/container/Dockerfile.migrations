@@ -1,0 +1,49 @@
+# syntax=docker/dockerfile:1.7
+
+# 固定 Maven/JDK 构建镜像。
+ARG MAVEN_IMAGE=maven:3.9.14-eclipse-temurin-21-alpine@sha256:6fc501a760cf277ce3702265fc1c88ec8b9fcbb9a264ebd907b65eb18148fbef
+# 固定 Flyway CLI 多架构镜像摘要。
+ARG FLYWAY_IMAGE=flyway/flyway:11.15.0-alpine@sha256:f1d802d70d6d89233feff96e7a3a8cd3e1c94c8da38b9fb7175855d903f44804
+
+# 构建包含三套独立 Flyway Location 的服务 JAR。
+FROM ${MAVEN_IMAGE} AS builder
+# 固定源码目录。
+WORKDIR /workspace
+# 复制受限构建上下文。
+COPY . .
+# 固定仓库版本。
+ARG PROJECT_VERSION=0.1.0
+# 构建三个数据库 Owner 的 Server JAR，并从实际 Library Owner 目录收集版本化 SQL。
+RUN --mount=type=cache,id=agentark-maven,target=/root/.m2 \
+    ./mvnw -B -ntp -DskipTests \
+      -pl agentark-services/agentark-control-server,agentark-services/agentark-runtime-server,agentark-services/agentark-scheduler-server \
+      -am package && \
+    mkdir -p /out/control /out/runtime /out/scheduler && \
+    cp /workspace/agentark-control/src/main/resources/db/migration/control/*.sql /out/control/ && \
+    cp /workspace/agentark-knowledge/src/main/resources/db/migration/control/*.sql /out/control/ && \
+    cp /workspace/agentark-runtime/src/main/resources/db/migration/runtime/*.sql /out/runtime/ && \
+    cp /workspace/agentark-scheduling/src/main/resources/db/migration/scheduler/*.sql /out/scheduler/ && \
+    test "$(ls -1 /out/control/*.sql | wc -l | tr -d ' ')" -eq 7 && \
+    test "$(ls -1 /out/runtime/*.sql | wc -l | tr -d ' ')" -eq 3 && \
+    test "$(ls -1 /out/scheduler/*.sql | wc -l | tr -d ' ')" -eq 3
+
+# 迁移运行阶段不包含 AgentArk 服务实现，只包含 Flyway CLI、MySQL Driver 与 SQL。
+FROM ${FLYWAY_IMAGE} AS runtime
+# 镜像来源提交。
+ARG VCS_REF=unknown
+# 镜像构建时间。
+ARG BUILD_DATE=unknown
+# 镜像版本。
+ARG IMAGE_VERSION=0.1.0
+# 写入 OCI 元数据，明确这是批处理工具而非第五个服务。
+LABEL org.opencontainers.image.title="AgentArk Database Migrations" \
+      org.opencontainers.image.description="Control, Runtime and Scheduler owner-isolated Flyway jobs" \
+      org.opencontainers.image.source="https://github.com/refinex/agentark" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.version="${IMAGE_VERSION}" \
+      org.opencontainers.image.licenses="Apache-2.0"
+# 按 Owner 分目录复制迁移，调用方必须显式选择一个 Location。
+COPY --from=builder /out/ /flyway/sql/
+# Flyway 官方 Alpine 镜像没有命名用户，使用固定 nobody UID/GID 运行只读迁移。
+USER 65534:65534

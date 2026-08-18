@@ -441,7 +441,10 @@ try {
       AGENTARK_CONTROL_BASE_URL: "http://127.0.0.1:8081",
       AGENTARK_RUNTIME_BASE_URL: "http://127.0.0.1:8082",
       AGENTARK_SCHEDULER_INTERNAL_TOKEN: serviceToken,
-      AGENTARK_SCHEDULER_WORKER_ENABLED: "false",
+      AGENTARK_SCHEDULER_WORKER_ENABLED:
+        process.env.AGENTARK_E2E_SCHEDULER_WORKER_ENABLED ?? "false",
+      AGENTARK_SCHEDULER_CRON_SCAN_DELAY:
+        process.env.AGENTARK_E2E_SCHEDULER_CRON_SCAN_DELAY ?? "30s",
     },
   );
   await waitForHealth("http://127.0.0.1:8083/actuator/health", scheduler);

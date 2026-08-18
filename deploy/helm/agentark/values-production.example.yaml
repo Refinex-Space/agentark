@@ -1,0 +1,124 @@
+# 开启生产渲染门禁；本示例只使用非敏感占位，不可直接部署。
+global:
+  # Helm 模板将拒绝 Tag、单副本、占位 Digest 和不安全依赖。
+  productionValidation: true
+  # 私有 Registry 拉取 Secret 仅按名称引用。
+  imagePullSecrets:
+    # 示例 Registry Secret 名称。
+    - agentark-registry
+  # 生产外部 HA 依赖。
+  external:
+    # MySQL 由 Managed HA 服务或代理提供。
+    mysql:
+      # 示例 DNS 需替换为真实内部地址。
+      host: mysql.database.example.com
+      # 固定 TLS 身份校验。
+      sslMode: VERIFY_IDENTITY
+    # Redis 由 Managed HA 服务提供。
+    redis:
+      # 示例 DNS 需替换。
+      host: redis.cache.example.com
+      # 生产应配合客户端 TLS 能力启用。
+      tls: true
+    # 企业 OIDC Issuer。
+    oidc:
+      # 绝对 HTTPS Issuer。
+      issuerUri: https://identity.example.com
+  # NetworkPolicy 只能使用 CIDR；示例需替换为真实 Managed Service 和 Provider 网段。
+  externalEgressCidrs:
+    - 10.0.0.0/8
+
+# 引用平台预创建 Kubernetes Secret；不在 Values 保存值。
+secretManagement:
+  # External Secrets 关闭时使用现有 Secret。
+  existingSecret: agentark-production-secrets
+  # 启用当前可验证的 Vault KV v2 Secret Resolver。
+  vault:
+    # 生产运行必须显式开启。
+    enabled: true
+    # 示例 Vault HTTPS 地址，部署前替换。
+    address: https://vault.example.com
+    # 示例 KV v2 Mount。
+    mount: secret
+    # 非 Enterprise 环境保持为空。
+    namespace: ""
+
+# 生产共享文件存储必须支持 RWX、快照和跨可用区复制。
+objectStorage:
+  # 示例 CSI StorageClass。
+  storageClassName: rwx-snapshot-replicated
+  # 明确要求 ReadWriteMany。
+  accessModes:
+    # 多副本共享对象存储访问模式。
+    - ReadWriteMany
+
+# 所有发布镜像必须替换为 Registry 返回的真实 Digest。
+services:
+  # Gateway 生产镜像覆盖。
+  gateway:
+    # Gateway 内容寻址镜像。
+    image:
+      # 示例 Registry Repository。
+      repository: registry.example.com/agentark/agentark-gateway-server
+      # 示例非占位 Digest，部署前必须替换为真实值。
+      digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+      # 生产禁止 Tag。
+      tag: ""
+  # Control 生产镜像覆盖。
+  control:
+    # Control 内容寻址镜像。
+    image:
+      # 示例 Registry Repository。
+      repository: registry.example.com/agentark/agentark-control-server
+      # 示例非占位 Digest。
+      digest: sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+      # 生产禁止 Tag。
+      tag: ""
+  # Runtime 生产镜像覆盖。
+  runtime:
+    # Runtime 内容寻址镜像。
+    image:
+      # 示例 Registry Repository。
+      repository: registry.example.com/agentark/agentark-runtime-server
+      # 示例非占位 Digest。
+      digest: sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+      # 生产禁止 Tag。
+      tag: ""
+  # Scheduler 生产镜像覆盖。
+  scheduler:
+    # Scheduler 内容寻址镜像。
+    image:
+      # 示例 Registry Repository。
+      repository: registry.example.com/agentark/agentark-scheduler-server
+      # 示例非占位 Digest。
+      digest: sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee
+      # 生产禁止 Tag。
+      tag: ""
+  # Web 生产镜像覆盖。
+  web:
+    # Web 内容寻址镜像。
+    image:
+      # 示例 Registry Repository。
+      repository: registry.example.com/agentark/agentark-web
+      # 示例非占位 Digest。
+      digest: sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+      # 生产禁止 Tag。
+      tag: ""
+
+# Flyway 批处理镜像同样按 Digest 部署。
+migrations:
+  # Flyway 内容寻址镜像。
+  image:
+    # 示例 Registry Repository。
+    repository: registry.example.com/agentark/agentark-migrations
+    # 示例非占位 Digest。
+    digest: sha256:9999999999999999999999999999999999999999999999999999999999999999
+    # 生产禁止 Tag。
+    tag: ""
+
+# 不可信 Sandbox 使用节点已安装的独立 RuntimeClass。
+sandbox:
+  # 示例 RuntimeClass 名称。
+  runtimeClassName: kata-qemu
+  # 示例 CRI Handler。
+  runtimeHandler: kata-qemu

@@ -1,0 +1,240 @@
+# kind 运行态演练使用本地 Tag；生产门禁保持关闭且不作为发布 Values。
+global:
+  # kind 使用演练专属安全配置，不冒充生产 Values。
+  productionValidation: false
+  # 镜像由脚本提前导入节点，禁止访问 Registry。
+  imagePullPolicy: Never
+  # Pod 总终止宽限期。
+  terminationGracePeriodSeconds: 35
+  # PreStop 提前排空时间。
+  preStopDelaySeconds: 20
+  # 演练外部依赖由同 Namespace Fixture 提供。
+  external:
+    # MySQL Fixture。
+    mysql:
+      # 使用 Service DNS。
+      host: mysql
+      # kind 内部网络不验证托管 MySQL TLS。
+      sslMode: DISABLED
+      # 演练 MySQL 无 TLS，允许获取 RSA 公钥；生产门禁固定拒绝。
+      allowPublicKeyRetrieval: true
+    # Redis Fixture。
+    redis:
+      # 使用 Service DNS。
+      host: redis
+    # 测试 Classpath 不访问该占位 IdP。
+    oidc:
+      # 保持绝对 HTTPS 形态。
+      issuerUri: https://identity.invalid
+  # Fixture Pod 与应用属于同一 Release，不需要额外外部 CIDR。
+  externalEgressCidrs: []
+
+# 演练 Secret 由脚本运行时随机生成。
+secretManagement:
+  # 引用临时 Namespace 中的随机 Secret。
+  existingSecret: agentark-kind-secrets
+
+# kind 不验证生产 ObjectStore；emptyDir 明确只用于无业务写入的拓扑演练。
+objectStorage:
+  # 仅 kind 允许临时卷。
+  ephemeral: true
+  # 不创建 PVC。
+  createClaims: false
+  # Control 临时卷声明容量。
+  controlSize: 1Gi
+  # Runtime 临时卷声明容量。
+  runtimeSize: 1Gi
+
+# 本地镜像通过 kind load 导入，不访问 Registry。
+services:
+  # Gateway 双副本。
+  gateway:
+    # 验证 PDB 和滚动升级的最小副本数。
+    replicas: 2
+    # 本地 Gateway 镜像。
+    image:
+      # 本地 Repository。
+      repository: agentark/agentark-gateway-server
+      # Schema 必填占位摘要；Tag 在非生产演练中实际生效。
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      # 脚本构建的固定 Tag。
+      tag: phase22
+    # Gateway 演练资源。
+    resources:
+      # 调度请求。
+      requests:
+        # 最小 CPU。
+        cpu: 50m
+        # 最小内存。
+        memory: 256Mi
+      # 容器上限。
+      limits:
+        # 最大 CPU。
+        cpu: "1"
+        # 最大内存。
+        memory: 1Gi
+    # kind 不验证 Metrics Server，关闭自动扩缩容。
+    autoscaling: &kindAutoscaling
+      # 禁用 HPA。
+      enabled: false
+      # 保持双副本下限。
+      minReplicas: 2
+      # 保持双副本上限。
+      maxReplicas: 2
+      # 保留 CPU 阈值结构。
+      targetCPUUtilizationPercentage: 70
+      # kind 不安装 KEDA。
+      keda:
+        # 禁用 KEDA。
+        enabled: false
+        # 无 Prometheus 地址。
+        serverAddress: ""
+        # 无 PromQL。
+        query: ""
+        # 保留合法阈值结构。
+        threshold: "1"
+  # Control 双副本。
+  control:
+    # 验证无状态多副本。
+    replicas: 2
+    # 本地 Control 镜像。
+    image:
+      # 本地 Repository。
+      repository: agentark/agentark-control-server
+      # Schema 占位摘要。
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      # 固定演练 Tag。
+      tag: phase22
+    # Control 演练资源。
+    resources:
+      # 调度请求。
+      requests:
+        # 最小 CPU。
+        cpu: 100m
+        # 最小内存。
+        memory: 512Mi
+      # 容器上限。
+      limits:
+        # 最大 CPU。
+        cpu: "1"
+        # 最大内存。
+        memory: 2Gi
+    # 复用关闭自动扩缩容的结构。
+    autoscaling: *kindAutoscaling
+  # Runtime 双副本。
+  runtime:
+    # 验证无 Sticky Session 和 Drain。
+    replicas: 2
+    # 本地 Runtime 镜像。
+    image:
+      # 本地 Repository。
+      repository: agentark/agentark-runtime-server
+      # Schema 占位摘要。
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      # 固定演练 Tag。
+      tag: phase22
+    # Runtime 演练资源。
+    resources:
+      # 调度请求。
+      requests:
+        # 最小 CPU。
+        cpu: 200m
+        # 最小内存。
+        memory: 1Gi
+      # 容器上限。
+      limits:
+        # 最大 CPU。
+        cpu: "2"
+        # 最大内存。
+        memory: 3Gi
+    # 复用关闭自动扩缩容的结构。
+    autoscaling: *kindAutoscaling
+  # Scheduler 双副本。
+  scheduler:
+    # 验证多实例安全启动。
+    replicas: 2
+    # 本地 Scheduler 镜像。
+    image:
+      # 本地 Repository。
+      repository: agentark/agentark-scheduler-server
+      # Schema 占位摘要。
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      # 固定演练 Tag。
+      tag: phase22
+    # Scheduler 演练资源。
+    resources:
+      # 调度请求。
+      requests:
+        # 最小 CPU。
+        cpu: 100m
+        # 最小内存。
+        memory: 512Mi
+      # 容器上限。
+      limits:
+        # 最大 CPU。
+        cpu: "1"
+        # 最大内存。
+        memory: 2Gi
+    # 复用关闭自动扩缩容的结构。
+    autoscaling: *kindAutoscaling
+  # Web 双副本。
+  web:
+    # 验证静态入口多副本。
+    replicas: 2
+    # 本地 Web 镜像。
+    image:
+      # 本地 Repository。
+      repository: agentark/agentark-web
+      # Schema 占位摘要。
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      # 固定演练 Tag。
+      tag: phase22
+    # Web 演练资源。
+    resources:
+      # 调度请求。
+      requests:
+        # 最小 CPU。
+        cpu: 25m
+        # 最小内存。
+        memory: 32Mi
+      # 容器上限。
+      limits:
+        # 最大 CPU。
+        cpu: 250m
+        # 最大内存。
+        memory: 128Mi
+    # 复用关闭自动扩缩容的结构。
+    autoscaling: *kindAutoscaling
+
+# kind 使用本地迁移镜像执行真实三 Schema Flyway。
+migrations:
+  # 启用三个 Helm Hook Job。
+  enabled: true
+  # 本地 Migration 镜像。
+  image:
+    # 本地 Repository。
+    repository: agentark/agentark-migrations
+    # Schema 占位摘要。
+    digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    # 固定演练 Tag。
+    tag: phase22
+
+# 演练不安装 Ingress Controller，直接通过 Service/exec 验证。
+ingress:
+  # 关闭 Ingress 资源。
+  enabled: false
+
+# Calico 在 kind 演练中实际执行默认拒绝策略。
+networkPolicy:
+  # 启用 NetworkPolicy。
+  enabled: true
+
+# Sandbox RuntimeClass 需要真实隔离运行时，kind 演练只验证主应用边界。
+sandbox:
+  # 不创建不可运行的 Sandbox RuntimeClass。
+  enabled: false
+
+# 避免为拓扑演练额外拉取 Collector；默认 Chart 已通过静态校验。
+otelCollector:
+  # 关闭 Collector Deployment。
+  enabled: false

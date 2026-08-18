@@ -1,0 +1,66 @@
+# syntax=docker/dockerfile:1.7
+
+# 固定 Maven、JDK 21 与多架构镜像索引摘要，构建平台由 BuildKit 选择。
+ARG MAVEN_IMAGE=maven:3.9.14-eclipse-temurin-21-alpine@sha256:6fc501a760cf277ce3702265fc1c88ec8b9fcbb9a264ebd907b65eb18148fbef
+# 固定 Java 21 JRE 补丁版与多架构镜像索引摘要。
+ARG RUNTIME_IMAGE=eclipse-temurin:21.0.10_7-jre-alpine-3.23@sha256:ad0cdd9782db550ca7dde6939a16fd850d04e683d37d3cff79d84a5848ba6a5a
+
+# 在独立构建阶段编译指定 Server 及其 Reactor 依赖。
+FROM ${MAVEN_IMAGE} AS builder
+# 固定容器内源码根目录。
+WORKDIR /workspace
+# 复制受 `.dockerignore` 约束的仓库源码。
+COPY . .
+# 只允许四个后端 Server 模块之一。
+ARG SERVICE_MODULE
+# 固定当前仓库版本，用于解析唯一可执行 JAR。
+ARG PROJECT_VERSION=0.1.0
+# 校验模块白名单后执行可重复 Maven Package，测试由镜像构建前 CI 单独完成。
+RUN --mount=type=cache,id=agentark-maven,target=/root/.m2 \
+    case "${SERVICE_MODULE}" in \
+      agentark-gateway-server|agentark-control-server|agentark-runtime-server|agentark-scheduler-server) ;; \
+      *) echo "unsupported SERVICE_MODULE" >&2; exit 2 ;; \
+    esac && \
+    ./mvnw -B -ntp -DskipTests -pl "agentark-services/${SERVICE_MODULE}" -am package && \
+    install -D -m 0444 \
+      "agentark-services/${SERVICE_MODULE}/target/${SERVICE_MODULE}-${PROJECT_VERSION}.jar" \
+      /out/application.jar
+
+# 运行阶段不包含 Maven、源码和构建缓存。
+FROM ${RUNTIME_IMAGE} AS runtime
+# 镜像来源提交，由发布流水线传入。
+ARG VCS_REF=unknown
+# 镜像构建时间使用 RFC 3339 UTC，由发布流水线传入。
+ARG BUILD_DATE=unknown
+# 镜像版本与仓库发布版本保持一致。
+ARG IMAGE_VERSION=0.1.0
+# 服务监听端口由每个镜像构建显式传入。
+ARG SERVICE_PORT
+# 写入 OCI 标准来源、版本和法律元数据。
+LABEL org.opencontainers.image.title="AgentArk Java Service" \
+      org.opencontainers.image.description="AgentArk Java-only backend deployment unit" \
+      org.opencontainers.image.source="https://github.com/refinex/agentark" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.created="${BUILD_DATE}" \
+      org.opencontainers.image.version="${IMAGE_VERSION}" \
+      org.opencontainers.image.licenses="Apache-2.0"
+# 创建固定非 Root UID/GID 和只读应用目录。
+RUN addgroup -S -g 65532 agentark && \
+    adduser -S -D -H -u 65532 -G agentark agentark && \
+    install -d -o 65532 -g 65532 -m 0555 /opt/agentark
+# 从构建阶段只复制可执行 JAR。
+COPY --from=builder --chown=65532:65532 /out/application.jar /opt/agentark/application.jar
+# JVM 使用容器内存、快速熵源、显式 OOM 退出和 UTF-8；部署可通过 JAVA_TOOL_OPTIONS 追加覆盖。
+ENV JAVA_TOOL_OPTIONS="-XX:+UseContainerSupport -XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8 -Djava.security.egd=file:/dev/urandom" \
+    AGENTARK_HEALTH_PORT="${SERVICE_PORT}"
+# 只声明当前服务端口，不暴露数据库或管理后门端口。
+EXPOSE ${SERVICE_PORT}
+# 健康检查只读取脱敏 Liveness，Kubernetes 仍使用独立 Startup/Readiness/Liveness Probe。
+HEALTHCHECK --interval=30s --timeout=3s --start-period=30s --retries=3 \
+  CMD wget -q -O - "http://127.0.0.1:${AGENTARK_HEALTH_PORT}/actuator/health/liveness" | grep -q '"status":"UP"' || exit 1
+# 固定非 Root 运行身份。
+USER 65532:65532
+# 固定只读工作目录；可写目录必须由 tmpfs/PVC 显式挂载。
+WORKDIR /opt/agentark
+# Exec 形式保证 SIGTERM 直接到 JVM，以触发 Spring Graceful Shutdown 和 Worker Drain。
+ENTRYPOINT ["java", "-jar", "/opt/agentark/application.jar"]

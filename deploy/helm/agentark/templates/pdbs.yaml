@@ -1,0 +1,20 @@
+{{- range $component := list "gateway" "control" "runtime" "scheduler" "web" }}
+{{- $service := index $.Values.services $component }}
+{{- if gt (int $service.replicas) 1 }}
+# {{ $component }} PDB 防止节点维护同时移除全部副本。
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "agentark.componentName" (dict "root" $ "component" $component) }}
+  labels:
+    {{- include "agentark.labels" (dict "root" $ "component" $component) | nindent 4 }}
+spec:
+  maxUnavailable: {{ $.Values.podDisruptionBudget.maxUnavailable }}
+  unhealthyPodEvictionPolicy: IfHealthyBudget
+  selector:
+    matchLabels:
+      {{- include "agentark.selectorLabels" (dict "root" $ "component" $component) | nindent 6 }}
+---
+{{- end }}
+{{- end }}
+

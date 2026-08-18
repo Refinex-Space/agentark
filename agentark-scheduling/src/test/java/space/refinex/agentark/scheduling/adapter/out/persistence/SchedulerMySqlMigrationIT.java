@@ -92,13 +92,13 @@ class SchedulerMySqlMigrationIT extends AbstractMySqlMigrationIT {
     }
 
     /**
-     * 返回 Phase 15 Scheduler 当前 Flyway 版本。
+     * 返回 Phase 22 Scheduler 当前 Flyway 版本。
      *
-     * @return V2
+     * @return V3
      */
     @Override
     protected String expectedVersion() {
-        return "2";
+        return "3";
     }
 
     /**
@@ -121,6 +121,47 @@ class SchedulerMySqlMigrationIT extends AbstractMySqlMigrationIT {
         return Set.of(
             "trigger_definition", "trigger_cursor", "job", "job_attempt", "job_lease",
             "delivery", "dead_letter", "scheduler_idempotency_record", "scheduler_outbox");
+    }
+
+    /**
+     * 证明前向迁移允许 Trigger 创建 Outbox，同时继续拒绝未声明聚合类型。
+     *
+     * @throws SQLException 数据库约束或写入失败时抛出
+     */
+    @Test
+    void allowsTriggerOutboxAndRejectsUnknownAggregate() throws SQLException {
+        migrateCurrentSchema();
+        try (Connection connection = ownerConnection();
+            PreparedStatement accepted = connection.prepareStatement("""
+                INSERT INTO scheduler_outbox
+                    (event_id, aggregate_type, aggregate_id, type, payload_json,
+                     status, available_at, attempts, created_at)
+                VALUES
+                    (UUID_TO_BIN(?), 'trigger', UUID_TO_BIN(?), 'trigger.created',
+                     JSON_OBJECT('triggerId', ?), 'PENDING', UTC_TIMESTAMP(6), 0,
+                     UTC_TIMESTAMP(6))
+                """)) {
+            String triggerId = UUID.randomUUID().toString();
+            accepted.setString(1, UUID.randomUUID().toString());
+            accepted.setString(2, triggerId);
+            accepted.setString(3, triggerId);
+            assertThat(accepted.executeUpdate()).isEqualTo(1);
+        }
+        assertThatThrownBy(() -> {
+            try (Connection connection = ownerConnection();
+                PreparedStatement rejected = connection.prepareStatement("""
+                    INSERT INTO scheduler_outbox
+                        (event_id, aggregate_type, aggregate_id, type, payload_json,
+                         status, available_at, attempts, created_at)
+                    VALUES
+                        (UUID_TO_BIN(?), 'unknown', UUID_TO_BIN(?), 'unknown.created',
+                         JSON_OBJECT(), 'PENDING', UTC_TIMESTAMP(6), 0, UTC_TIMESTAMP(6))
+                    """)) {
+                rejected.setString(1, UUID.randomUUID().toString());
+                rejected.setString(2, UUID.randomUUID().toString());
+                rejected.executeUpdate();
+            }
+        }).isInstanceOf(SQLException.class);
     }
 
     /**

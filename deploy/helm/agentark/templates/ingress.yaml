@@ -1,0 +1,42 @@
+{{- if .Values.ingress.enabled }}
+# 公共 API 只进入 Gateway，Web 使用独立静态 Service。
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "agentark.fullname" . }}
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "ingress") | nindent 4 }}
+  {{- with .Values.ingress.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.apiHost | quote }}
+        - {{ .Values.ingress.webHost | quote }}
+      secretName: {{ .Values.ingress.tlsSecretName }}
+  rules:
+    - host: {{ .Values.ingress.apiHost | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "agentark.fullname" . }}-gateway
+                port:
+                  name: http
+    - host: {{ .Values.ingress.webHost | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "agentark.fullname" . }}-web
+                port:
+                  name: http
+{{- end }}
+

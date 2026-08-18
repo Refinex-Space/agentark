@@ -1,0 +1,11 @@
+AgentArk 已渲染为 Java-only 四平面与独立 Web。
+
+生产安装前必须执行：
+
+  tools/production/validate-chart.sh <production-values.yaml>
+
+确认所有镜像使用真实 sha256 Digest、Secret 由 ExternalSecret/ExistingSecret 提供、
+MySQL 使用 VERIFY_IDENTITY、ObjectStore PVC 支持 RWX/快照/复制、Sandbox RuntimeClass 已安装。
+
+Gateway Service：{{ include "agentark.fullname" . }}-gateway:{{ .Values.services.gateway.port }}
+Web Service：{{ include "agentark.fullname" . }}-web:{{ .Values.services.web.port }}

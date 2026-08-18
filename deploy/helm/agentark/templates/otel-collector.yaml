@@ -1,0 +1,167 @@
+{{- if .Values.otelCollector.enabled }}
+# OTel Collector 配置使用有界内存、批处理和可选外部 OTLP Exporter。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "agentark.fullname" . }}-otel-collector
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "otel-collector") | nindent 4 }}
+data:
+  collector.yaml: |-
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+          http:
+            endpoint: 0.0.0.0:4318
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 768
+        spike_limit_mib: 128
+      batch:
+        timeout: 5s
+        send_batch_size: 512
+        send_batch_max_size: 1024
+    exporters:
+      debug:
+        verbosity: basic
+      {{- if .Values.otelCollector.exportEndpoint }}
+      otlphttp/upstream:
+        endpoint: {{ .Values.otelCollector.exportEndpoint | quote }}
+        timeout: 5s
+        sending_queue:
+          enabled: true
+          queue_size: 2048
+        retry_on_failure:
+          enabled: true
+          initial_interval: 1s
+          max_interval: 10s
+          max_elapsed_time: 30s
+      {{- end }}
+    service:
+      telemetry:
+        logs:
+          level: info
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [memory_limiter, batch]
+          exporters:
+            - debug
+            {{- if .Values.otelCollector.exportEndpoint }}
+            - otlphttp/upstream
+            {{- end }}
+---
+# Collector 两副本接收四服务 OTLP，Backend 故障不阻断业务。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentark.fullname" . }}-otel-collector
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "otel-collector") | nindent 4 }}
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Collector 滚动期间保持全部现有副本可用。
+      maxUnavailable: 0
+      # 允许额外创建一个新副本。
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "agentark.selectorLabels" (dict "root" . "component" "otel-collector") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agentark.selectorLabels" (dict "root" . "component" "otel-collector") | nindent 8 }}
+        app.kubernetes.io/part-of: agentark
+      annotations:
+        checksum/config: {{ toJson .Values.otelCollector | sha256sum }}
+    spec:
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          # 使用节点默认 Seccomp 策略。
+          type: RuntimeDefault
+      containers:
+        - name: collector
+          image: {{ include "agentark.image" (dict "root" . "image" .Values.otelCollector.image) | quote }}
+          imagePullPolicy: {{ .Values.global.imagePullPolicy }}
+          args: ["--config=/etc/otel/collector.yaml"]
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              # 删除全部默认 Linux Capability。
+              drop:
+                # Collector 不需要任何 Capability。
+                - "ALL"
+          ports:
+            # OTLP gRPC 接收端口。
+            - name: otlp-grpc
+              # Collector gRPC 标准端口。
+              containerPort: 4317
+              # 使用 TCP。
+              protocol: TCP
+            # OTLP HTTP 接收端口。
+            - name: otlp-http
+              # Collector HTTP 标准端口。
+              containerPort: 4318
+              # 使用 TCP。
+              protocol: TCP
+          resources:
+            {{- toYaml .Values.otelCollector.resources | nindent 12 }}
+          volumeMounts:
+            # 只读 Collector 配置。
+            - name: config
+              # 固定配置目录。
+              mountPath: /etc/otel
+              # 禁止运行时修改配置。
+              readOnly: true
+            # 只读根文件系统所需临时目录。
+            - name: tmp
+              # 临时写入路径。
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "agentark.fullname" . }}-otel-collector
+        - name: tmp
+          emptyDir:
+            # 临时文件只保存在内存。
+            medium: Memory
+            # 限制异常写入。
+            sizeLimit: 64Mi
+---
+# OTLP Service DNS 供四服务直接发现 Collector。
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "agentark.fullname" . }}-otel-collector
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "otel-collector") | nindent 4 }}
+spec:
+  selector:
+    {{- include "agentark.selectorLabels" (dict "root" . "component" "otel-collector") | nindent 4 }}
+  ports:
+    # OTLP gRPC Service 端口。
+    - name: otlp-grpc
+      # 集群内端口。
+      port: 4317
+      # 转发到具名容器端口。
+      targetPort: otlp-grpc
+    # OTLP HTTP Service 端口。
+    - name: otlp-http
+      # 集群内端口。
+      port: 4318
+      # 转发到具名容器端口。
+      targetPort: otlp-http
+{{- end }}

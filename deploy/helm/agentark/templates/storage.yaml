@@ -1,0 +1,37 @@
+{{- if and (not .Values.objectStorage.ephemeral) .Values.objectStorage.createClaims (not .Values.objectStorage.controlExistingClaim) }}
+# Control Artifact/Document 使用可快照、可复制的 RWX PVC。
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "agentark.fullname" . }}-control-objects
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "control") | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.objectStorage.accessModes | nindent 4 }}
+  {{- with .Values.objectStorage.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.objectStorage.controlSize }}
+---
+{{- end }}
+{{- if and (not .Values.objectStorage.ephemeral) .Values.objectStorage.createClaims (not .Values.objectStorage.runtimeExistingClaim) }}
+# Runtime 大 Event/State Payload 使用独立 RWX PVC。
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "agentark.fullname" . }}-runtime-objects
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "runtime") | nindent 4 }}
+spec:
+  accessModes:
+    {{- toYaml .Values.objectStorage.accessModes | nindent 4 }}
+  {{- with .Values.objectStorage.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.objectStorage.runtimeSize }}
+{{- end }}

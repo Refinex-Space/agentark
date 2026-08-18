@@ -1,0 +1,67 @@
+# Phase 22 生产容器、Helm、恢复与故障脚本静态门禁。
+name: Production Topology
+
+# 只在生产拓扑及其直接所有者变化时执行。
+on:
+  # Pull Request 必须阻断无效 Chart、脚本和 Compose。
+  pull_request:
+    # 限制到会改变部署或迁移行为的路径。
+    paths:
+      # 生产容器定义。
+      - "deploy/container/**"
+      # Helm/Kubernetes 资源。
+      - "deploy/helm/**"
+      # 本地 Compose 仍需保持可解析。
+      - "deploy/compose/**"
+      # 生产演练与校验脚本。
+      - "tools/production/**"
+      # 三个 Owner 的 Flyway 迁移。
+      - "agentark-*/src/main/resources/db/migration/**"
+      # 当前工作流本身。
+      - ".github/workflows/production.yml"
+  # 主分支持续复核同一边界。
+  push:
+    # 只验证默认分支。
+    branches:
+      # AgentArk 默认分支。
+      - main
+
+# 默认只读取仓库，不授予 Registry、集群或 OIDC 写权限。
+permissions:
+  # Checkout 所需最小权限。
+  contents: read
+
+# 新提交取消同一引用上的旧拓扑验证。
+concurrency:
+  # 按工作流和 Git 引用隔离。
+  group: production-${{ github.workflow }}-${{ github.ref }}
+  # 避免旧模板检查占用 Runner。
+  cancel-in-progress: true
+
+# 生产静态门禁任务。
+jobs:
+  # 验证 Helm、Kubernetes Schema、Compose 与 Shell 语法。
+  topology:
+    # 对外展示任务名称。
+    name: Validate Helm and production scripts
+    # 使用带 Docker/Compose 的 GitHub 托管 Linux。
+    runs-on: ubuntu-latest
+    # 网络工具下载和 Schema 校验上限。
+    timeout-minutes: 15
+    # 验证步骤。
+    steps:
+      # 获取当前提交；固定 Action Commit。
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # 安装仓库固定版本的 Helm、kubeconform、kind 和 k6 到已忽略目录。
+      - name: Bootstrap production tools
+        run: ./tools/production/bootstrap-tools.sh
+      # 验证 Values Schema、模板、禁止依赖、Digest 和 Kubernetes OpenAPI。
+      - name: Validate Helm chart
+        run: ./tools/production/validate-chart.sh
+      # 验证所有 Bash 演练入口的语法，不在 PR 中创建集群或恢复容器。
+      - name: Validate rehearsal scripts
+        run: bash -n tools/production/*.sh
+      # 验证 Core Compose 仍可解析且默认 Java-only。
+      - name: Validate Compose
+        run: docker compose --file deploy/compose/docker-compose.yml --profile core config --quiet

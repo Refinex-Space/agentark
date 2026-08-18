@@ -1,0 +1,221 @@
+{{- $fullname := include "agentark.fullname" . -}}
+{{- range $component := list "gateway" "control" "runtime" "scheduler" "web" }}
+{{- $service := index $.Values.services $component }}
+# {{ $component }} 无状态多副本工作负载；业务事实保存在外部 Owner Store。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "agentark.componentName" (dict "root" $ "component" $component) }}
+  labels:
+    {{- include "agentark.labels" (dict "root" $ "component" $component) | nindent 4 }}
+spec:
+  replicas: {{ $service.replicas }}
+  revisionHistoryLimit: 3
+  progressDeadlineSeconds: 600
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  selector:
+    matchLabels:
+      {{- include "agentark.selectorLabels" (dict "root" $ "component" $component) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "agentark.selectorLabels" (dict "root" $ "component" $component) | nindent 8 }}
+        app.kubernetes.io/part-of: agentark
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmaps.yaml") $ | sha256sum }}
+    spec:
+      serviceAccountName: {{ include "agentark.serviceAccountName" (dict "root" $ "component" $component) }}
+      automountServiceAccountToken: false
+      enableServiceLinks: false
+      terminationGracePeriodSeconds: {{ $.Values.global.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml $.Values.global.podSecurityContext | nindent 8 }}
+      {{- with $.Values.global.imagePullSecrets }}
+      imagePullSecrets:
+        {{- range . }}
+        - name: {{ . }}
+        {{- end }}
+      {{- end }}
+      topologySpreadConstraints:
+        {{- range $.Values.global.topologySpreadConstraints }}
+        - maxSkew: {{ .maxSkew }}
+          topologyKey: {{ .topologyKey }}
+          whenUnsatisfiable: {{ .whenUnsatisfiable }}
+          labelSelector:
+            matchLabels:
+              {{- include "agentark.selectorLabels" (dict "root" $ "component" $component) | nindent 14 }}
+        {{- end }}
+      {{- if $.Values.global.affinity.enabled }}
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                topologyKey: kubernetes.io/hostname
+                labelSelector:
+                  matchLabels:
+                    {{- include "agentark.selectorLabels" (dict "root" $ "component" $component) | nindent 20 }}
+      {{- end }}
+      containers:
+        - name: {{ $component }}
+          image: {{ include "agentark.image" (dict "root" $ "image" $service.image) | quote }}
+          imagePullPolicy: {{ $.Values.global.imagePullPolicy }}
+          securityContext:
+            {{- toYaml $.Values.global.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ $service.port }}
+              protocol: TCP
+          {{- if ne $component "web" }}
+          envFrom:
+            - configMapRef:
+                name: {{ $fullname }}-{{ $component }}-config
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: production
+            - name: JAVA_TOOL_OPTIONS
+              value: {{ $.Values.global.javaToolOptions | quote }}
+            {{- if eq $component "gateway" }}
+            - name: SPRING_DATA_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentark.secretName" $ }}
+                  key: {{ $.Values.secretManagement.keys.redisPassword }}
+            {{- end }}
+            {{- if eq $component "control" }}
+            - name: AGENTARK_CONTROL_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentark.secretName" $ }}
+                  key: {{ $.Values.secretManagement.keys.controlDatabasePassword }}
+            {{- end }}
+            {{- if eq $component "runtime" }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: AGENTARK_RUNTIME_INSTANCE_KEY
+              value: "$(POD_NAME)"
+            - name: AGENTARK_RUNTIME_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentark.secretName" $ }}
+                  key: {{ $.Values.secretManagement.keys.runtimeDatabasePassword }}
+            - name: AGENTARK_REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentark.secretName" $ }}
+                  key: {{ $.Values.secretManagement.keys.redisPassword }}
+            - name: AGENTARK_RUNTIME_INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentark.secretName" $ }}
+                  key: {{ $.Values.secretManagement.keys.runtimeServiceToken }}
+            {{- end }}
+            {{- if eq $component "scheduler" }}
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+            - name: AGENTARK_SCHEDULER_INSTANCE_KEY
+              value: "$(POD_NAME)"
+            - name: AGENTARK_SCHEDULER_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentark.secretName" $ }}
+                  key: {{ $.Values.secretManagement.keys.schedulerDatabasePassword }}
+            - name: AGENTARK_SCHEDULER_INTERNAL_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "agentark.secretName" $ }}
+                  key: {{ $.Values.secretManagement.keys.schedulerServiceToken }}
+            {{- end }}
+          {{- end }}
+          startupProbe:
+            httpGet:
+              path: {{ ternary "/healthz" "/actuator/health/liveness" (eq $component "web") }}
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 60
+          readinessProbe:
+            httpGet:
+              path: {{ ternary "/healthz" "/actuator/health/readiness" (eq $component "web") }}
+              port: http
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: {{ ternary "/healthz" "/actuator/health/liveness" (eq $component "web") }}
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          lifecycle:
+            preStop:
+              exec:
+                command:
+                  {{- if eq $component "web" }}
+                  - /bin/sh
+                  - -c
+                  - sleep 5
+                  {{- else }}
+                  - /bin/sh
+                  - -c
+                  - {{ printf "kill -TERM 1; sleep %v" $.Values.global.preStopDelaySeconds | quote }}
+                  {{- end }}
+          resources:
+            {{- toYaml $service.resources | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            {{- if eq $component "control" }}
+            - name: control-objects
+              mountPath: /var/lib/agentark/objects
+            - name: application-secrets
+              mountPath: /var/run/secrets/agentark
+              readOnly: true
+            {{- end }}
+            {{- if eq $component "runtime" }}
+            - name: runtime-objects
+              mountPath: /var/lib/agentark/objects
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
+        {{- if eq $component "control" }}
+        - name: control-objects
+          {{- if $.Values.objectStorage.ephemeral }}
+          emptyDir:
+            sizeLimit: {{ $.Values.objectStorage.controlSize }}
+          {{- else }}
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-control-objects" $fullname) $.Values.objectStorage.controlExistingClaim }}
+          {{- end }}
+        - name: application-secrets
+          secret:
+            secretName: {{ include "agentark.secretName" $ }}
+            defaultMode: 0400
+            items:
+              - key: {{ $.Values.secretManagement.keys.vaultToken }}
+                path: vault-token
+        {{- end }}
+        {{- if eq $component "runtime" }}
+        - name: runtime-objects
+          {{- if $.Values.objectStorage.ephemeral }}
+          emptyDir:
+            sizeLimit: {{ $.Values.objectStorage.runtimeSize }}
+          {{- else }}
+          persistentVolumeClaim:
+            claimName: {{ default (printf "%s-runtime-objects" $fullname) $.Values.objectStorage.runtimeExistingClaim }}
+          {{- end }}
+        {{- end }}
+---
+{{- end }}

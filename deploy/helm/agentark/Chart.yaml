@@ -1,0 +1,26 @@
+# Helm Chart API v2，兼容 Helm 4 和仍受支持的 Helm 3。
+apiVersion: v2
+# Chart 稳定名称。
+name: agentark
+# Chart 中文用途说明。
+description: AgentArk Java-only 四平面与 Web 的生产 Kubernetes 拓扑
+# 本 Chart 安装应用资源，不作为 Library Chart。
+type: application
+# Chart 自身语义版本。
+version: 0.1.0
+# AgentArk 应用版本。
+appVersion: "0.1.0"
+# 固定已验证的 Kubernetes API 版本范围。
+kubeVersion: ">=1.32.0-0 <1.37.0-0"
+# Chart 维护者信息。
+maintainers:
+  # 统一作者标识。
+  - name: refinex
+# 可审计来源与许可证元数据。
+annotations:
+  # 源码仓库。
+  artifacthub.io/links: |-
+    - name: source
+      url: https://github.com/refinex/agentark
+  # SPDX 许可证。
+  artifacthub.io/license: Apache-2.0

@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-18
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -9,7 +9,17 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## 当前状态
 
-Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07–18 已建立 IAM、资产、Knowledge、不可变发布、托管 Runtime、Scheduler、Gateway 和真实 Web 产品流程。Phase 19 新增四服务 OTel/Prometheus、Control V7 Governance、Runtime V3 Usage/Quota 关联、观测部署和 Web 治理视图。生产 Object Store、恶意文件扫描、Embedding/Reranker、云 Secret、Outbound Endpoint Resolver、Channel Bridge、真实 AgentScope Model/Component Provider 与生产 Observability Backend 仍必须由部署方提供受支持 Adapter。
+Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSource、HikariCP 与 Flyway Baseline。Phase 07–18 已建立 IAM、资产、Knowledge、不可变发布、托管 Runtime、Scheduler、Gateway 和真实 Web 产品流程。Phase 19 新增四服务 OTel/Prometheus、Control V7 Governance、Runtime V3 Usage/Quota 关联、观测部署和 Web 治理视图。Phase 22 新增生产容器、Helm Values Schema、外部依赖配置、三套 Flyway Job 与生产失败关闭校验。生产 Object Store、恶意文件扫描、Embedding/Reranker、云 Secret、Outbound Endpoint Resolver、Channel Bridge、真实 AgentScope Model/Component Provider 与生产 Observability Backend 仍必须由部署方提供受支持 Adapter。
+
+## Helm 生产配置
+
+`deploy/helm/agentark/values.yaml` 是安全默认和结构基线，`values-production.example.yaml` 只展示生产必填形态，不含真实 Secret、域名或镜像摘要。生产 Values 必须开启 `global.productionValidation=true`，并通过：
+
+```bash
+./tools/production/validate-chart.sh <approved-production-values.yaml>
+```
+
+门禁要求五个应用和 Migration 镜像使用真实 Digest、服务至少双副本、Secret 来自 ExistingSecret/ExternalSecret、Vault KV v2 使用真实 HTTPS 地址、MySQL 使用 `VERIFY_IDENTITY` 且关闭公钥获取、Redis 开启 TLS、Object Store 使用 RWX 与显式 StorageClass/ExistingClaim、Sandbox 提供真实 RuntimeClass，并为外部依赖声明受控且非全网/元数据地址的出口 CIDR。Chart 不生成含值 Kubernetes Secret，也不内置生产 MySQL、Redis、Qdrant、Elasticsearch 或 Neo4j。
 
 ## Server 与本地 Profile
 

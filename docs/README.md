@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-18
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -35,6 +35,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 19 执行证据 | [可观测与治理基线](implementation/phase-19-observability-governance.md) | 复核 OTel、Audit、Usage/Cost、Quota、Evaluation、Web 与部署验收 |
 | Phase 20 执行证据 | [安全加固与威胁测试](implementation/phase-20-security-hardening.md) | 复核 Threat Model、Vault、MCP、Skill、Sandbox、RAG 与供应链门禁 |
 | Phase 21 执行证据 | [Aistio 绞杀与 Java Control 切换](implementation/phase-21-aistio-strangler.md) | 复核固定源码审计、Contract Freeze、迁移/Shadow 工具、Java-only 默认部署与真实验收边界 |
+| Phase 22 执行证据 | [Kubernetes、HA 与恢复](implementation/phase-22-production.md) | 复核生产镜像、Helm、三节点 HA、备份恢复、性能和故障演练证据 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |
@@ -67,6 +68,11 @@ referenced_by: AGENTS.md#knowledge-map
 | 安全事件 | [Security Incident Runbook](runbooks/security-incident.md) | Secret、越权、SSRF、Sandbox 或供应链事件的隔离、证据和恢复 |
 | Aistio 切换 | [Aistio Cutover Runbook](runbooks/aistio-cutover.md) | 对已有 AgentScope Service 部署执行备份、Dry Run、Shadow、迁移、灰度和 Java-only 切换 |
 | Aistio 回退 | [Aistio Rollback Runbook](runbooks/aistio-rollback.md) | 按 Cohort 回退 Route、保持 Session Owner 并通过 Owner API 补偿 |
+| 生产备份恢复 | [Backup/Restore Runbook](runbooks/backup-restore.md) | 规划或执行 MySQL PITR、Object/Qdrant 恢复、Redis 重建和 Reconcile |
+| Kubernetes 升级 | [Kubernetes Upgrade Runbook](runbooks/kubernetes-upgrade.md) | 执行 Helm 安装、Expand/Migrate/Contract、Drain、滚动升级与回退 |
+| 扩缩容 | [Scaling and Capacity Runbook](runbooks/scaling-and-capacity.md) | 调整 HPA/KEDA、资源、连接池、Provider 并发或容量结论 |
+| 故障演练 | [Fault Rehearsal Runbook](runbooks/fault-rehearsal.md) | 注入 Runtime/Redis/MySQL/Qdrant/Provider/OTel/NetworkPolicy 故障 |
+| 容量与 RPO/RTO | [Phase 22 容量报告](operations/phase-22-capacity-rpo-rto.md) | 复核本机性能、HA、恢复实测与生产批准边界 |
 | 上游来源 | [上游基线](migration/upstream-baseline.md) | 读取参考源码或执行迁移审计 |
 | 上游迁移审计 | [源码清单](migration/source-inventory.md) | 定位 Service/Core/Harness/Extensions/Frontend 的具体来源 |
 | 迁移分类 | [迁移清单](migration/migration-manifest.md) | 决定候选路径的取用类型、目标模块和明确拒绝项 |

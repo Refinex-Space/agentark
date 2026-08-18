@@ -1,0 +1,83 @@
+{{- if .Values.sandbox.enabled }}
+# Sandbox 使用独立 Namespace 和 restricted Pod Security Admission。
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: {{ .Values.sandbox.namespace }}
+  labels:
+    app.kubernetes.io/name: agentark-sandbox
+    app.kubernetes.io/part-of: agentark
+    pod-security.kubernetes.io/enforce: restricted
+    pod-security.kubernetes.io/enforce-version: latest
+    pod-security.kubernetes.io/audit: restricted
+    pod-security.kubernetes.io/warn: restricted
+---
+# Sandbox 默认拒绝所有入站和出站，授权由单独受审策略追加。
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+  namespace: {{ .Values.sandbox.namespace }}
+spec:
+  podSelector: {}
+  policyTypes: ["Ingress", "Egress"]
+---
+# Sandbox 聚合配额阻止租户成本耗尽。
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: sandbox-quota
+  namespace: {{ .Values.sandbox.namespace }}
+spec:
+  hard:
+    pods: "50"
+    requests.cpu: "20"
+    requests.memory: 40Gi
+    limits.cpu: "40"
+    limits.memory: 80Gi
+    requests.ephemeral-storage: 100Gi
+    limits.ephemeral-storage: 200Gi
+---
+# Sandbox 单容器默认资源边界。
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: sandbox-container-limits
+  namespace: {{ .Values.sandbox.namespace }}
+spec:
+  limits:
+    - type: Container
+      # 未声明请求时的安全下限。
+      defaultRequest:
+        # 默认 CPU 请求。
+        cpu: 250m
+        # 默认内存请求。
+        memory: 256Mi
+        # 默认临时存储请求。
+        ephemeral-storage: 512Mi
+      # 未声明限制时的默认上限。
+      default:
+        # 默认 CPU 上限。
+        cpu: "1"
+        # 默认内存上限。
+        memory: 512Mi
+        # 默认临时存储上限。
+        ephemeral-storage: 1Gi
+      # Sandbox 容器硬上限。
+      max:
+        # 单容器最大 CPU。
+        cpu: "8"
+        # 单容器最大内存。
+        memory: 16Gi
+        # 单容器最大临时存储。
+        ephemeral-storage: 100Gi
+{{- if .Values.sandbox.runtimeClassName }}
+---
+# RuntimeClass 把不可信代码调度到独立运行时隔离边界。
+apiVersion: node.k8s.io/v1
+kind: RuntimeClass
+metadata:
+  name: {{ .Values.sandbox.runtimeClassName }}
+handler: {{ required "sandbox.runtimeHandler is required" .Values.sandbox.runtimeHandler }}
+{{- end }}
+{{- end }}

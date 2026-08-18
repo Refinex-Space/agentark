@@ -22,7 +22,7 @@ Phase 21 最终边界：
 - 活动 Go Session 固定 `GO_UNTIL_TERMINAL`，新 Session 只在 Java Runtime 创建；
 - 临时兼容代理只允许 GET，默认 `JAVA_ONLY`，Go Fallback 最长 24 小时且最终关闭；
 - Agent Team、CRD、ASDP/BYO 和 Hosted Store 已明确 `DEFER/REJECT`，不阻塞 C1–C8 核心切换；
-- AgentArk 默认 Compose 已是 Java-only；当前没有 Helm Chart，Phase 22 新建 Chart 时必须通过同一门禁。
+- AgentArk 默认 Compose 与 `deploy/helm/agentark/` 均为 Java-only；Helm 生产门禁同样拒绝 Aistio/Go 依赖回流。
 
 机器可读冻结证据见 `contracts/migration/aistio-cutover-v1.json`，取舍决策见 [ADR-0006](../architecture/decisions/0006-aistio-cutover-scope.md)。
 

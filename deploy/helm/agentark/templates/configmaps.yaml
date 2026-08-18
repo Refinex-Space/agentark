@@ -1,0 +1,141 @@
+{{- include "agentark.validateProduction" . -}}
+{{- $fullname := include "agentark.fullname" . -}}
+# Gateway 非敏感路由、OIDC、Redis 和 OTel 配置。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-gateway-config
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "gateway") | nindent 4 }}
+data:
+  # Control 集群内 Service URL。
+  AGENTARK_CONTROL_BASE_URL: {{ printf "http://%s-control:%v" $fullname .Values.services.control.port | quote }}
+  # Runtime 集群内 Service URL。
+  AGENTARK_RUNTIME_BASE_URL: {{ printf "http://%s-runtime:%v" $fullname .Values.services.runtime.port | quote }}
+  # Scheduler 集群内 Service URL。
+  AGENTARK_SCHEDULER_BASE_URL: {{ printf "http://%s-scheduler:%v" $fullname .Values.services.scheduler.port | quote }}
+  # Managed Redis DNS 名称。
+  AGENTARK_REDIS_HOST: {{ .Values.global.external.redis.host | quote }}
+  # Managed Redis TCP/TLS 端口。
+  AGENTARK_REDIS_PORT: {{ .Values.global.external.redis.port | quote }}
+  # Spring Data Redis TLS 开关。
+  SPRING_DATA_REDIS_SSL_ENABLED: {{ .Values.global.external.redis.tls | quote }}
+  # 生产模式启用 Gateway JWT 验证。
+  AGENTARK_GATEWAY_SECURITY_ENABLED: {{ ternary "true" "false" .Values.global.productionValidation | quote }}
+  # 受信 OIDC Issuer。
+  AGENTARK_FOUNDATION_SECURITY_ISSUER_URI: {{ .Values.global.external.oidc.issuerUri | quote }}
+  # Gateway 专属 JWT Audience。
+  AGENTARK_GATEWAY_JWT_AUDIENCE: {{ .Values.global.external.oidc.gatewayAudience | quote }}
+  # 生产 Gateway 固定启用 Redis 限流。
+  AGENTARK_GATEWAY_RATE_LIMIT_ENABLED: "true"
+  # OTel Collector 启用时开启 Trace Export。
+  AGENTARK_OTEL_EXPORT_ENABLED: {{ ternary "true" "false" .Values.otelCollector.enabled | quote }}
+  # OTLP/HTTP Trace 接收地址。
+  AGENTARK_OTEL_TRACES_ENDPOINT: {{ .Values.global.external.otel.tracesEndpoint | quote }}
+---
+# Control 数据库、OIDC、ObjectStore、Vault 和 OTel 非敏感配置。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-control-config
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "control") | nindent 4 }}
+data:
+  # Control 独占 Schema JDBC URL，不含密码。
+  AGENTARK_CONTROL_DB_URL: {{ printf "jdbc:mysql://%s:%v/%s?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8&useUnicode=true&sslMode=%s&allowPublicKeyRetrieval=%t" .Values.global.external.mysql.host .Values.global.external.mysql.port .Values.global.external.mysql.controlSchema .Values.global.external.mysql.sslMode .Values.global.external.mysql.allowPublicKeyRetrieval | quote }}
+  # Control 最小权限数据库账号。
+  AGENTARK_CONTROL_DB_USERNAME: {{ .Values.global.external.mysql.usernames.control | quote }}
+  # 生产模式启用 Control JWT 验证。
+  AGENTARK_SECURITY_ENABLED: {{ ternary "true" "false" .Values.global.productionValidation | quote }}
+  # Control 受信 OIDC Issuer。
+  AGENTARK_OIDC_ISSUER_URI: {{ .Values.global.external.oidc.issuerUri | quote }}
+  # 启用 Control ObjectStore Adapter。
+  AGENTARK_FOUNDATION_STORAGE_ENABLED: "true"
+  # Control ObjectStore PVC 挂载路径。
+  AGENTARK_FOUNDATION_STORAGE_ROOT: "/var/lib/agentark/objects/control"
+  # Control ObjectRef 稳定 Authority。
+  AGENTARK_FOUNDATION_STORAGE_AUTHORITY: {{ .Values.objectStorage.controlAuthority | quote }}
+  # 是否启用 Vault KV v2 Resolver。
+  AGENTARK_VAULT_ENABLED: {{ .Values.secretManagement.vault.enabled | quote }}
+  # Vault HTTPS 地址。
+  AGENTARK_VAULT_ADDRESS: {{ .Values.secretManagement.vault.address | quote }}
+  # Vault KV v2 Mount。
+  AGENTARK_VAULT_MOUNT: {{ .Values.secretManagement.vault.mount | quote }}
+  # 可选 Vault Enterprise Namespace。
+  AGENTARK_VAULT_NAMESPACE: {{ .Values.secretManagement.vault.namespace | quote }}
+  # Vault 短期 Token 文件挂载位置。
+  AGENTARK_VAULT_TOKEN_FILE: "/var/run/secrets/agentark/vault-token"
+  # 独立 Migration Job 启用时关闭应用内 Flyway。
+  SPRING_FLYWAY_ENABLED: {{ ternary "false" "true" .Values.migrations.enabled | quote }}
+  # OTel Collector 启用时开启 Trace Export。
+  AGENTARK_OTEL_EXPORT_ENABLED: {{ ternary "true" "false" .Values.otelCollector.enabled | quote }}
+  # OTLP/HTTP Trace 接收地址。
+  AGENTARK_OTEL_TRACES_ENDPOINT: {{ .Values.global.external.otel.tracesEndpoint | quote }}
+---
+# Runtime 数据库、Control DNS、Redis、共享 ObjectStore 和 Worker 非敏感配置。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-runtime-config
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "runtime") | nindent 4 }}
+data:
+  # Runtime 独占 Schema JDBC URL，不含密码。
+  AGENTARK_RUNTIME_DB_URL: {{ printf "jdbc:mysql://%s:%v/%s?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8&useUnicode=true&sslMode=%s&allowPublicKeyRetrieval=%t" .Values.global.external.mysql.host .Values.global.external.mysql.port .Values.global.external.mysql.runtimeSchema .Values.global.external.mysql.sslMode .Values.global.external.mysql.allowPublicKeyRetrieval | quote }}
+  # Runtime 最小权限数据库账号。
+  AGENTARK_RUNTIME_DB_USERNAME: {{ .Values.global.external.mysql.usernames.runtime | quote }}
+  # Control 集群内 Service URL。
+  AGENTARK_CONTROL_BASE_URL: {{ printf "http://%s-control:%v" $fullname .Values.services.control.port | quote }}
+  # Managed Redis DNS 名称。
+  AGENTARK_REDIS_HOST: {{ .Values.global.external.redis.host | quote }}
+  # Managed Redis TCP/TLS 端口。
+  AGENTARK_REDIS_PORT: {{ .Values.global.external.redis.port | quote }}
+  # Spring Data Redis TLS 开关。
+  SPRING_DATA_REDIS_SSL_ENABLED: {{ .Values.global.external.redis.tls | quote }}
+  # 生产模式启用 Runtime JWT 验证。
+  AGENTARK_RUNTIME_SECURITY_ENABLED: {{ ternary "true" "false" .Values.global.productionValidation | quote }}
+  # Runtime 受信 OIDC Issuer。
+  AGENTARK_FOUNDATION_SECURITY_ISSUER_URI: {{ .Values.global.external.oidc.issuerUri | quote }}
+  # 启用 Runtime ObjectStore Adapter。
+  AGENTARK_FOUNDATION_STORAGE_ENABLED: "true"
+  # Runtime ObjectStore PVC 挂载路径。
+  AGENTARK_FOUNDATION_STORAGE_ROOT: "/var/lib/agentark/objects/runtime"
+  # Runtime ObjectRef 稳定 Authority。
+  AGENTARK_RUNTIME_OBJECT_AUTHORITY: {{ .Values.objectStorage.runtimeAuthority | quote }}
+  # 默认不领取真实 Run，Provider 完整装配后由部署覆盖。
+  AGENTARK_RUNTIME_WORKER_ENABLED: "false"
+  # 独立 Migration Job 启用时关闭应用内 Flyway。
+  SPRING_FLYWAY_ENABLED: {{ ternary "false" "true" .Values.migrations.enabled | quote }}
+  # OTel Collector 启用时开启 Trace Export。
+  AGENTARK_OTEL_EXPORT_ENABLED: {{ ternary "true" "false" .Values.otelCollector.enabled | quote }}
+  # OTLP/HTTP Trace 接收地址。
+  AGENTARK_OTEL_TRACES_ENDPOINT: {{ .Values.global.external.otel.tracesEndpoint | quote }}
+---
+# Scheduler 数据库、内部 Service DNS、Worker 和 OTel 非敏感配置。
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ $fullname }}-scheduler-config
+  labels:
+    {{- include "agentark.labels" (dict "root" . "component" "scheduler") | nindent 4 }}
+data:
+  # Scheduler 独占 Schema JDBC URL，不含密码。
+  AGENTARK_SCHEDULER_DB_URL: {{ printf "jdbc:mysql://%s:%v/%s?connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true&characterEncoding=UTF-8&useUnicode=true&sslMode=%s&allowPublicKeyRetrieval=%t" .Values.global.external.mysql.host .Values.global.external.mysql.port .Values.global.external.mysql.schedulerSchema .Values.global.external.mysql.sslMode .Values.global.external.mysql.allowPublicKeyRetrieval | quote }}
+  # Scheduler 最小权限数据库账号。
+  AGENTARK_SCHEDULER_DB_USERNAME: {{ .Values.global.external.mysql.usernames.scheduler | quote }}
+  # Control 集群内 Service URL。
+  AGENTARK_CONTROL_BASE_URL: {{ printf "http://%s-control:%v" $fullname .Values.services.control.port | quote }}
+  # Runtime 集群内 Service URL。
+  AGENTARK_RUNTIME_BASE_URL: {{ printf "http://%s-runtime:%v" $fullname .Values.services.runtime.port | quote }}
+  # 生产模式启用 Scheduler JWT 验证。
+  AGENTARK_SECURITY_ENABLED: {{ ternary "true" "false" .Values.global.productionValidation | quote }}
+  # Scheduler 受信 OIDC Issuer。
+  AGENTARK_FOUNDATION_SECURITY_ISSUER_URI: {{ .Values.global.external.oidc.issuerUri | quote }}
+  # 默认不领取真实 Job，Handler 完整装配后由部署覆盖。
+  AGENTARK_SCHEDULER_WORKER_ENABLED: "false"
+  # 独立 Migration Job 启用时关闭应用内 Flyway。
+  SPRING_FLYWAY_ENABLED: {{ ternary "false" "true" .Values.migrations.enabled | quote }}
+  # OTel Collector 启用时开启 Trace Export。
+  AGENTARK_OTEL_EXPORT_ENABLED: {{ ternary "true" "false" .Values.otelCollector.enabled | quote }}
+  # OTLP/HTTP Trace 接收地址。
+  AGENTARK_OTEL_TRACES_ENDPOINT: {{ .Values.global.external.otel.tracesEndpoint | quote }}

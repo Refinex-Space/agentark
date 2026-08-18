@@ -50,7 +50,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.EnumMap;
 import java.util.List;
-import java.util.random.RandomGenerator;
+import java.util.Random;
 
 /**
  * 在非测试 Profile 装配 Scheduler MySQL、版本化 Client、Worker、Cron、Webhook 与管理 API。
@@ -373,7 +373,7 @@ public class SchedulerServerConfiguration {
             pools.put(type, properties.workerPoolSize());
         }
         return new SchedulerWorker(
-            store, handlers, pools, clock, RandomGenerator.getDefault(),
+            store, handlers, pools, clock, new Random(),
             properties.instanceKey(), properties.leaseTtl(), telemetry);
     }
 

@@ -1,0 +1,256 @@
+# kind 演练 MySQL 使用同一 Namespace 的短期空数据卷。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql
+  # Fixture 资源标签。
+  labels:
+    # 基础设施名称。
+    app.kubernetes.io/name: mysql
+    # 纳入 AgentArk NetworkPolicy 选择范围。
+    app.kubernetes.io/part-of: agentark
+    # 允许同一演练 Release 内通信。
+    app.kubernetes.io/instance: agentark
+spec:
+  replicas: 1
+  selector:
+    # 只管理 MySQL Fixture Pod。
+    matchLabels:
+      # 匹配基础设施名称。
+      app.kubernetes.io/name: mysql
+  template:
+    metadata:
+      # Pod 标签同时满足 Deployment、Service 和 NetworkPolicy。
+      labels:
+        # 基础设施名称。
+        app.kubernetes.io/name: mysql
+        # 基础设施组件。
+        app.kubernetes.io/component: mysql
+        # 纳入 AgentArk 默认拒绝策略。
+        app.kubernetes.io/part-of: agentark
+        # 允许同 Release 应用访问。
+        app.kubernetes.io/instance: agentark
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: agentark-phase22-control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: mysql
+          image: mysql:8.4.11
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MYSQL_ROOT_PASSWORD_FILE
+              value: /run/secrets/mysql_root_password
+            - name: TZ
+              value: UTC
+          args:
+            - --character-set-server=utf8mb4
+            - --collation-server=utf8mb4_0900_ai_ci
+            - --default-time-zone=+00:00
+            - --sql-mode=STRICT_TRANS_TABLES,ONLY_FULL_GROUP_BY,ERROR_FOR_DIVISION_BY_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE,NO_ENGINE_SUBSTITUTION
+            - --log-bin-trust-function-creators=ON
+          ports:
+            # MySQL TCP 端口。
+            - name: mysql
+              # 容器标准监听端口。
+              containerPort: 3306
+          readinessProbe:
+            exec:
+              command: ["/bin/sh", "-c", "MYSQL_PWD=$(cat /run/secrets/mysql_control_password) mysql --protocol=tcp --host=127.0.0.1 --user=agentark_control agentark_control --execute='SELECT 1' >/dev/null"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 30
+          resources:
+            # 调度请求。
+            requests:
+              # 最小 CPU。
+              cpu: 200m
+              # 最小内存。
+              memory: 512Mi
+            # 容器上限。
+            limits:
+              # 最大 CPU。
+              cpu: "2"
+              # 最大内存。
+              memory: 2Gi
+          volumeMounts:
+            # 临时数据库目录。
+            - name: data
+              # MySQL 数据路径。
+              mountPath: /var/lib/mysql
+            # 三 Schema 初始化脚本。
+            - name: init
+              # 官方入口点扫描路径。
+              mountPath: /docker-entrypoint-initdb.d/01-agentark-schemas.sh
+              # 只挂载单个脚本文件。
+              subPath: 01-agentark-schemas.sh
+              # 禁止容器修改脚本。
+              readOnly: true
+            # 临时随机凭据。
+            - name: secrets
+              # 文件 Secret 目录。
+              mountPath: /run/secrets
+              # 禁止容器修改凭据。
+              readOnly: true
+      volumes:
+        - name: data
+          # 只用于一次性演练，退出时删除。
+          emptyDir:
+            # 防止异常写满节点。
+            sizeLimit: 4Gi
+        - name: init
+          configMap:
+            name: agentark-mysql-init
+            defaultMode: 0555
+        - name: secrets
+          secret:
+            secretName: agentark-kind-secrets
+            defaultMode: 0444
+---
+# MySQL Service DNS 与生产 Chart 的外部地址形式一致。
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  # Service 标签。
+  labels:
+    # 基础设施名称。
+    app.kubernetes.io/name: mysql
+    # 纳入 AgentArk 资源视图。
+    app.kubernetes.io/part-of: agentark
+    # 演练 Release。
+    app.kubernetes.io/instance: agentark
+spec:
+  # 只选择 MySQL Fixture Pod。
+  selector:
+    # 基础设施名称。
+    app.kubernetes.io/name: mysql
+  ports:
+    # MySQL Service 端口。
+    - name: mysql
+      # 集群内监听端口。
+      port: 3306
+      # 转发到具名容器端口。
+      targetPort: mysql
+---
+# kind 演练 Redis 只保存可丢失 Lease/Cache 数据。
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  # Fixture 资源标签。
+  labels:
+    # 基础设施名称。
+    app.kubernetes.io/name: redis
+    # 纳入 AgentArk NetworkPolicy 选择范围。
+    app.kubernetes.io/part-of: agentark
+    # 允许同一演练 Release 内通信。
+    app.kubernetes.io/instance: agentark
+spec:
+  replicas: 1
+  selector:
+    # 只管理 Redis Fixture Pod。
+    matchLabels:
+      # 匹配基础设施名称。
+      app.kubernetes.io/name: redis
+  template:
+    metadata:
+      # Pod 标签同时满足 Deployment、Service 和 NetworkPolicy。
+      labels:
+        # 基础设施名称。
+        app.kubernetes.io/name: redis
+        # 基础设施组件。
+        app.kubernetes.io/component: redis
+        # 纳入 AgentArk 默认拒绝策略。
+        app.kubernetes.io/part-of: agentark
+        # 允许同 Release 应用访问。
+        app.kubernetes.io/instance: agentark
+    spec:
+      automountServiceAccountToken: false
+      nodeSelector:
+        kubernetes.io/hostname: agentark-phase22-control-plane
+      tolerations:
+        - key: node-role.kubernetes.io/control-plane
+          operator: Exists
+          effect: NoSchedule
+      containers:
+        - name: redis
+          image: redis:8.10.0
+          imagePullPolicy: IfNotPresent
+          command: ["/bin/sh", "-c"]
+          args: ["exec redis-server --appendonly yes --requirepass \"$(cat /run/secrets/redis_password)\""]
+          ports:
+            # Redis TCP 端口。
+            - name: redis
+              # 容器标准监听端口。
+              containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ["/bin/sh", "-c", "REDISCLI_AUTH=$(cat /run/secrets/redis_password) redis-cli ping | grep -q PONG"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 20
+          resources:
+            # 调度请求。
+            requests:
+              # 最小 CPU。
+              cpu: 50m
+              # 最小内存。
+              memory: 64Mi
+            # 容器上限。
+            limits:
+              # 最大 CPU。
+              cpu: "1"
+              # 最大内存。
+              memory: 512Mi
+          volumeMounts:
+            # 临时 AOF 数据目录。
+            - name: data
+              # Redis 数据路径。
+              mountPath: /data
+            # 临时随机凭据。
+            - name: secrets
+              # 文件 Secret 目录。
+              mountPath: /run/secrets
+              # 禁止容器修改凭据。
+              readOnly: true
+      volumes:
+        - name: data
+          # 只用于一次性演练，退出时删除。
+          emptyDir:
+            # 防止异常写满节点。
+            sizeLimit: 1Gi
+        - name: secrets
+          secret:
+            secretName: agentark-kind-secrets
+            defaultMode: 0444
+---
+# Redis Service DNS。
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  # Service 标签。
+  labels:
+    # 基础设施名称。
+    app.kubernetes.io/name: redis
+    # 纳入 AgentArk 资源视图。
+    app.kubernetes.io/part-of: agentark
+    # 演练 Release。
+    app.kubernetes.io/instance: agentark
+spec:
+  # 只选择 Redis Fixture Pod。
+  selector:
+    # 基础设施名称。
+    app.kubernetes.io/name: redis
+  ports:
+    # Redis Service 端口。
+    - name: redis
+      # 集群内监听端口。
+      port: 6379
+      # 转发到具名容器端口。
+      targetPort: redis

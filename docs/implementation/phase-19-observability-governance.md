@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-18
 status: active
 referenced_by: PLAN.md#phase-19--opentelemetryauditusagecostquota-与-evaluation-基线
 ---
@@ -110,7 +110,7 @@ git diff HEAD --check
 
 ## 安全与剩余边界
 
-- 本地 Observability Compose 不是生产清单；生产 HA、TLS、认证、存储保留和备份归 Phase 22。
+- 本地 Observability Compose 不是生产清单；Phase 22 Helm 已提供无状态 Collector 基线，生产后端 HA、TLS、认证、存储保留和备份仍由目标平台配置并验收。
 - Trace 采样不能作为 Audit 或 Usage 证据；Audit/Usage 保持不采样的 MySQL 事实。
 - Scheduler/Runtime 跨平面 Audit 先保留本地 Outbox，再做提交后汇聚；Control 故障期间需按 `sourceEventId` 运维重放。
 - 云成本目录、真实 Provider 账单核对、LLM-as-judge 和在线预算中断只保留版本化扩展边界，不伪造成已接入能力。

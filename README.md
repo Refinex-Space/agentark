@@ -411,7 +411,7 @@ Repository instructions route contributors to the normative source for each deci
 
 ## Development Status
 
-AgentArk currently follows an **architecture-first migration strategy**. Phases 02–06 provide the fixed upstream evidence baseline, Maven build foundation, framework-free Kernel, focused Foundation Starters, four Spring Boot deployment units, isolated MySQL ownership, and reproducible contract gates. Phases 07–10 provide Control IAM, versioned AI assets, Knowledge metadata, immutable Agent revisions/snapshots, and Deployment pointers. Phases 11–16 provide the provider-neutral Runtime domain, AgentScope Java 2 anti-corruption adapter, managed Runtime APIs, safe RAG ingestion, durable Scheduler, and stateless public Gateway. Phases 17–18 provide the independent Web build, design system, generated Public API/SSE clients, and the real Govern → Build → Release → Runtime → Approval → Operate product flow. Phases 19–21 provide governance, security hardening, the Aistio migration toolchain and a Java-only default deployment. Production Kubernetes, HA and DR remain in Phase 22.
+AgentArk currently follows an **architecture-first migration strategy**. Phases 02–06 provide the fixed upstream evidence baseline, Maven build foundation, framework-free Kernel, focused Foundation Starters, four Spring Boot deployment units, isolated MySQL ownership, and reproducible contract gates. Phases 07–10 provide Control IAM, versioned AI assets, Knowledge metadata, immutable Agent revisions/snapshots, and Deployment pointers. Phases 11–16 provide the provider-neutral Runtime domain, AgentScope Java 2 anti-corruption adapter, managed Runtime APIs, safe RAG ingestion, durable Scheduler, and stateless public Gateway. Phases 17–18 provide the independent Web build, design system, generated Public API/SSE clients, and the real Govern → Build → Release → Runtime → Approval → Operate product flow. Phases 19–22 provide governance, security hardening, the Aistio migration toolchain, Java-only production containers, Kubernetes/Helm topology, HA, backup/restore, performance and fault-rehearsal baselines. Release-readiness closure remains in Phase 23.
 
 The initial implementation will be derived from the useful service-plane capabilities in AgentScope Java's `agentscope-service`, while deliberately reshaping module boundaries and gradually replacing the Go control plane with Java.
 
@@ -442,7 +442,7 @@ The migration sequence is designed to avoid changing package names, modules, JDK
 | **D — Knowledge / RAG** | ingestion, Qdrant, Knowledge Revision, retrieval, citations | ✅ Complete — safe pipeline, fixed-Revision retrieval, citations, and Qdrant isolation verified |
 | **E — Scheduler & Integrations** | cron, webhook, channels, retry/dead-letter | ✅ Complete |
 | **F — AgentArk Web** | design system, Agent builder, runtime console, governance | ✅ Complete — Phase 17 foundation and Phase 18 real product flows verified |
-| **G — Production Hardening** | Kubernetes, HA, security, DR, quotas, cost, evaluation | 🟡 In progress — governance, security, Aistio migration capability and Java-only defaults complete through Phase 21; production deployment/HA/DR remain |
+| **G — Production Hardening** | Kubernetes, HA, security, DR, quotas, cost, evaluation | ✅ Complete — Phase 22 production topology, HA, recovery, capacity and fault-rehearsal baseline verified; target environment approval remains external |
 
 The roadmap describes architectural sequencing rather than release dates.
 
@@ -528,7 +528,20 @@ docker compose \
 
 See [`docs/guides/observability-operations.md`](./docs/guides/observability-operations.md) before starting or deleting its local volumes.
 
-All four Server JARs expose sanitized Actuator health, build information, and Prometheus metrics. Control, Runtime, and Scheduler contain the versioned business APIs implemented through Phase 21, while local security defaults fail closed. Phase 19 adds W3C OpenTelemetry propagation, bounded OTLP export, append-only Audit, versioned Usage/Cost, concurrency-safe Quota Reservation, deterministic Evaluation/Release Gates, and the Web governance view. Phase 20 adds the threat model, Vault Secret lifecycle, MCP SSRF/DNS Rebinding guard, signed Skill/SBOM gate, restricted Sandbox contract, untrusted RAG/Tool/Model output labels, and pinned security/supply-chain workflows. Phase 21 freezes the Internal Contract hashes, provides read-only Aistio export, resumable API migration and semantic Shadow gates, and keeps the default Compose Java-only. Runtime execution and Scheduler Worker remain disabled until the required production Model/Component/Secret, ingestion, outbound endpoint, channel and Sandbox Provider beans are supplied. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. The separate `deploy/observability/` stack is development-only. There is still no Helm chart, configured production identity provider, production Kubernetes acceptance, real external Aistio migration run, real external Model/Provider acceptance, HA or DR validation. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
+Validate the production containers, Helm topology, recovery, performance and fault-rehearsal gates:
+
+```bash
+./tools/production/build-images.sh
+./tools/production/validate-chart.sh
+./tools/production/restore-rehearsal.sh
+./tools/production/performance-rehearsal.sh
+./tools/production/kind-rehearsal.sh
+./tools/production/fault-rehearsal.sh
+```
+
+These commands create only explicitly named temporary Docker/kind resources and write sanitized evidence below the ignored `.agentark/evidence/phase22/` directory. Read [`docs/implementation/phase-22-production.md`](./docs/implementation/phase-22-production.md) and the linked runbooks before using them against a production-like environment.
+
+All four Server JARs expose sanitized Actuator health, build information, and Prometheus metrics. Control, Runtime, and Scheduler contain the versioned business APIs implemented through Phase 21, while local security defaults fail closed. Phase 19 adds W3C OpenTelemetry propagation, bounded OTLP export, append-only Audit, versioned Usage/Cost, concurrency-safe Quota Reservation, deterministic Evaluation/Release Gates, and the Web governance view. Phase 20 adds the threat model, Vault Secret lifecycle, MCP SSRF/DNS Rebinding guard, signed Skill/SBOM gate, restricted Sandbox contract, untrusted RAG/Tool/Model output labels, and pinned security/supply-chain workflows. Phase 21 freezes the Internal Contract hashes, provides read-only Aistio export, resumable API migration and semantic Shadow gates, and keeps the default Compose Java-only. Phase 22 adds non-root production images, the Java-only `deploy/helm/agentark/` Chart, NetworkPolicy/SecurityContext, Flyway Jobs, three-node HA/rolling-drain evidence, MySQL PITR, Qdrant/Object recovery, k6 capacity thresholds and fault rehearsals. Runtime execution and Scheduler Worker remain disabled until the required production Model/Component/Secret, ingestion, outbound endpoint, channel and Sandbox Provider beans are supplied. The Core profile starts MySQL 8.4.11, Redis 8.10.0, and MinIO with locally generated file-based secrets; `--profile rag` additionally starts Qdrant 1.18.3. The separate `deploy/observability/` stack is development-only. A configured production IdP, cloud workload identity, real external Aistio migration, real Model/Provider acceptance, managed-service HA and production-volume RPO/RTO still require target-environment execution and approval; the repository does not claim those external acceptances. Generated SBOM and third-party reports are written below the ignored root `target/` directory.
 
 ### Engineering Rules
 

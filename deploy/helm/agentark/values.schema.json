@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AgentArk Helm Values Schema",
+  "description": "约束 Java-only 生产拓扑、Digest 镜像、外部 HA 依赖、Secret 引用和容量边界。",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "global", "secretManagement", "objectStorage", "services", "migrations", "ingress",
+    "serviceAccount", "networkPolicy", "podDisruptionBudget", "sandbox", "otelCollector"
+  ],
+  "properties": {
+    "global": {
+      "description": "跨组件共享的生产、安全、发现和外部依赖配置。",
+      "type": "object",
+      "required": ["productionValidation", "clusterDomain", "imagePullPolicy", "terminationGracePeriodSeconds", "preStopDelaySeconds", "javaToolOptions", "podSecurityContext", "containerSecurityContext", "topologySpreadConstraints", "affinity", "external", "externalEgressCidrs"],
+      "properties": {
+        "productionValidation": { "description": "是否启用额外生产门禁。", "type": "boolean" },
+        "clusterDomain": { "description": "Kubernetes DNS 后缀。", "type": "string", "minLength": 1 },
+        "imagePullPolicy": { "description": "镜像拉取策略。", "enum": ["IfNotPresent", "Always", "Never"] },
+        "imagePullSecrets": { "description": "Registry Secret 名称列表。", "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true },
+        "terminationGracePeriodSeconds": { "description": "Pod 终止宽限秒数。", "type": "integer", "minimum": 30, "maximum": 600 },
+        "preStopDelaySeconds": { "description": "提前 SIGTERM 后排空等待秒数。", "type": "integer", "minimum": 20, "maximum": 300 },
+        "javaToolOptions": { "description": "不含 Secret 的 JVM 容器参数。", "type": "string", "minLength": 1 },
+        "podSecurityContext": { "description": "Pod SecurityContext。", "type": "object" },
+        "containerSecurityContext": { "description": "容器 SecurityContext。", "type": "object" },
+        "topologySpreadConstraints": { "description": "跨节点/可用区分布规则。", "type": "array", "minItems": 1, "items": { "type": "object" } },
+        "affinity": { "description": "反亲和开关。", "type": "object", "required": ["enabled"], "properties": { "enabled": { "description": "是否由模板生成组件级软反亲和。", "type": "boolean" } }, "additionalProperties": false },
+        "external": { "description": "MySQL、Redis、OIDC、Qdrant、Elastic、Neo4j 和 OTel 非敏感地址。", "type": "object" },
+        "externalEgressCidrs": { "description": "生产 NetworkPolicy 允许的外部 CIDR。", "type": "array", "items": { "type": "string", "pattern": "^(?:[0-9a-fA-F:.]+)/[0-9]{1,3}$" }, "uniqueItems": true }
+      }
+    },
+    "secretManagement": { "description": "现有 Secret 或 External Secrets 引用。", "type": "object" },
+    "objectStorage": { "description": "Control/Runtime 共享文件 ObjectStore PVC 配置。", "type": "object" },
+    "services": {
+      "description": "Gateway、Control、Runtime、Scheduler 和 Web 工作负载。",
+      "type": "object",
+      "required": ["gateway", "control", "runtime", "scheduler", "web"],
+      "properties": {
+        "gateway": { "$ref": "#/$defs/service" },
+        "control": { "$ref": "#/$defs/service" },
+        "runtime": { "$ref": "#/$defs/service" },
+        "scheduler": { "$ref": "#/$defs/service" },
+        "web": { "$ref": "#/$defs/service" }
+      },
+      "additionalProperties": false
+    },
+    "migrations": { "description": "Owner 隔离 Flyway Hook Job 配置。", "type": "object" },
+    "ingress": { "description": "Gateway API 与 Web Ingress 配置。", "type": "object" },
+    "serviceAccount": { "description": "最小权限 ServiceAccount 配置。", "type": "object" },
+    "networkPolicy": { "description": "默认拒绝和窄化通信配置。", "type": "object" },
+    "podDisruptionBudget": { "description": "滚动和节点维护中断预算。", "type": "object" },
+    "sandbox": { "description": "独立 Sandbox Namespace 与 RuntimeClass。", "type": "object" },
+    "otelCollector": { "description": "OTel Collector 部署和出口配置。", "type": "object" }
+  },
+  "$defs": {
+    "image": {
+      "description": "生产使用 Digest、本地演练可使用 Tag 的镜像引用。",
+      "type": "object",
+      "required": ["repository", "digest", "tag"],
+      "properties": {
+        "repository": { "description": "不含 Tag 或 Digest 的 Registry Repository。", "type": "string", "minLength": 1 },
+        "digest": { "description": "生产内容寻址 sha256 摘要。", "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+        "tag": { "description": "仅非生产演练允许使用的镜像 Tag。", "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "autoscaling": {
+      "description": "HPA 与可选 KEDA 配置。",
+      "type": "object",
+      "required": ["enabled", "minReplicas", "maxReplicas", "targetCPUUtilizationPercentage", "keda"],
+      "properties": {
+        "enabled": { "description": "是否生成 CPU HPA。", "type": "boolean" },
+        "minReplicas": { "description": "HPA 允许的最小副本数。", "type": "integer", "minimum": 1 },
+        "maxReplicas": { "description": "HPA 允许的最大副本数。", "type": "integer", "minimum": 1 },
+        "targetCPUUtilizationPercentage": { "description": "HPA 平均 CPU 利用率目标百分比。", "type": "integer", "minimum": 1, "maximum": 100 },
+        "keda": { "description": "可选 Prometheus KEDA Trigger 配置。", "type": "object" }
+      }
+    },
+    "service": {
+      "description": "单个无状态工作负载的副本、镜像、端口、资源与扩缩容。",
+      "type": "object",
+      "required": ["replicas", "image", "port", "resources", "autoscaling"],
+      "properties": {
+        "replicas": { "description": "未由 HPA 接管时的目标副本数。", "type": "integer", "minimum": 1 },
+        "image": { "description": "当前工作负载的内容寻址镜像。", "$ref": "#/$defs/image" },
+        "port": { "description": "当前工作负载的非特权 HTTP 端口。", "type": "integer", "minimum": 1024, "maximum": 65535 },
+        "resources": { "description": "容器 CPU、内存请求与限制。", "type": "object", "required": ["requests", "limits"] },
+        "autoscaling": { "description": "当前工作负载的 HPA/KEDA 配置。", "$ref": "#/$defs/autoscaling" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

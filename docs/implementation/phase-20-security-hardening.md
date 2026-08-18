@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-18
 status: active
 referenced_by: PLAN.md#phase-20--安全加固sandboxmcpskill-供应链与威胁测试
 ---
@@ -17,7 +17,7 @@ Phase 20 已建立从威胁登记到可执行门禁的安全闭环：身份/租�
 
 [Threat Model](../security/threat-model.md) 按 Restricted/Confidential/Internal/Public 分类资产，列出 Internet、Gateway、Backend、Snapshot、AgentScope、MCP、Sandbox、Qdrant 和 Release Trust Boundary，并对租户越权、Secret、SSRF、Prompt Injection、Tool Side Effect、Sandbox Escape、供应链、外传、成本耗尽、Webhook Replay 和 Internal Spoofing 给出 Owner、严重度、缓解、验证和状态。
 
-Critical/High 当前没有未解释开放项。生产 Kubernetes 的真实 NetworkPolicy CNI、Pod Security Admission、mTLS、工作负载身份、镜像 Admission 和逃逸测试仍由 Phase 22–23 在真实环境验证；这些是纵深部署验收，不允许削弱本阶段已经失败关闭的代码边界。
+Critical/High 当前没有未解释开放项。Phase 22 已在三节点 Calico 集群验证主应用 NetworkPolicy CNI、非 Root 和只读根；生产 Pod Security Admission、mTLS、工作负载身份、镜像 Admission 和 Sandbox 逃逸仍由目标环境与 Phase 23 验证。这些是纵深部署验收，不允许削弱本阶段已经失败关闭的代码边界。
 
 ## Secret
 
@@ -96,5 +96,5 @@ git diff HEAD --check
 
 - 本地没有 GitHub OIDC 身份和受控 Registry，因此没有伪称已产生真实 Cosign 签名或 GitHub Attestation；工作流语义已通过 Actionlint，真实 Tag/手工发布 Run 由 Phase 22–23 留存证明 URL。
 - 没有对某个生产服务镜像执行漏洞扫描，因为本阶段没有授权发布目标 Registry/Digest；任何镜像发布都必须先通过 `scan-image.sh`，不能用仓库扫描替代。
-- Kubernetes 清单通过静态安全测试和 Trivy IaC；真实 CNI Egress、Admission、资源耗尽与 Sandbox Escape 必须在 Phase 22 集群验证。
+- Kubernetes 清单通过静态安全测试和 Trivy IaC；Phase 22 已验证 Calico Egress 和主应用资源边界，Admission、真实 Sandbox Runtime 资源耗尽与逃逸仍需目标集群验证。
 - Trivy 扫描 Maven CycloneDX 时会提示部分非 SHA-256 Hash 算法不用于验证；漏洞解析结果以 PURL/版本为准，Artifact 完整性仍使用 Maven/仓库 SHA-256 和签名链。

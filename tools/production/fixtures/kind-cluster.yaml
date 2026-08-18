@@ -1,0 +1,18 @@
+# kind 三节点集群用于多副本、滚动、节点排空和 NetworkPolicy 演练。
+kind: Cluster
+# kind 稳定配置 API。
+apiVersion: kind.x-k8s.io/v1alpha4
+# 禁用 kindnet，改由固定 Calico CNI 实际执行 NetworkPolicy。
+networking:
+  # 关闭默认 CNI，防止没有执行 NetworkPolicy 的假阳性。
+  disableDefaultCNI: true
+  # 固定 Calico IP Pool 使用的 Pod CIDR。
+  podSubnet: 192.168.0.0/16
+# 一个控制平面和两个 Worker 提供真实跨节点调度。
+nodes:
+  # 控制平面节点。
+  - role: control-plane
+  # 第一工作节点。
+  - role: worker
+  # 第二工作节点。
+  - role: worker

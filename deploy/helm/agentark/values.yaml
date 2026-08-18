@@ -1,0 +1,541 @@
+# 全局生产约束与共享配置。
+global:
+  # 默认模板允许使用占位镜像；生产交付必须由 validate-chart.sh 显式开启并校验。
+  productionValidation: false
+  # Kubernetes 集群 DNS 后缀。
+  clusterDomain: cluster.local
+  # 镜像拉取策略；Digest 已固定时无需 Always。
+  imagePullPolicy: IfNotPresent
+  # 私有 Registry 拉取凭据名称；值只引用 Secret，不包含凭据。
+  imagePullSecrets: []
+  # Pod 终止总宽限期，覆盖 Spring 20 秒 Graceful Shutdown 和 Lease 交接。
+  terminationGracePeriodSeconds: 45
+  # PreStop 内提前触发 SIGTERM 后等待的秒数。
+  preStopDelaySeconds: 25
+  # JVM 容器内存与 OOM 基线，可按服务覆盖。
+  javaToolOptions: >-
+    -XX:+UseContainerSupport -XX:InitialRAMPercentage=25 -XX:MaxRAMPercentage=75
+    -XX:+ExitOnOutOfMemoryError -Dfile.encoding=UTF-8
+    -Djava.security.egd=file:/dev/urandom
+  # 四服务共享的 Pod SecurityContext。
+  podSecurityContext:
+    # 运行身份必须为非 Root。
+    runAsNonRoot: true
+    # 与生产镜像 UID 一致。
+    runAsUser: 65532
+    # 与生产镜像 GID 一致。
+    runAsGroup: 65532
+    # 挂载卷默认文件组。
+    fsGroup: 65532
+    # 避免无关卷递归改权限。
+    fsGroupChangePolicy: OnRootMismatch
+    # 使用节点默认 Seccomp。
+    seccompProfile:
+      # 禁止 Unconfined。
+      type: RuntimeDefault
+  # 容器级安全上下文。
+  containerSecurityContext:
+    # 禁止提权。
+    allowPrivilegeEscalation: false
+    # 根文件系统只读。
+    readOnlyRootFilesystem: true
+    # 再次强制非 Root。
+    runAsNonRoot: true
+    # 删除全部 Linux Capability。
+    capabilities:
+      # 不保留默认 Capability。
+      drop: ["ALL"]
+  # 默认跨节点和可用区分布。
+  topologySpreadConstraints:
+    # 同一服务 Pod 尽量跨主机分布。
+    - maxSkew: 1
+      # 使用主机名拓扑域。
+      topologyKey: kubernetes.io/hostname
+      # 没有足够节点时仍允许调度，生产可改为 DoNotSchedule。
+      whenUnsatisfiable: ScheduleAnyway
+      # 标签选择器由模板补充。
+      labelSelector: {}
+    # 同一服务 Pod 尽量跨可用区分布。
+    - maxSkew: 1
+      # 使用标准 Zone 标签。
+      topologyKey: topology.kubernetes.io/zone
+      # 单区集群不阻塞安装。
+      whenUnsatisfiable: ScheduleAnyway
+      # 标签选择器由模板补充。
+      labelSelector: {}
+  # 默认软反亲和，减少同节点故障影响。
+  affinity:
+    # 由模板按组件标签生成 Pod 反亲和。
+    enabled: true
+  # 外部依赖的非敏感连接信息。
+  external:
+    # Managed MySQL 主节点或代理地址。
+    mysql:
+      # 生产必须替换的 DNS 名称。
+      host: mysql.invalid
+      # MySQL 标准端口。
+      port: 3306
+      # JDBC SSL 模式；生产要求 VERIFY_IDENTITY。
+      sslMode: VERIFY_IDENTITY
+      # 生产 TLS 不允许通过未加密连接获取 RSA 公钥。
+      allowPublicKeyRetrieval: false
+      # Control 独占 Schema。
+      controlSchema: agentark_control
+      # Runtime 独占 Schema。
+      runtimeSchema: agentark_runtime
+      # Scheduler 独占 Schema。
+      schedulerSchema: agentark_scheduler
+      # 三个最小权限账号。
+      usernames:
+        # Control Schema Owner。
+        control: agentark_control
+        # Runtime Schema Owner。
+        runtime: agentark_runtime
+        # Scheduler Schema Owner。
+        scheduler: agentark_scheduler
+    # Managed Redis 地址。
+    redis:
+      # 生产必须替换的 DNS 名称。
+      host: redis.invalid
+      # Redis TLS 端口由平台决定。
+      port: 6379
+      # 当前 Spring 配置的 TLS 开关预留；启用前须提供对应客户端配置。
+      tls: false
+    # OIDC/JWK 身份提供方。
+    oidc:
+      # 生产必须替换为绝对 HTTPS Issuer。
+      issuerUri: https://idp.invalid
+      # Gateway Audience。
+      gatewayAudience: agentark-gateway
+      # Control Audience。
+      controlAudience: agentark-control
+      # Runtime Audience。
+      runtimeAudience: agentark-runtime
+      # Scheduler Audience。
+      schedulerAudience: agentark-scheduler
+    # 可选 Qdrant 外部连接。
+    qdrant:
+      # 空值表示未启用 RAG Provider。
+      endpoint: ""
+    # 可选 Elasticsearch 外部连接；默认不启用或部署。
+    elasticsearch:
+      # 空值表示没有 Search Profile。
+      endpoint: ""
+    # 可选 Neo4j 外部连接；默认不启用或部署。
+    neo4j:
+      # 空值表示没有 Graph Profile。
+      endpoint: ""
+    # OTel Collector OTLP/HTTP 地址由 Chart 内服务提供。
+    otel:
+      # 固定集群内 Service DNS。
+      tracesEndpoint: http://agentark-otel-collector:4318/v1/traces
+  # NetworkPolicy 无法表达 FQDN，生产必须填入受控出口 CIDR 或使用受审查的 CNI FQDN Policy。
+  externalEgressCidrs: []
+
+# Secret 只通过引用或 External Secrets 生成，不在 Values 中出现值。
+secretManagement:
+  # 已存在的 Kubernetes Secret；ExternalSecret 关闭时生产必填。
+  existingSecret: ""
+  # External Secrets Operator 集成。
+  externalSecret:
+    # 默认关闭，避免要求集群预装 CRD；生产可显式开启。
+    enabled: false
+    # 当前 ESO 稳定 API。
+    apiVersion: external-secrets.io/v1
+    # 生成 Secret 的刷新周期。
+    refreshInterval: 1h
+    # SecretStore 或 ClusterSecretStore 引用。
+    secretStoreRef:
+      # Store 名称由平台团队提供。
+      name: ""
+      # 允许 SecretStore 或 ClusterSecretStore。
+      kind: ClusterSecretStore
+    # 远端键映射；这里只保存路径，不保存值。
+    data: []
+  # 应用读取的稳定 Secret Key 名称。
+  keys:
+    # Control 数据库密码。
+    controlDatabasePassword: control-database-password
+    # Runtime 数据库密码。
+    runtimeDatabasePassword: runtime-database-password
+    # Scheduler 数据库密码。
+    schedulerDatabasePassword: scheduler-database-password
+    # Redis 密码。
+    redisPassword: redis-password
+    # Runtime 面向 Control 的服务身份 Token。
+    runtimeServiceToken: runtime-service-token
+    # Scheduler Internal Client 服务身份 Token。
+    schedulerServiceToken: scheduler-service-token
+    # Vault 工作负载短期 Token 文件键。
+    vaultToken: vault-token
+  # AgentArk 当前可验证的生产 Secret Resolver 为 Vault KV v2。
+  vault:
+    # 默认 Values 不连接外部 Vault；生产门禁要求显式开启。
+    enabled: false
+    # 生产必须替换为真实 HTTPS Vault 地址。
+    address: https://vault.invalid
+    # Vault KV v2 Mount 名称。
+    mount: secret
+    # 可选 Vault Enterprise Namespace。
+    namespace: ""
+
+# Control 与 Runtime 的共享文件 ObjectStore 基线；生产要求 RWX、快照和复制能力。
+objectStorage:
+  # 仅本地 kind 演练允许 emptyDir；生产校验固定拒绝。
+  ephemeral: false
+  # Chart 可创建 PVC，也可绑定平台预创建 PVC。
+  createClaims: true
+  # 存储类为空时使用集群默认类；生产校验要求显式给出。
+  storageClassName: ""
+  # 生产多副本要求 ReadWriteMany。
+  accessModes: ["ReadWriteMany"]
+  # Control Artifact/Document 容量。
+  controlSize: 100Gi
+  # Runtime Event/State 大载荷容量。
+  runtimeSize: 100Gi
+  # 预创建 Control PVC；非空时不创建。
+  controlExistingClaim: ""
+  # 预创建 Runtime PVC；非空时不创建。
+  runtimeExistingClaim: ""
+  # ObjectRef Authority 必须稳定，不能按 Pod 变化。
+  controlAuthority: control-objects
+  # Runtime ObjectRef Authority。
+  runtimeAuthority: runtime-objects
+
+# 五个无状态工作负载的独立容量和镜像配置。
+services:
+  # 公共 Gateway。
+  gateway:
+    # 默认两副本满足滚动和 PDB。
+    replicas: 2
+    # 镜像引用。
+    image:
+      # 生产 Registry Repository。
+      repository: registry.invalid/agentark/agentark-gateway-server
+      # 生产必须替换为真实 sha256 摘要。
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      # 仅本地演练允许 Tag。
+      tag: ""
+    # HTTP 端口。
+    port: 8080
+    # 容量请求与限制。
+    resources:
+      # Gateway 调度请求。
+      requests:
+        # 最小 CPU 请求。
+        cpu: 250m
+        # 最小内存请求。
+        memory: 512Mi
+      # Gateway 容器上限。
+      limits:
+        # 最大 CPU。
+        cpu: "2"
+        # 最大内存。
+        memory: 2Gi
+    # HPA 基线。
+    autoscaling:
+      # 默认启用 CPU HPA。
+      enabled: true
+      # 最小双副本。
+      minReplicas: 2
+      # 最大副本数。
+      maxReplicas: 20
+      # CPU 扩容目标百分比。
+      targetCPUUtilizationPercentage: 65
+      # 可选 KEDA Prometheus 指标；默认关闭。
+      keda:
+        # 默认只使用 HPA。
+        enabled: false
+        # Prometheus 地址；启用时必填。
+        serverAddress: ""
+        # 低基数 PromQL；启用时必填。
+        query: ""
+        # 扩容阈值字符串。
+        threshold: "100"
+  # Java Control Plane。
+  control:
+    # 默认双副本。
+    replicas: 2
+    # Control 镜像引用。
+    image:
+      # 生产 Registry Repository。
+      repository: registry.invalid/agentark/agentark-control-server
+      # 生产必须替换为真实摘要。
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      # 生产禁止 Tag。
+      tag: ""
+    # Control HTTP 端口。
+    port: 8081
+    # Control 容量边界。
+    resources:
+      # 调度请求。
+      requests:
+        # 最小 CPU 请求。
+        cpu: 500m
+        # 最小内存请求。
+        memory: 1Gi
+      # 容器上限。
+      limits:
+        # 最大 CPU。
+        cpu: "2"
+        # 最大内存。
+        memory: 3Gi
+    # Control HPA/KEDA。
+    autoscaling:
+      # 默认启用 HPA。
+      enabled: true
+      # 最小双副本。
+      minReplicas: 2
+      # 最大副本数。
+      maxReplicas: 10
+      # CPU 扩容目标。
+      targetCPUUtilizationPercentage: 70
+      # 可选 KEDA 指标。
+      keda:
+        # 默认关闭。
+        enabled: false
+        # Prometheus 地址。
+        serverAddress: ""
+        # PromQL 查询。
+        query: ""
+        # 扩容阈值。
+        threshold: "100"
+  # 托管 Runtime Plane。
+  runtime:
+    # 默认双副本。
+    replicas: 2
+    # Runtime 镜像引用。
+    image:
+      # 生产 Registry Repository。
+      repository: registry.invalid/agentark/agentark-runtime-server
+      # 生产必须替换为真实摘要。
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      # 生产禁止 Tag。
+      tag: ""
+    # Runtime HTTP 端口。
+    port: 8082
+    # Runtime 容量边界。
+    resources:
+      # 调度请求。
+      requests:
+        # 最小 CPU 请求。
+        cpu: "1"
+        # 最小内存请求。
+        memory: 2Gi
+      # 容器上限。
+      limits:
+        # 最大 CPU。
+        cpu: "4"
+        # 最大内存。
+        memory: 6Gi
+    # Runtime HPA/KEDA。
+    autoscaling:
+      # 默认启用 HPA。
+      enabled: true
+      # 最小双副本。
+      minReplicas: 2
+      # 最大副本数。
+      maxReplicas: 50
+      # CPU 扩容目标。
+      targetCPUUtilizationPercentage: 70
+      # 可选 Active Run/Queue KEDA 指标。
+      keda:
+        # 默认关闭。
+        enabled: false
+        # Prometheus 地址。
+        serverAddress: ""
+        # 低基数队列查询。
+        query: ""
+        # 扩容阈值。
+        threshold: "20"
+  # 持久 Scheduler Plane。
+  scheduler:
+    # 默认双副本。
+    replicas: 2
+    # Scheduler 镜像引用。
+    image:
+      # 生产 Registry Repository。
+      repository: registry.invalid/agentark/agentark-scheduler-server
+      # 生产必须替换为真实摘要。
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      # 生产禁止 Tag。
+      tag: ""
+    # Scheduler HTTP 端口。
+    port: 8083
+    # Scheduler 容量边界。
+    resources:
+      # 调度请求。
+      requests:
+        # 最小 CPU 请求。
+        cpu: 500m
+        # 最小内存请求。
+        memory: 1Gi
+      # 容器上限。
+      limits:
+        # 最大 CPU。
+        cpu: "2"
+        # 最大内存。
+        memory: 3Gi
+    # Scheduler HPA/KEDA。
+    autoscaling:
+      # 默认启用 HPA。
+      enabled: true
+      # 最小双副本。
+      minReplicas: 2
+      # 最大副本数。
+      maxReplicas: 30
+      # CPU 扩容目标。
+      targetCPUUtilizationPercentage: 70
+      # 可选 Queue Depth/Oldest Age KEDA 指标。
+      keda:
+        # 默认关闭。
+        enabled: false
+        # Prometheus 地址。
+        serverAddress: ""
+        # 低基数队列查询。
+        query: ""
+        # 扩容阈值。
+        threshold: "100"
+  # 独立静态 Web。
+  web:
+    # 默认双副本。
+    replicas: 2
+    # Web 镜像引用。
+    image:
+      # 生产 Registry Repository。
+      repository: registry.invalid/agentark/agentark-web
+      # 生产必须替换为真实摘要。
+      digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+      # 生产禁止 Tag。
+      tag: ""
+    # Web HTTP 端口。
+    port: 8080
+    # Web 容量边界。
+    resources:
+      # 调度请求。
+      requests:
+        # 最小 CPU 请求。
+        cpu: 50m
+        # 最小内存请求。
+        memory: 64Mi
+      # 容器上限。
+      limits:
+        # 最大 CPU。
+        cpu: 500m
+        # 最大内存。
+        memory: 256Mi
+    # Web HPA/KEDA。
+    autoscaling:
+      # 默认启用 HPA。
+      enabled: true
+      # 最小双副本。
+      minReplicas: 2
+      # 最大副本数。
+      maxReplicas: 10
+      # CPU 扩容目标。
+      targetCPUUtilizationPercentage: 70
+      # 可选 KEDA 指标。
+      keda:
+        # 默认关闭。
+        enabled: false
+        # Prometheus 地址。
+        serverAddress: ""
+        # PromQL 查询。
+        query: ""
+        # 扩容阈值。
+        threshold: "100"
+
+# 数据库迁移使用独立批处理镜像，应用 Pod 默认关闭 Flyway。
+migrations:
+  # 生产默认启用 Helm Hook Job。
+  enabled: true
+  # 单一迁移工具镜像包含三个 Owner 的独立 SQL 目录。
+  image:
+    # 生产 Registry Repository。
+    repository: registry.invalid/agentark/agentark-migrations
+    # 生产必须替换为真实摘要。
+    digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    # 生产禁止 Tag。
+    tag: ""
+  # 单次迁移失败不重试未知 DDL。
+  backoffLimit: 0
+  # 每个 Owner 迁移最长十分钟。
+  activeDeadlineSeconds: 600
+
+# Kubernetes Service 与入口配置。
+ingress:
+  # 默认创建统一 Ingress。
+  enabled: true
+  # 生产 IngressClass 由平台指定。
+  className: nginx
+  # TLS/Controller 专属非敏感注解。
+  annotations: {}
+  # 公共 API 主机。
+  apiHost: api.agentark.invalid
+  # Web 主机。
+  webHost: agentark.invalid
+  # 引用预创建 TLS Secret。
+  tlsSecretName: agentark-tls
+
+# 最小权限 ServiceAccount/RBAC。
+serviceAccount:
+  # 创建每个组件独立 ServiceAccount。
+  create: true
+  # 默认不添加云 IAM 注解。
+  annotations: {}
+
+# 默认拒绝和窄化通信策略。
+networkPolicy:
+  # 生产默认启用。
+  enabled: true
+  # Ingress Controller Namespace 标签。
+  ingressNamespaceSelector:
+    kubernetes.io/metadata.name: ingress-nginx
+  # Ingress Controller Pod 标签。
+  ingressPodSelector:
+    app.kubernetes.io/component: controller
+
+# PDB 保护滚动与节点维护。
+podDisruptionBudget:
+  # 多副本服务默认最多同时丢失一个 Pod。
+  maxUnavailable: 1
+
+# Sandbox 独立信任区与 RuntimeClass。
+sandbox:
+  # 创建独立 Namespace 与安全基线。
+  enabled: true
+  # Sandbox Namespace 名称。
+  namespace: agentark-sandbox
+  # RuntimeClass 名称；为空时不创建，生产校验要求显式配置。
+  runtimeClassName: ""
+  # Runtime Handler 由节点运行时提供，例如 kata-qemu 或 gvisor。
+  runtimeHandler: ""
+
+# OTel Collector 作为可选无状态部署。
+otelCollector:
+  # 默认启用集群内 OTLP 接收与外部转发。
+  enabled: true
+  # Collector 镜像必须固定摘要。
+  image:
+    # OTel 官方 Repository。
+    repository: otel/opentelemetry-collector-contrib
+    # 固定多架构内容摘要。
+    digest: sha256:886722fe0f37af9d1fe24d29529253ec59fbf263b3b1df4facaf221373e19d23
+    # 生产禁止 Tag。
+    tag: ""
+  # 外部 OTLP Endpoint 为空时只输出 Debug，不阻断业务。
+  exportEndpoint: ""
+  # Collector 资源边界。
+  resources:
+    # 调度请求。
+    requests:
+      # 最小 CPU 请求。
+      cpu: 100m
+      # 最小内存请求。
+      memory: 128Mi
+    # 容器上限。
+    limits:
+      # 最大 CPU。
+      cpu: "1"
+      # 最大内存。
+      memory: 1Gi

@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-18
 status: active
 referenced_by: PLAN.md#phase-20--安全加固sandboxmcpskill-供应链与威胁测试
 ---
@@ -94,4 +94,4 @@ referenced_by: PLAN.md#phase-20--安全加固sandboxmcpskill-供应链与威胁�
 
 以下变化必须更新本模型并重新评估严重度：新增 Provider/Sandbox 类型；放开 MCP Egress；引入新模型或向量后端；改变 Secret 解析链；新增 GitHub Action/Registry；允许新的 Skill 许可证；增加外部 Webhook/Channel；改变身份、Schema Owner 或 Runtime Snapshot Contract。
 
-生产发布前还必须完成 Phase 22 的真实 Kubernetes Egress/Privilege、mTLS、KMS/Vault 工作负载身份、镜像 Admission、备份恢复和故障演练，以及 Phase 23 的独立安全审查。静态清单通过不能冒充集群执行证据。
+Phase 22 已在三节点 kind/Calico 中验证 Kubernetes 默认拒绝 Egress、非 Root/只读根、NetworkPolicy、节点 Drain、备份恢复和故障演练。生产发布前仍必须在目标环境完成 mTLS、KMS/Vault 工作负载身份、镜像 Admission、Sandbox 逃逸测试和 Phase 23 独立安全审查；本机集群证据不能冒充云账号或生产集群验收。
