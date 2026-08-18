@@ -49,7 +49,7 @@ Phase 05 建立了 Gateway、Control、Runtime 和 Scheduler 四个可独立启�
 | MinIO | `minio/minio:RELEASE.2025-09-07T16-13-09Z` | Core/RAG | `/minio/health/live` | `minio-data` |
 | Qdrant | `qdrant/qdrant:v1.18.3` | 仅 RAG | Phase 14 接线前不作为 Core 就绪依赖 | `qdrant-data` |
 
-四个 Server 镜像固定基于 `eclipse-temurin:21.0.10_7-jre-alpine-3.23`，使用非 root 用户、只读根文件系统和受限 `/tmp` tmpfs。根 `.dockerignore` 仅允许四个可执行 JAR 与镜像模板进入 Build Context，排除 `.git`、`.agentark`、本地 Secret、上游 Worktree 和不相关源码。所有宿主端口只绑定 `127.0.0.1`。
+四个 Server 镜像固定基于 `eclipse-temurin:21.0.10_7-jre-alpine-3.23`，使用非 root 用户、只读根文件系统和受限 `/tmp` tmpfs。本地 Compose 通过 `deploy/compose/Dockerfile.service.dockerignore` 仅允许四个可执行 JAR 与镜像模板进入 Build Context，排除 `.git`、`.agentark`、本地 Secret、上游 Worktree 和不相关源码；根 `.dockerignore` 继续服务于生产多阶段构建，并排除宿主 Maven 产物。所有宿主端口只绑定 `127.0.0.1`。
 
 ## MySQL 隔离与 Secret
 

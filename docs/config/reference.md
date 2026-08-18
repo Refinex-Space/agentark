@@ -39,6 +39,8 @@ Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSo
 | `core` | MySQL、Redis、MinIO、四个 Server | `mysql:8.4.11`、`redis:8.10.0`、`minio/minio:RELEASE.2025-09-07T16-13-09Z`、`eclipse-temurin:21.0.10_7-jre-alpine-3.23` | 默认本地基础设施与空业务应用壳 |
 | `rag` | Core 全部服务 + Qdrant | 额外 `qdrant/qdrant:v1.18.3` | Phase 14 Qdrant Adapter 的本地集成 Profile，默认不启动；不自动启用摄取 Handler |
 
+`tools/dev-up.sh` 先在宿主机打包四个可执行 JAR，再由 `deploy/compose/Dockerfile.service` 复制到本地运行镜像。该 Dockerfile 使用专用的 `deploy/compose/Dockerfile.service.dockerignore`，构建上下文默认拒绝全部仓库内容，只放行镜像模板和四个 `agentark-*-server-*.jar`；不得放行源码、其他 `target` 产物或本地 Secret。根 `.dockerignore` 继续服务于生产多阶段镜像构建，并排除全部宿主 Maven 输出。
+
 Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334` 和四个 Server 端口均只绑定 `127.0.0.1`。宿主基础设施端口可在本地 `.env` 中使用 `deploy/compose/.env.example` 列出的非敏感变量覆盖；四个 Server 端口为 Phase 05 固定值。
 
 MySQL Core 容器显式使用 `--log-bin-trust-function-creators=ON`，使最小权限 Flyway 账号可以创建 V5 的 Revision/Snapshot 不可变触发器。该参数不授予应用账号 `SUPER`，也不扩大三个 Schema 的权限。生产 MySQL 若启用 Binary Log，数据库管理员必须在执行 V5 前配置并核验同一变量；缺失时 Flyway 会以 `ERROR 1419` 失败，禁止通过扩大应用账号权限或关闭 Flyway 绕过。
