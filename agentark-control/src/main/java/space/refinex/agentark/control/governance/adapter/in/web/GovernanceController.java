@@ -16,6 +16,8 @@
 
 package space.refinex.agentark.control.governance.adapter.in.web;
 
+import static space.refinex.agentark.control.governance.adapter.in.web.GovernanceApiModels.optional;
+
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
