@@ -92,8 +92,7 @@ public record McpToolDescriptorSnapshot(
         if (!java.util.Set.of("IDEMPOTENT", "NON_IDEMPOTENT", "UNKNOWN").contains(idempotency)) {
             throw new IllegalArgumentException("idempotency is not supported");
         }
-        permissionMetadataJson = CatalogFieldPolicy.json(
-            permissionMetadataJson, "permissionMetadataJson");
+        permissionMetadataJson = CatalogFieldPolicy.json(permissionMetadataJson, "permissionMetadataJson");
         Objects.requireNonNull(contentHash, "contentHash must not be null");
         createdAt = CatalogFieldPolicy.instant(createdAt, "createdAt");
     }

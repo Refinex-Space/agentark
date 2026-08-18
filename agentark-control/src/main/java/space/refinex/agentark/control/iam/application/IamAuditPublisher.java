@@ -54,6 +54,7 @@ public final class IamAuditPublisher {
             auditPort.append(record);
             return;
         }
+
         TransactionSynchronizationManager.registerSynchronization(
             new TransactionSynchronization() {
 

@@ -67,14 +67,10 @@ public final class IamDevBootstrapRunner implements ApplicationRunner {
      * @param iamService       IAM 应用服务
      * @param tenantRepository 租户目录端口
      */
-    public IamDevBootstrapRunner(
-        IamDevBootstrapProperties properties,
-        IamApplicationService iamService,
-        TenantCatalogRepository tenantRepository) {
+    public IamDevBootstrapRunner(IamDevBootstrapProperties properties, IamApplicationService iamService, TenantCatalogRepository tenantRepository) {
         this.properties = java.util.Objects.requireNonNull(properties, "properties must not be null");
         this.iamService = java.util.Objects.requireNonNull(iamService, "iamService must not be null");
-        this.tenantRepository = java.util.Objects.requireNonNull(
-            tenantRepository, "tenantRepository must not be null");
+        this.tenantRepository = java.util.Objects.requireNonNull(tenantRepository, "tenantRepository must not be null");
     }
 
     /**
@@ -94,20 +90,15 @@ public final class IamDevBootstrapRunner implements ApplicationRunner {
 
         Organization organization = tenantRepository
             .findOrganizationBySlug(properties.getOrganizationSlug())
-            .orElseGet(() -> iamService.createOrganization(
-                principal, properties.getOrganizationSlug(), properties.getOrganizationName()));
+            .orElseGet(() -> iamService.createOrganization(principal, properties.getOrganizationSlug(), properties.getOrganizationName()));
         Project project = tenantRepository
             .findProjectBySlug(organization.id(), properties.getProjectSlug())
-            .orElseGet(() -> iamService.createProject(
-                principal, organization.id(), properties.getProjectSlug(), properties.getProjectName()));
+            .orElseGet(() -> iamService.createProject(principal, organization.id(), properties.getProjectSlug(), properties.getProjectName()));
         Environment environment = tenantRepository
             .findEnvironmentByKey(project.id(), properties.getEnvironmentKey())
-            .orElseGet(() -> iamService.createEnvironment(
-                principal, project.id(), properties.getEnvironmentKey(), properties.getEnvironmentName()));
+            .orElseGet(() -> iamService.createEnvironment(principal, project.id(), properties.getEnvironmentKey(), properties.getEnvironmentName()));
         LOGGER.info(
             "IAM local bootstrap ready organizationId={} projectId={} environmentId={}",
-            organization.id().asString(),
-            project.id().asString(),
-            environment.id().asString());
+            organization.id().asString(), project.id().asString(), environment.id().asString());
     }
 }

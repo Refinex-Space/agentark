@@ -21,6 +21,7 @@ import space.refinex.agentark.control.iam.domain.*;
 import space.refinex.agentark.kernel.id.*;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -42,7 +43,7 @@ public final class MybatisIdentityRepository implements IdentityRepository {
      * @param mapper 身份 Mapper
      */
     public MybatisIdentityRepository(IdentityMapper mapper) {
-        this.mapper = java.util.Objects.requireNonNull(mapper, "mapper must not be null");
+        this.mapper = Objects.requireNonNull(mapper, "mapper must not be null");
     }
 
     /**
@@ -122,10 +123,10 @@ public final class MybatisIdentityRepository implements IdentityRepository {
      * @return 服务账号列表
      */
     @Override
-    public List<ServiceAccount> listServiceAccounts(
-        OrganizationId organizationId, ProjectId projectId, int limit) {
+    public List<ServiceAccount> listServiceAccounts(OrganizationId organizationId, ProjectId projectId, int limit) {
         return mapper.listServiceAccounts(organizationId.value(), projectId.value(), limit).stream()
-            .map(this::serviceAccount).toList();
+            .map(this::serviceAccount)
+            .toList();
     }
 
     /**
@@ -152,13 +153,8 @@ public final class MybatisIdentityRepository implements IdentityRepository {
      * @return 活动成员时为 {@code true}
      */
     @Override
-    public boolean isActiveMember(
-        OrganizationId organizationId,
-        ProjectId projectId,
-        PrincipalKind principalKind,
-        UUID principalId) {
-        return mapper.countActiveMembership(
-            organizationId.value(), projectId.value(), principalKind.name(), principalId) == 1;
+    public boolean isActiveMember(OrganizationId organizationId, ProjectId projectId, PrincipalKind principalKind, UUID principalId) {
+        return mapper.countActiveMembership(organizationId.value(), projectId.value(), principalKind.name(), principalId) == 1;
     }
 
     /**
@@ -170,10 +166,10 @@ public final class MybatisIdentityRepository implements IdentityRepository {
      * @return 成员关系列表
      */
     @Override
-    public List<Membership> listMemberships(
-        OrganizationId organizationId, ProjectId projectId, int limit) {
+    public List<Membership> listMemberships(OrganizationId organizationId, ProjectId projectId, int limit) {
         return mapper.listMemberships(organizationId.value(), projectId.value(), limit).stream()
-            .map(this::membership).toList();
+            .map(this::membership)
+            .toList();
     }
 
     /**

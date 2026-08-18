@@ -17,11 +17,14 @@
 package space.refinex.agentark.control.catalog.application;
 
 import space.refinex.agentark.control.catalog.domain.CatalogAssetKind;
+import space.refinex.agentark.kernel.ref.Checksum;
 import space.refinex.agentark.kernel.ref.ObjectRef;
 import space.refinex.agentark.kernel.ref.SecretRef;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.net.URI;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 /**
@@ -54,8 +57,7 @@ public final class CatalogPayloadValidator {
      * @param payload 调用方语言中立载荷
      * @return 完成校验且键顺序稳定的载荷
      */
-    public CatalogValidatedPayload validateVersion(
-        CatalogAssetKind kind, Map<String, Object> payload) {
+    public CatalogValidatedPayload validateVersion(CatalogAssetKind kind, Map<String, Object> payload) {
         Map<String, Object> checked = requireMap(payload, "payload");
         rejectSecretValues(checked);
         List<Map<String, Object>> tools = switch (kind) {
@@ -79,8 +81,7 @@ public final class CatalogPayloadValidator {
         Map<String, Object> checked = requireMap(metadata, "metadata");
         rejectSecretValues(checked);
         if (kind == CatalogAssetKind.MODEL_PROVIDER) {
-            requiredEnum(checked, "providerType", Set.of(
-                "OPENAI_COMPATIBLE", "ANTHROPIC", "GEMINI", "OLLAMA", "CUSTOM"));
+            requiredEnum(checked, "providerType", Set.of("OPENAI_COMPATIBLE", "ANTHROPIC", "GEMINI", "OLLAMA", "CUSTOM"));
             requireMap(checked.get("descriptor"), "descriptor");
         } else if (!checked.isEmpty()) {
             throw new IllegalArgumentException("metadata is only supported for model-provider");
@@ -119,8 +120,9 @@ public final class CatalogPayloadValidator {
         requiredString(payload, "modelName", 255);
         List<?> capabilities = requiredList(payload, "capabilities");
         Set<String> allowed = Set.of("TOOL", "VISION", "STRUCTURED_OUTPUT", "STREAMING");
-        if (capabilities.isEmpty() || capabilities.stream()
-            .anyMatch(value -> !(value instanceof String text) || !allowed.contains(text))) {
+        if (capabilities.isEmpty()
+            || capabilities.stream().anyMatch(value -> !(value instanceof String text)
+            || !allowed.contains(text))) {
             throw new IllegalArgumentException("capabilities contains unsupported values");
         }
         requireMap(payload.get("parameters"), "parameters");
@@ -135,8 +137,7 @@ public final class CatalogPayloadValidator {
      */
     @SuppressWarnings("unchecked")
     private List<Map<String, Object>> validateMcpServer(Map<String, Object> payload) {
-        String transport = requiredEnum(
-            payload, "transport", Set.of("STREAMABLE_HTTP", "SSE", "STDIO"));
+        String transport = requiredEnum(payload, "transport", Set.of("STREAMABLE_HTTP", "SSE", "STDIO"));
         if ("STDIO".equals(transport)) {
             requiredString(payload, "commandName", 255);
             if (payload.get("endpointUri") != null) {
@@ -148,6 +149,7 @@ public final class CatalogPayloadValidator {
                 throw new IllegalArgumentException("remote transport must not contain commandName");
             }
         }
+
         requireMap(payload.get("transportConfig"), "transportConfig");
         optionalRegion(payload, "dataRegion");
         optionalSecretRef(payload, "tlsSecretRef");
@@ -166,6 +168,7 @@ public final class CatalogPayloadValidator {
             if (!names.add(name)) {
                 throw new IllegalArgumentException("tool names must be unique in a server version");
             }
+
             requireMap(tool.get("argumentSchema"), "argumentSchema");
             requiredEnum(tool, "accessMode", Set.of("READ", "WRITE", "READ_WRITE"));
             requiredEnum(tool, "riskLevel", Set.of("LOW", "MEDIUM", "HIGH", "CRITICAL"));
@@ -184,12 +187,12 @@ public final class CatalogPayloadValidator {
         Map<String, Object> artifact = requireMap(payload.get("artifact"), "artifact");
         ObjectRef.of(
             requiredString(artifact, "uri", 2048),
-            new space.refinex.agentark.kernel.ref.Checksum(
-                requiredString(artifact, "checksum", 71)),
+            new Checksum(requiredString(artifact, "checksum", 71)),
             requiredLong(artifact, "size", 0),
             requiredString(artifact, "mediaType", 255));
         validateSourceUri(requiredString(payload, "sourceUri", 2048));
         requiredString(payload, "license", 255);
+
         Object signature = payload.get("signature");
         if (signature != null) {
             Map<String, Object> signatureMap = requireMap(signature, "signature");
@@ -197,29 +200,31 @@ public final class CatalogPayloadValidator {
             requiredString(signatureMap, "keyId", 255);
             requiredString(signatureMap, "value", 4096);
         }
+
         Object sbom = payload.get("sbom");
         if (sbom != null) {
             Map<String, Object> sbomMap = requireMap(sbom, "sbom");
             ObjectRef.of(
                 requiredString(sbomMap, "uri", 2048),
-                new space.refinex.agentark.kernel.ref.Checksum(
-                    requiredString(sbomMap, "checksum", 71)),
+                new Checksum(requiredString(sbomMap, "checksum", 71)),
                 requiredLong(sbomMap, "size", 1),
                 requiredString(sbomMap, "mediaType", 255));
         }
+
         Object scan = payload.get("scanAttestation");
         if (scan != null) {
             Map<String, Object> scanMap = requireMap(scan, "scanAttestation");
             requiredString(scanMap, "scanner", 255);
             requiredEnum(scanMap, "status", Set.of("PASSED", "FAILED"));
-            new space.refinex.agentark.kernel.ref.Checksum(
-                requiredString(scanMap, "artifactChecksum", 71));
+            new Checksum(requiredString(scanMap, "artifactChecksum", 71));
+
             try {
-                java.time.Instant.parse(requiredString(scanMap, "scannedAt", 64));
-            } catch (java.time.format.DateTimeParseException exception) {
+                Instant.parse(requiredString(scanMap, "scannedAt", 64));
+            } catch (DateTimeParseException exception) {
                 throw new IllegalArgumentException("scanAttestation.scannedAt is invalid", exception);
             }
         }
+
         requireMap(payload.get("compatibility"), "compatibility");
         return List.of();
     }
@@ -244,13 +249,13 @@ public final class CatalogPayloadValidator {
         requiredList(payload, "rules");
         requiredList(payload, "scopes");
         requireMap(payload.get("approvalPolicy"), "approvalPolicy");
+
         Object dataBoundary = payload.get("dataBoundary");
         if (dataBoundary != null) {
             Map<String, Object> boundary = requireMap(dataBoundary, "dataBoundary");
             requiredEnum(boundary, "classification", Set.of("STANDARD", "SENSITIVE"));
             List<?> regions = requiredList(boundary, "allowedRegions");
-            if (regions.isEmpty() || regions.stream().anyMatch(
-                region -> !(region instanceof String text) || !isRegion(text))) {
+            if (regions.isEmpty() || regions.stream().anyMatch(region -> !(region instanceof String text) || !isRegion(text))) {
                 throw new IllegalArgumentException("dataBoundary.allowedRegions is invalid");
             }
         }
@@ -261,7 +266,7 @@ public final class CatalogPayloadValidator {
      * 校验可选部署数据区域标识。
      *
      * @param payload 资产版本载荷
-     * @param key 区域字段名
+     * @param key     区域字段名
      */
     private void optionalRegion(Map<String, Object> payload, String key) {
         Object value = payload.get(key);
@@ -284,10 +289,16 @@ public final class CatalogPayloadValidator {
     private void validateRemoteEndpoint(String uriText) {
         URI uri = URI.create(uriText);
         String host = uri.getHost();
-        if (!"https".equals(uri.getScheme()) || host == null || uri.getRawUserInfo() != null
-            || uri.getRawQuery() != null || uri.getRawFragment() != null
-            || host.equalsIgnoreCase("localhost") || host.equals("169.254.169.254")
+
+        if (!"https".equals(uri.getScheme())
+            || host == null
+            || uri.getRawUserInfo() != null
+            || uri.getRawQuery() != null
+            || uri.getRawFragment() != null
+            || host.equalsIgnoreCase("localhost")
+            || host.equals("169.254.169.254")
             || isPrivateIpv4(host)) {
+
             throw new IllegalArgumentException("remote MCP endpoint violates SSRF baseline");
         }
     }
@@ -308,8 +319,7 @@ public final class CatalogPayloadValidator {
      */
     private void validateSourceUri(String uriText) {
         URI uri = URI.create(uriText);
-        if (uri.getScheme() == null || uri.getRawUserInfo() != null
-            || uri.getRawQuery() != null || uri.getRawFragment() != null) {
+        if (uri.getScheme() == null || uri.getRawUserInfo() != null || uri.getRawQuery() != null || uri.getRawFragment() != null) {
             throw new IllegalArgumentException("sourceUri must not contain credentials or query");
         }
     }
@@ -433,8 +443,7 @@ public final class CatalogPayloadValidator {
      */
     @SuppressWarnings("unchecked")
     private Map<String, Object> requireMap(Object value, String name) {
-        if (!(value instanceof Map<?, ?> raw)
-            || raw.keySet().stream().anyMatch(key -> !(key instanceof String))) {
+        if (!(value instanceof Map<?, ?> raw) || raw.keySet().stream().anyMatch(key -> !(key instanceof String))) {
             throw new IllegalArgumentException(name + " must be an object with string keys");
         }
         return (Map<String, Object>) raw;

@@ -88,14 +88,10 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      * @return 实际更新行数
      */
     @Override
-    public int updateDraft(
-        ProjectId projectId, AgentId agentId, AgentDraftSpec spec, long expectedVersion,
-        Instant now, String actor) {
-        int updated = mapper.updateDraft(
-            projectId.value(), agentId.value(), write(spec), expectedVersion, now, actor);
+    public int updateDraft(ProjectId projectId, AgentId agentId, AgentDraftSpec spec, long expectedVersion, Instant now, String actor) {
+        int updated = mapper.updateDraft(projectId.value(), agentId.value(), write(spec), expectedVersion, now, actor);
         if (updated == 1) {
-            AgentDraft draft = mapper.findDraft(projectId.value(), agentId.value())
-                .map(this::draft).orElseThrow();
+            AgentDraft draft = mapper.findDraft(projectId.value(), agentId.value()).map(this::draft).orElseThrow();
             mapper.deleteComponents(projectId.value(), agentId.value());
             insertComponents(draft, now);
         }
@@ -122,8 +118,7 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      * @param report 校验报告 @param projectId 项目 @param actor 操作主体
      */
     @Override
-    public void insertValidationReport(
-        ValidationReport report, ProjectId projectId, String actor) {
+    public void insertValidationReport(ValidationReport report, ProjectId projectId, String actor) {
         mapper.insertValidationReport(
             report.id().value(), projectId.value(), report.agentId().value(),
             report.draftVersion(), report.valid() ? "VALID" : "INVALID",
@@ -134,8 +129,7 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      * @param projectId 项目 @param agentId Agent @param key 幂等键 @return 操作
      */
     @Override
-    public Optional<PublishOperation> findPublishOperation(
-        ProjectId projectId, AgentId agentId, String key) {
+    public Optional<PublishOperation> findPublishOperation(ProjectId projectId, AgentId agentId, String key) {
         return mapper.findPublishOperation(projectId.value(), agentId.value(), key)
             .map(this::operation);
     }
@@ -144,9 +138,7 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      * @param snapshot Snapshot @param operation 操作 @param report 报告 @param outbox 事件 @param actor 主体
      */
     @Override
-    public void insertPublished(
-        StoredSnapshot snapshot, PublishOperation operation, ValidationReport report,
-        OutboxEvent outbox, String actor) {
+    public void insertPublished(StoredSnapshot snapshot, PublishOperation operation, ValidationReport report, OutboxEvent outbox, String actor) {
         SnapshotRow row = snapshotRow(snapshot);
         mapper.insertRevision(row, actor);
         mapper.insertSnapshot(row, actor);
@@ -194,10 +186,8 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      * @return Deployment 列表
      */
     @Override
-    public List<Deployment> listDeployments(
-        ProjectId projectId, EnvironmentId environmentId, DeploymentId afterId, int limit) {
-        return mapper.listDeployments(
-                projectId.value(), environmentId.value(), afterId.value(), limit)
+    public List<Deployment> listDeployments(ProjectId projectId, EnvironmentId environmentId, DeploymentId afterId, int limit) {
+        return mapper.listDeployments(projectId.value(), environmentId.value(), afterId.value(), limit)
             .stream().map(this::deployment).toList();
     }
 
@@ -205,8 +195,7 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      * @param deployment Deployment @param history 历史 @param outbox 事件 @param actor 主体
      */
     @Override
-    public void insertDeployment(
-        Deployment deployment, DeploymentRevision history, OutboxEvent outbox, String actor) {
+    public void insertDeployment(Deployment deployment, DeploymentRevision history, OutboxEvent outbox, String actor) {
         mapper.insertDeployment(deploymentRow(deployment), actor);
         insertHistory(deployment, history, actor);
         insertOutbox(outbox);
@@ -216,8 +205,7 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      * @param projectId 项目 @param environmentId 环境 @param id Deployment @return Deployment
      */
     @Override
-    public Optional<Deployment> findDeployment(
-        ProjectId projectId, EnvironmentId environmentId, DeploymentId id) {
+    public Optional<Deployment> findDeployment(ProjectId projectId, EnvironmentId environmentId, DeploymentId id) {
         return mapper.findDeployment(projectId.value(), environmentId.value(), id.value())
             .map(this::deployment);
     }
@@ -241,9 +229,7 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      * @return 实际更新行数
      */
     @Override
-    public int updateDeployment(
-        Deployment deployment, long expectedVersion, DeploymentRevision history,
-        OutboxEvent outbox, String actor) {
+    public int updateDeployment(Deployment deployment, long expectedVersion, DeploymentRevision history, OutboxEvent outbox, String actor) {
         int updated = mapper.updateDeployment(deploymentRow(deployment), expectedVersion, actor);
         if (updated == 1) {
             insertHistory(deployment, history, actor);
@@ -257,55 +243,41 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      */
     private void insertComponents(AgentDraft draft, Instant now) {
         AgentDraftSpec spec = draft.spec();
-        insertComponent(draft, "MODEL", 0, spec.model().providerId().value(),
-            spec.model().profileId().value(), Map.of(), now);
+        insertComponent(draft, "MODEL", 0, spec.model().providerId().value(), spec.model().profileId().value(), Map.of(), now);
         for (int index = 0; index < spec.prompts().size(); index++) {
             PromptBinding value = spec.prompts().get(index);
-            insertComponent(draft, "PROMPT", index, value.promptId().value(),
-                value.versionId().value(), Map.of("role", value.role().name()), now);
+            insertComponent(draft, "PROMPT", index, value.promptId().value(), value.versionId().value(), Map.of("role", value.role().name()), now);
         }
         for (int index = 0; index < spec.mcpServers().size(); index++) {
             McpBinding value = spec.mcpServers().get(index);
-            insertComponent(draft, "MCP", index, value.serverId().value(),
-                value.versionId().value(), Map.of("allowedTools", value.allowedTools()), now);
+            insertComponent(draft, "MCP", index, value.serverId().value(), value.versionId().value(), Map.of("allowedTools", value.allowedTools()), now);
         }
         for (int index = 0; index < spec.skills().size(); index++) {
             SkillBinding value = spec.skills().get(index);
-            insertComponent(draft, "SKILL", index, value.skillId().value(),
-                value.versionId().value(), Map.of(), now);
+            insertComponent(draft, "SKILL", index, value.skillId().value(), value.versionId().value(), Map.of(), now);
         }
         for (int index = 0; index < spec.knowledge().size(); index++) {
             KnowledgeBinding value = spec.knowledge().get(index);
-            insertComponent(draft, "KNOWLEDGE", index, value.knowledgeBaseId().value(),
-                value.revisionId().value(), Map.of(), now);
+            insertComponent(draft, "KNOWLEDGE", index, value.knowledgeBaseId().value(), value.revisionId().value(), Map.of(), now);
         }
         ProfileBindings profiles = spec.profiles();
-        insertComponent(draft, "MEMORY", 0, profiles.memoryId().value(),
-            profiles.memoryVersionId().value(), Map.of(), now);
-        insertComponent(draft, "WORKSPACE", 0, profiles.workspaceId().value(),
-            profiles.workspaceVersionId().value(), Map.of(), now);
-        insertComponent(draft, "SANDBOX", 0, profiles.sandboxId().value(),
-            profiles.sandboxVersionId().value(), Map.of(), now);
-        insertComponent(draft, "PERMISSION", 0, spec.permissionPolicy().policyId().value(),
-            spec.permissionPolicy().versionId().value(), Map.of(), now);
+        insertComponent(draft, "MEMORY", 0, profiles.memoryId().value(), profiles.memoryVersionId().value(), Map.of(), now);
+        insertComponent(draft, "WORKSPACE", 0, profiles.workspaceId().value(), profiles.workspaceVersionId().value(), Map.of(), now);
+        insertComponent(draft, "SANDBOX", 0, profiles.sandboxId().value(), profiles.sandboxVersionId().value(), Map.of(), now);
+        insertComponent(draft, "PERMISSION", 0, spec.permissionPolicy().policyId().value(), spec.permissionPolicy().versionId().value(), Map.of(), now);
     }
 
     /**
      * @param draft Draft @param type 类型 @param order 顺序 @param ownerId Owner @param versionId Version @param binding 绑定 @param now 时刻
      */
-    private void insertComponent(
-        AgentDraft draft, String type, int order, UUID ownerId, UUID versionId,
-        Map<String, Object> binding, Instant now) {
-        mapper.insertComponent(new ComponentRow(
-            draft.agentId().value(), draft.organizationId().value(), draft.projectId().value(),
-            type, order, ownerId, versionId, write(binding), now));
+    private void insertComponent(AgentDraft draft, String type, int order, UUID ownerId, UUID versionId, Map<String, Object> binding, Instant now) {
+        mapper.insertComponent(new ComponentRow(draft.agentId().value(), draft.organizationId().value(), draft.projectId().value(), type, order, ownerId, versionId, write(binding), now));
     }
 
     /**
      * @param deployment Deployment @param history 历史 @param actor 主体
      */
-    private void insertHistory(
-        Deployment deployment, DeploymentRevision history, String actor) {
+    private void insertHistory(Deployment deployment, DeploymentRevision history, String actor) {
         mapper.insertDeploymentRevision(
             history.id().value(), deployment.organizationId().value(), deployment.projectId().value(),
             deployment.id().value(), history.action().name(),
@@ -317,9 +289,7 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      * @param event Outbox 事件
      */
     private void insertOutbox(OutboxEvent event) {
-        mapper.insertOutbox(
-            event.id().value(), event.aggregateType(), event.aggregateId(), event.eventType(),
-            event.payloadJson(), event.createdAt());
+        mapper.insertOutbox(event.id().value(), event.aggregateType(), event.aggregateId(), event.eventType(), event.payloadJson(), event.createdAt());
     }
 
     /**
@@ -336,8 +306,7 @@ public final class MybatisReleaseRepository implements ReleaseRepository {
      * @param row 操作行 @return 发布操作
      */
     private PublishOperation operation(OperationRow row) {
-        return new PublishOperation(
-            new JobId(row.id()), new ProjectId(row.projectId()), new AgentId(row.agentId()),
+        return new PublishOperation(new JobId(row.id()), new ProjectId(row.projectId()), new AgentId(row.agentId()),
             row.idempotencyKey(), row.draftVersion(), PublishStatus.valueOf(row.status()),
             Optional.ofNullable(row.revisionId()).map(RevisionId::new), row.createdAt());
     }

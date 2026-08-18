@@ -191,6 +191,7 @@ public class IamControlConfiguration {
         AuthorizationRepository authorizationRepository,
         AuthorizationCache authorizationCache,
         Clock clock) {
+
         return new IamAuthorizationService(
             identityRepository,
             identityMappingService,
@@ -220,6 +221,7 @@ public class IamControlConfiguration {
         ApplicationEventPublisher eventPublisher,
         IamAuditPublisher auditPublisher,
         Clock clock) {
+
         return new IamApplicationService(
             tenantRepository,
             identityRepository,
@@ -253,6 +255,7 @@ public class IamControlConfiguration {
         ApplicationEventPublisher eventPublisher,
         IamAuditPublisher auditPublisher,
         Clock clock) {
+
         return new IamApiKeyService(
             secureRandom,
             apiKeyRepository,
@@ -271,8 +274,7 @@ public class IamControlConfiguration {
      * @return 失效监听器
      */
     @Bean
-    public IamAuthorizationCacheInvalidator iamAuthorizationCacheInvalidator(
-        AuthorizationCache cache) {
+    public IamAuthorizationCacheInvalidator iamAuthorizationCacheInvalidator(AuthorizationCache cache) {
         return new IamAuthorizationCacheInvalidator(cache);
     }
 
@@ -284,8 +286,7 @@ public class IamControlConfiguration {
      * @return API Key 过滤器
      */
     @Bean
-    public IamApiKeyAuthenticationFilter iamApiKeyAuthenticationFilter(
-        IamApiKeyService apiKeyService, IamSecurityProblemWriter problemWriter) {
+    public IamApiKeyAuthenticationFilter iamApiKeyAuthenticationFilter(IamApiKeyService apiKeyService, IamSecurityProblemWriter problemWriter) {
         return new IamApiKeyAuthenticationFilter(apiKeyService, problemWriter);
     }
 
@@ -307,8 +308,7 @@ public class IamControlConfiguration {
      * @return 已授权租户上下文解析器
      */
     @Bean
-    public TenantContextResolver tenantContextResolver(
-        IamAuthorizationService authorizationService) {
+    public TenantContextResolver tenantContextResolver(IamAuthorizationService authorizationService) {
         return new IamTenantContextResolver(authorizationService);
     }
 
@@ -319,8 +319,7 @@ public class IamControlConfiguration {
      * @return Control 租户行处理器
      */
     @Bean
-    public ControlTenantLineHandler controlTenantLineHandler(
-        RequestContextAccessor requestContextAccessor) {
+    public ControlTenantLineHandler controlTenantLineHandler(RequestContextAccessor requestContextAccessor) {
         return new ControlTenantLineHandler(requestContextAccessor);
     }
 
@@ -332,8 +331,7 @@ public class IamControlConfiguration {
      * @return IAM Controller
      */
     @Bean
-    public IamController iamController(
-        IamApplicationService iamApplicationService, IamApiKeyService iamApiKeyService) {
+    public IamController iamController(IamApplicationService iamApplicationService, IamApiKeyService iamApiKeyService) {
         return new IamController(iamApplicationService, iamApiKeyService);
     }
 
@@ -354,8 +352,7 @@ public class IamControlConfiguration {
      * @return IAM 异常映射器
      */
     @Bean
-    public IamProblemDetailAdvice iamProblemDetailAdvice(
-        RequestContextAccessor requestContextAccessor) {
+    public IamProblemDetailAdvice iamProblemDetailAdvice(RequestContextAccessor requestContextAccessor) {
         return new IamProblemDetailAdvice(requestContextAccessor);
     }
 

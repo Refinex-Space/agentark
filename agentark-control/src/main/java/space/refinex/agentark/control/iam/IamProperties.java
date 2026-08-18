@@ -75,8 +75,7 @@ public class IamProperties {
             || authorizationCacheTtl.isZero()
             || authorizationCacheTtl.isNegative()
             || authorizationCacheTtl.compareTo(Duration.ofMinutes(1)) > 0) {
-            throw new IllegalArgumentException(
-                "authorizationCacheTtl must be positive and at most one minute");
+            throw new IllegalArgumentException("authorizationCacheTtl must be positive and at most one minute");
         }
         this.authorizationCacheTtl = authorizationCacheTtl;
     }

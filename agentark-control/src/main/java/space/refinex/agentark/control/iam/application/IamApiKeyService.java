@@ -16,9 +16,9 @@
 
 package space.refinex.agentark.control.iam.application;
 
-import org.springframework.context.ApplicationEventPublisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 import space.refinex.agentark.control.iam.application.port.ApiKeyRepository;
 import space.refinex.agentark.control.iam.application.port.IdentityRepository;
@@ -47,7 +47,9 @@ import java.util.*;
  */
 public class IamApiKeyService implements ApiKeyAuthenticator {
 
-    /** 只记录认证阶段分类而不记录前缀、摘要或凭据的安全诊断日志。 */
+    /**
+     * 只记录认证阶段分类而不记录前缀、摘要或凭据的安全诊断日志。
+     */
     private static final Logger LOGGER = LoggerFactory.getLogger(IamApiKeyService.class);
 
     /**
@@ -112,29 +114,17 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
      * @param auditPublisher        审计发布器
      * @param clock                 UTC 时钟
      */
-    public IamApiKeyService(
-        SecureRandom secureRandom,
-        ApiKeyRepository apiKeyRepository,
-        IdentityRepository identityRepository,
-        IamAuthorizationService authorizationService,
-        IamApplicationService iamApplicationService,
-        ApplicationEventPublisher eventPublisher,
-        IamAuditPublisher auditPublisher,
-        Clock clock) {
-        this.secureRandom = java.util.Objects.requireNonNull(
-            secureRandom, "secureRandom must not be null");
-        this.apiKeyRepository = java.util.Objects.requireNonNull(
-            apiKeyRepository, "apiKeyRepository must not be null");
-        this.identityRepository = java.util.Objects.requireNonNull(
-            identityRepository, "identityRepository must not be null");
-        this.authorizationService = java.util.Objects.requireNonNull(
-            authorizationService, "authorizationService must not be null");
-        this.iamApplicationService = java.util.Objects.requireNonNull(
-            iamApplicationService, "iamApplicationService must not be null");
-        this.eventPublisher = java.util.Objects.requireNonNull(
-            eventPublisher, "eventPublisher must not be null");
-        this.auditPublisher = java.util.Objects.requireNonNull(
-            auditPublisher, "auditPublisher must not be null");
+    public IamApiKeyService(SecureRandom secureRandom, ApiKeyRepository apiKeyRepository, IdentityRepository identityRepository,
+                            IamAuthorizationService authorizationService, IamApplicationService iamApplicationService,
+                            ApplicationEventPublisher eventPublisher, IamAuditPublisher auditPublisher, Clock clock) {
+
+        this.secureRandom = java.util.Objects.requireNonNull(secureRandom, "secureRandom must not be null");
+        this.apiKeyRepository = java.util.Objects.requireNonNull(apiKeyRepository, "apiKeyRepository must not be null");
+        this.identityRepository = java.util.Objects.requireNonNull(identityRepository, "identityRepository must not be null");
+        this.authorizationService = java.util.Objects.requireNonNull(authorizationService, "authorizationService must not be null");
+        this.iamApplicationService = java.util.Objects.requireNonNull(iamApplicationService, "iamApplicationService must not be null");
+        this.eventPublisher = java.util.Objects.requireNonNull(eventPublisher, "eventPublisher must not be null");
+        this.auditPublisher = java.util.Objects.requireNonNull(auditPublisher, "auditPublisher must not be null");
         this.clock = java.util.Objects.requireNonNull(clock, "clock must not be null");
     }
 
@@ -150,13 +140,9 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
      * @return 单次明文交付对象
      */
     @Transactional
-    public CreatedApiKey create(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        ServiceAccountId serviceAccountId,
-        String name,
-        Set<String> scopes,
-        Optional<Instant> expiresAt) {
+    public CreatedApiKey create(AgentArkPrincipal principal, ProjectId projectId, ServiceAccountId serviceAccountId,
+                                String name, Set<String> scopes, Optional<Instant> expiresAt) {
+
         var project = iamApplicationService.requireProject(projectId);
         authorizationService.requirePermission(
             principal,
@@ -172,8 +158,7 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
         Set<String> servicePermissions = authorizationService.serviceAccountPermissions(
             project.organizationId(), project.id(), account.id());
         if (!servicePermissions.containsAll(checkedScopes)) {
-            throw new IamAccessDeniedException(
-                "API key scopes must not exceed service account permissions");
+            throw new IamAccessDeniedException("API key scopes must not exceed service account permissions");
         }
 
         String prefix = encode(randomBytes(9));
@@ -190,8 +175,7 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
             expiresAt,
             clock.instant());
         apiKeyRepository.insert(apiKey);
-        eventPublisher.publishEvent(
-            new IamAuthorizationChanged(project.organizationId(), Optional.of(project.id())));
+        eventPublisher.publishEvent(new IamAuthorizationChanged(project.organizationId(), Optional.of(project.id())));
         auditPublisher.append(new IamAuditRecord(
             "api_key.create",
             principal.subject(),
@@ -232,11 +216,7 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
      * @param expectedVersion 调用方读取的乐观锁版本
      */
     @Transactional
-    public void revoke(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        ApiKeyId apiKeyId,
-        long expectedVersion) {
+    public void revoke(AgentArkPrincipal principal, ProjectId projectId, ApiKeyId apiKeyId, long expectedVersion) {
         var project = iamApplicationService.requireProject(projectId);
         authorizationService.requirePermission(
             principal,
@@ -252,8 +232,7 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
             expectedVersion)) {
             throw new IamConflictException("API key was already changed or not found");
         }
-        eventPublisher.publishEvent(
-            new IamAuthorizationChanged(project.organizationId(), Optional.of(project.id())));
+        eventPublisher.publishEvent(new IamAuthorizationChanged(project.organizationId(), Optional.of(project.id())));
         auditPublisher.append(new IamAuditRecord(
             "api_key.revoke",
             principal.subject(),
@@ -285,6 +264,7 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
             clear(secret);
             return Optional.empty();
         }
+
         try {
             byte[] candidateDigest = digest(keyId, secret);
             Optional<ApiKey> candidate = apiKeyRepository.findByPrefix(keyId);
@@ -296,22 +276,21 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
                 .map(apiKey -> apiKey.isUsableAt(clock.instant()))
                 .orElse(false);
             if (!digestMatches || !usable) {
-                LOGGER.debug(
-                    "API key authentication rejected: candidatePresent={}, digestMatches={}, usable={}",
+                LOGGER.debug("API key authentication rejected: candidatePresent={}, digestMatches={}, usable={}",
                     candidate.isPresent(), digestMatches, usable);
                 return Optional.empty();
             }
             LOGGER.debug("API key authentication passed digest and lifecycle checks");
             return candidate.map(apiKey -> new AgentArkPrincipal(
-                    "urn:agentark:api-key",
-                    apiKey.serviceAccountId().asString(),
-                    PrincipalType.API_KEY,
-                    apiKey.scopes(),
-                    Optional.of(new TenantSelection(
-                        apiKey.organizationId(),
-                        Optional.of(apiKey.projectId()),
-                        Optional.empty())),
-                    Optional.empty()));
+                "urn:agentark:api-key",
+                apiKey.serviceAccountId().asString(),
+                PrincipalType.API_KEY,
+                apiKey.scopes(),
+                Optional.of(new TenantSelection(
+                    apiKey.organizationId(),
+                    Optional.of(apiKey.projectId()),
+                    Optional.empty())),
+                Optional.empty()));
         } finally {
             clear(secret);
         }
@@ -347,8 +326,7 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
      */
     private byte[] digest(String plaintext) {
         try {
-            return MessageDigest.getInstance("SHA-256")
-                .digest(plaintext.getBytes(StandardCharsets.US_ASCII));
+            return MessageDigest.getInstance("SHA-256").digest(plaintext.getBytes(StandardCharsets.US_ASCII));
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256 is unavailable", exception);
         }

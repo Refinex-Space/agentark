@@ -26,10 +26,12 @@ public enum CatalogVersionStatus {
      * 尚未作为稳定引用公开的草稿版本。
      */
     DRAFT,
+
     /**
      * 可被 Agent Draft 和 Snapshot 引用的已发布版本。
      */
     PUBLISHED,
+
     /**
      * 只供历史引用读取的归档版本。
      */

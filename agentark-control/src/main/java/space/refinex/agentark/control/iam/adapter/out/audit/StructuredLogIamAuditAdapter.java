@@ -20,6 +20,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import space.refinex.agentark.control.iam.application.IamAuditRecord;
 import space.refinex.agentark.control.iam.application.port.IamAuditPort;
+import space.refinex.agentark.kernel.id.StrongId;
 
 /**
  * 将非秘密 IAM 审计事实写入独立结构化日志类别，Phase 19 可替换为持久审计适配器。
@@ -54,7 +55,7 @@ public final class StructuredLogIamAuditAdapter implements IamAuditPort {
             record.resourceType(),
             record.resourceId(),
             record.organizationId().map(value -> value.asString()).orElse("-"),
-            record.projectId().map(value -> value.asString()).orElse("-"),
+            record.projectId().map(StrongId::asString).orElse("-"),
             record.outcome(),
             record.occurredAt());
     }

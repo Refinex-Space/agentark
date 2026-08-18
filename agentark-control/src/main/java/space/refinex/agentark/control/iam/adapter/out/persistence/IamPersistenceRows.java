@@ -44,9 +44,8 @@ public final class IamPersistenceRows {
      * @param updatedAt 更新时间
      * @author refinex
      */
-    public record OrganizationRow(
-        UUID id, String slug, String name, String status, long version, Instant createdAt,
-        Instant updatedAt) {
+    public record OrganizationRow(UUID id, String slug, String name, String status, long version, Instant createdAt,
+                                  Instant updatedAt) {
     }
 
     /**
@@ -62,9 +61,8 @@ public final class IamPersistenceRows {
      * @param updatedAt      更新时间
      * @author refinex
      */
-    public record ProjectRow(
-        UUID id, UUID organizationId, String slug, String name, String status, long version,
-        Instant createdAt, Instant updatedAt) {
+    public record ProjectRow(UUID id, UUID organizationId, String slug, String name, String status, long version,
+                             Instant createdAt, Instant updatedAt) {
     }
 
     /**
@@ -81,9 +79,8 @@ public final class IamPersistenceRows {
      * @param updatedAt      更新时间
      * @author refinex
      */
-    public record EnvironmentRow(
-        UUID id, UUID organizationId, UUID projectId, String key, String name, String status,
-        long version, Instant createdAt, Instant updatedAt) {
+    public record EnvironmentRow(UUID id, UUID organizationId, UUID projectId, String key, String name, String status,
+                                 long version, Instant createdAt, Instant updatedAt) {
     }
 
     /**
@@ -101,9 +98,9 @@ public final class IamPersistenceRows {
      * @param updatedAt   更新时间
      * @author refinex
      */
-    public record UserIdentityRow(
-        UUID id, String issuer, String subject, String displayName, String email, String status,
-        Instant lastSeenAt, long version, Instant createdAt, Instant updatedAt) {
+    public record UserIdentityRow(UUID id, String issuer, String subject, String displayName, String email,
+                                  String status,
+                                  Instant lastSeenAt, long version, Instant createdAt, Instant updatedAt) {
     }
 
     /**
@@ -119,9 +116,9 @@ public final class IamPersistenceRows {
      * @param updatedAt      更新时间
      * @author refinex
      */
-    public record ServiceAccountRow(
-        UUID id, UUID organizationId, UUID projectId, String name, String status, long version,
-        Instant createdAt, Instant updatedAt) {
+    public record ServiceAccountRow(UUID id, UUID organizationId, UUID projectId, String name, String status,
+                                    long version,
+                                    Instant createdAt, Instant updatedAt) {
     }
 
     /**
@@ -138,9 +135,8 @@ public final class IamPersistenceRows {
      * @param updatedAt      更新时间
      * @author refinex
      */
-    public record MembershipRow(
-        UUID id, UUID organizationId, UUID projectId, String principalType, UUID principalId,
-        String status, long version, Instant createdAt, Instant updatedAt) {
+    public record MembershipRow(UUID id, UUID organizationId, UUID projectId, String principalType, UUID principalId,
+                                String status, long version, Instant createdAt, Instant updatedAt) {
     }
 
     /**
@@ -153,8 +149,7 @@ public final class IamPersistenceRows {
      * @param createdAt   注册时刻
      * @author refinex
      */
-    public record PermissionRow(
-        UUID id, String key, String description, String riskLevel, Instant createdAt) {
+    public record PermissionRow(UUID id, String key, String description, String riskLevel, Instant createdAt) {
     }
 
     /**
@@ -172,9 +167,8 @@ public final class IamPersistenceRows {
      * @param updatedAt      更新时间
      * @author refinex
      */
-    public record RoleRow(
-        UUID id, UUID organizationId, UUID projectId, String key, String name, boolean builtIn,
-        String status, long version, Instant createdAt, Instant updatedAt) {
+    public record RoleRow(UUID id, UUID organizationId, UUID projectId, String key, String name, boolean builtIn,
+                          String status, long version, Instant createdAt, Instant updatedAt) {
     }
 
     /**
@@ -193,10 +187,9 @@ public final class IamPersistenceRows {
      * @param updatedAt      更新时间
      * @author refinex
      */
-    public record RoleBindingRow(
-        UUID id, UUID organizationId, UUID projectId, UUID roleId, String principalType,
-        UUID principalId, String scopeType, UUID scopeId, long version, Instant createdAt,
-        Instant updatedAt) {
+    public record RoleBindingRow(UUID id, UUID organizationId, UUID projectId, UUID roleId, String principalType,
+                                 UUID principalId, String scopeType, UUID scopeId, long version, Instant createdAt,
+                                 Instant updatedAt) {
     }
 
     /**
@@ -216,9 +209,8 @@ public final class IamPersistenceRows {
      * @param updatedAt        更新时间
      * @author refinex
      */
-    public record ApiKeyRow(
-        UUID id, UUID organizationId, UUID projectId, UUID serviceAccountId, String name,
-        String prefix, byte[] digest, Instant expiresAt, Instant revokedAt, long version,
-        Instant createdAt, Instant updatedAt) {
+    public record ApiKeyRow(UUID id, UUID organizationId, UUID projectId, UUID serviceAccountId, String name,
+                            String prefix, byte[] digest, Instant expiresAt, Instant revokedAt, long version,
+                            Instant createdAt, Instant updatedAt) {
     }
 }

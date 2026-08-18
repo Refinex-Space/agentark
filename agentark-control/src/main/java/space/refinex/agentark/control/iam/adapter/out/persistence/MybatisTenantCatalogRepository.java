@@ -23,6 +23,7 @@ import space.refinex.agentark.kernel.id.OrganizationId;
 import space.refinex.agentark.kernel.id.ProjectId;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -44,7 +45,7 @@ public final class MybatisTenantCatalogRepository implements TenantCatalogReposi
      * @param mapper 显式 Scope Mapper
      */
     public MybatisTenantCatalogRepository(TenantCatalogMapper mapper) {
-        this.mapper = java.util.Objects.requireNonNull(mapper, "mapper must not be null");
+        this.mapper = Objects.requireNonNull(mapper, "mapper must not be null");
     }
 
     /**
@@ -91,10 +92,10 @@ public final class MybatisTenantCatalogRepository implements TenantCatalogReposi
      * @return 可见组织
      */
     @Override
-    public List<Organization> listOrganizationsForPrincipal(
-        PrincipalKind principalKind, UUID principalId, int limit) {
-        return mapper.listOrganizationsForPrincipal(principalKind.name(), principalId, limit)
-            .stream().map(this::organization).toList();
+    public List<Organization> listOrganizationsForPrincipal(PrincipalKind principalKind, UUID principalId, int limit) {
+        return mapper.listOrganizationsForPrincipal(principalKind.name(), principalId, limit).stream()
+            .map(this::organization)
+            .toList();
     }
 
     /**
@@ -191,10 +192,10 @@ public final class MybatisTenantCatalogRepository implements TenantCatalogReposi
      * @return 环境列表
      */
     @Override
-    public List<Environment> listEnvironments(
-        OrganizationId organizationId, ProjectId projectId, int limit) {
+    public List<Environment> listEnvironments(OrganizationId organizationId, ProjectId projectId, int limit) {
         return mapper.listEnvironments(organizationId.value(), projectId.value(), limit).stream()
-            .map(this::environment).toList();
+            .map(this::environment)
+            .toList();
     }
 
     /**

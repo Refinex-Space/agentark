@@ -20,8 +20,10 @@ import space.refinex.agentark.control.governance.application.port.GovernanceRepo
 import space.refinex.agentark.control.governance.domain.GovernanceModels.*;
 import space.refinex.agentark.control.iam.application.IamAuditRecord;
 import space.refinex.agentark.control.iam.application.port.IamAuditPort;
+import space.refinex.agentark.foundation.web.RequestContext;
 import space.refinex.agentark.foundation.web.RequestContextAccessor;
 import space.refinex.agentark.kernel.id.EventId;
+import space.refinex.agentark.kernel.id.StrongId;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -36,13 +38,19 @@ import java.util.Optional;
  */
 public final class PersistentIamAuditAdapter implements IamAuditPort {
 
-    /** 治理持久化仓储。 */
+    /**
+     * 治理持久化仓储。
+     */
     private final GovernanceRepository repository;
 
-    /** 当前 Servlet 请求上下文。 */
+    /**
+     * 当前 Servlet 请求上下文。
+     */
     private final RequestContextAccessor requestContextAccessor;
 
-    /** UTC 时钟。 */
+    /**
+     * UTC 时钟。
+     */
     private final Clock clock;
 
     /**
@@ -52,13 +60,9 @@ public final class PersistentIamAuditAdapter implements IamAuditPort {
      * @param requestContextAccessor 请求上下文访问器
      * @param clock                  UTC 时钟
      */
-    public PersistentIamAuditAdapter(
-        GovernanceRepository repository,
-        RequestContextAccessor requestContextAccessor,
-        Clock clock) {
+    public PersistentIamAuditAdapter(GovernanceRepository repository, RequestContextAccessor requestContextAccessor, Clock clock) {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
-        this.requestContextAccessor = Objects.requireNonNull(
-            requestContextAccessor, "requestContextAccessor must not be null");
+        this.requestContextAccessor = Objects.requireNonNull(requestContextAccessor, "requestContextAccessor must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
@@ -73,19 +77,29 @@ public final class PersistentIamAuditAdapter implements IamAuditPort {
         var context = requestContextAccessor.current();
         Instant ingestedAt = Instant.now(clock);
         repository.appendAudit(new AuditEvent(
-            EventId.generate(), EventId.generate().asString(), AuditPlane.CONTROL,
-            record.organizationId(), record.projectId(), principalType(record.principal()),
-            record.principal(), record.projectId().isPresent()
-                ? AuditScopeType.PROJECT
-                : record.organizationId().isPresent()
-                    ? AuditScopeType.ORGANIZATION : AuditScopeType.PLATFORM,
-            record.projectId().map(value -> value.asString())
-                .or(() -> record.organizationId().map(value -> value.asString()))
+            EventId.generate(),
+            EventId.generate().asString(),
+            AuditPlane.CONTROL,
+            record.organizationId(),
+            record.projectId(),
+            principalType(record.principal()),
+            record.principal(),
+            record.projectId().isPresent() ? AuditScopeType.PROJECT : record.organizationId().isPresent() ? AuditScopeType.ORGANIZATION : AuditScopeType.PLATFORM,
+            record.projectId().map(StrongId::asString)
+                .or(() -> record.organizationId().map(StrongId::asString))
                 .orElse("platform"),
-            record.action(), AuditResult.valueOf(record.outcome()), record.resourceType(),
-            record.resourceId(), Map.of(), Optional.empty(), Optional.empty(),
-            context.map(value -> value.traceId()), context.map(value -> value.requestId()),
-            record.occurredAt(), ingestedAt));
+            record.action(),
+            AuditResult.valueOf(record.outcome()),
+            record.resourceType(),
+            record.resourceId(),
+            Map.of(),
+            Optional.empty(),
+            Optional.empty(),
+            context.map(RequestContext::traceId),
+            context.map(RequestContext::requestId),
+            record.occurredAt(),
+            ingestedAt)
+        );
     }
 
     /**

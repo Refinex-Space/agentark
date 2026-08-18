@@ -52,12 +52,7 @@ public interface GovernanceRepository {
      * @param limit          最大数量
      * @return 审计事件列表
      */
-    List<AuditEvent> listAudit(
-        OrganizationId organizationId,
-        ProjectId projectId,
-        Optional<Instant> before,
-        Optional<EventId> beforeId,
-        int limit);
+    List<AuditEvent> listAudit(OrganizationId organizationId, ProjectId projectId, Optional<Instant> before, Optional<EventId> beforeId, int limit);
 
     /**
      * 插入稳定价格表身份。
@@ -87,13 +82,12 @@ public interface GovernanceRepository {
     /**
      * 列出指定价格表不可变版本。
      *
-     * @param projectId   项目
+     * @param projectId    项目
      * @param priceTableId 价格表 UUIDv7
-     * @param limit       最大数量
+     * @param limit        最大数量
      * @return 版本列表
      */
-    List<PriceTableVersion> listPriceTableVersions(
-        ProjectId projectId, UUID priceTableId, int limit);
+    List<PriceTableVersion> listPriceTableVersions(ProjectId projectId, UUID priceTableId, int limit);
 
     /**
      * 幂等写入用量明细并更新日聚合。
@@ -111,8 +105,7 @@ public interface GovernanceRepository {
      * @param limit     最大数量
      * @return 用量明细
      */
-    List<UsageLedgerEntry> listUsageLedger(
-        ProjectId projectId, Optional<Instant> before, int limit);
+    List<UsageLedgerEntry> listUsageLedger(ProjectId projectId, Optional<Instant> before, int limit);
 
     /**
      * 读取固定时间范围内的日级用量聚合。
@@ -123,8 +116,7 @@ public interface GovernanceRepository {
      * @param limit     最大数量
      * @return 用量聚合
      */
-    List<UsageAggregate> listUsageAggregates(
-        ProjectId projectId, Instant from, Instant to, int limit);
+    List<UsageAggregate> listUsageAggregates(ProjectId projectId, Instant from, Instant to, int limit);
 
     /**
      * 插入 Quota Policy。
@@ -158,17 +150,9 @@ public interface GovernanceRepository {
      * @param now            当前时间
      * @return Quota 决策
      */
-    QuotaDecision reserveQuota(
-        OrganizationId organizationId,
-        ProjectId projectId,
-        QuotaScopeType scopeType,
-        String scopeRef,
-        QuotaMetric metric,
-        String idempotencyKey,
-        String subjectRef,
-        BigDecimal amount,
-        Duration ttl,
-        Instant now);
+    QuotaDecision reserveQuota(OrganizationId organizationId, ProjectId projectId, QuotaScopeType scopeType,
+                               String scopeRef, QuotaMetric metric, String idempotencyKey, String subjectRef,
+                               BigDecimal amount, Duration ttl, Instant now);
 
     /**
      * 幂等转换 Quota Reservation 终态。
@@ -188,13 +172,8 @@ public interface GovernanceRepository {
      * @param cases   Test Case
      * @param actor   操作主体
      */
-    void insertDataset(
-        EvaluationDataset dataset,
-        DatasetVersion version,
-        List<EvaluationTestCase> cases,
-        OrganizationId organizationId,
-        ProjectId projectId,
-        String actor);
+    void insertDataset(EvaluationDataset dataset, DatasetVersion version, List<EvaluationTestCase> cases,
+                       OrganizationId organizationId, ProjectId projectId, String actor);
 
     /**
      * 列出项目 Dataset。
@@ -226,18 +205,13 @@ public interface GovernanceRepository {
     /**
      * 插入 Evaluator 和不可变版本。
      *
-     * @param evaluator Evaluator
-     * @param version   Version
+     * @param evaluator      Evaluator
+     * @param version        Version
      * @param organizationId 组织
-     * @param projectId 项目
-     * @param actor     操作主体
+     * @param projectId      项目
+     * @param actor          操作主体
      */
-    void insertEvaluator(
-        Evaluator evaluator,
-        EvaluatorVersion version,
-        OrganizationId organizationId,
-        ProjectId projectId,
-        String actor);
+    void insertEvaluator(Evaluator evaluator, EvaluatorVersion version, OrganizationId organizationId, ProjectId projectId, String actor);
 
     /**
      * 列出项目 Evaluator。
@@ -260,18 +234,13 @@ public interface GovernanceRepository {
     /**
      * 原子插入 Evaluation Run 和只追加 Score。
      *
-     * @param run     Evaluation Run
-     * @param scores  Test Case Scores
+     * @param run            Evaluation Run
+     * @param scores         Test Case Scores
      * @param organizationId 组织
-     * @param projectId 项目
-     * @param actor   操作主体
+     * @param projectId      项目
+     * @param actor          操作主体
      */
-    void insertEvaluationRun(
-        EvaluationRun run,
-        List<EvaluationScore> scores,
-        OrganizationId organizationId,
-        ProjectId projectId,
-        String actor);
+    void insertEvaluationRun(EvaluationRun run, List<EvaluationScore> scores, OrganizationId organizationId, ProjectId projectId, String actor);
 
     /**
      * 按创建时间倒序列出 Evaluation Run。
@@ -300,8 +269,7 @@ public interface GovernanceRepository {
      * @param now             当前时间
      * @return 持久化 Gate
      */
-    ReleaseGate saveReleaseGate(
-        ReleaseGate gate, Optional<Long> expectedVersion, String actor, Instant now);
+    ReleaseGate saveReleaseGate(ReleaseGate gate, Optional<Long> expectedVersion, String actor, Instant now);
 
     /**
      * 列出项目 Release Gate。
@@ -322,12 +290,7 @@ public interface GovernanceRepository {
      * @param revisionId     目标 Revision
      * @return Gate 决策
      */
-    ReleaseGateDecision evaluateReleaseGate(
-        OrganizationId organizationId,
-        ProjectId projectId,
-        AgentId agentId,
-        EnvironmentId environmentId,
-        RevisionId revisionId);
+    ReleaseGateDecision evaluateReleaseGate(OrganizationId organizationId, ProjectId projectId, AgentId agentId, EnvironmentId environmentId, RevisionId revisionId);
 
     /**
      * 返回平台治理概览计数和当前成本。

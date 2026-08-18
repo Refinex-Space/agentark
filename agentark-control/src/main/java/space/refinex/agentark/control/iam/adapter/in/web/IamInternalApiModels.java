@@ -25,7 +25,9 @@ import java.util.Set;
  */
 public final class IamInternalApiModels {
 
-    /** 禁止实例化内部响应容器。 */
+    /**
+     * 禁止实例化内部响应容器。
+     */
     private IamInternalApiModels() {
     }
 
@@ -64,8 +66,8 @@ public final class IamInternalApiModels {
             if (!"API_KEY".equals(principalType)) {
                 throw new IllegalArgumentException("principalType must be API_KEY");
             }
-            authorities = Set.copyOf(java.util.Objects.requireNonNull(
-                authorities, "authorities must not be null"));
+
+            authorities = Set.copyOf(java.util.Objects.requireNonNull(authorities, "authorities must not be null"));
             organizationId = requireText(organizationId, "organizationId");
             projectId = requireText(projectId, "projectId");
         }

@@ -37,7 +37,8 @@ final class CatalogCursorCodec {
      * @return URL 安全无填充游标
      */
     static String encode(String value) {
-        return Base64.getUrlEncoder().withoutPadding()
+        return Base64.getUrlEncoder()
+            .withoutPadding()
             .encodeToString(value.getBytes(StandardCharsets.UTF_8));
     }
 
@@ -50,9 +51,9 @@ final class CatalogCursorCodec {
         if (cursor == null || cursor.isBlank()) {
             return defaultValue;
         }
+
         try {
-            String value = new String(
-                Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
+            String value = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
             if (value.isBlank() || value.length() > 128) {
                 throw new IllegalArgumentException("cursor value is invalid");
             }

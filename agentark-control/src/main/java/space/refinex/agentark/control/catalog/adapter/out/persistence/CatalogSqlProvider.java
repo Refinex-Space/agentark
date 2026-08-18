@@ -40,6 +40,7 @@ public final class CatalogSqlProvider {
         String commonValues = "#{row.id}, #{row.organizationId}, #{row.projectId}, #{row.assetKey}, "
             + "#{row.name}, #{row.description}, 'ACTIVE', 0, #{row.createdAt}, #{row.createdBy}, "
             + "#{row.updatedAt}, #{row.updatedBy}";
+
         if (kind == CatalogAssetKind.MODEL_PROVIDER) {
             return "INSERT INTO model_provider (id, organization_id, project_id, asset_key, name, "
                 + "description, provider_type, descriptor_json, status, version, created_at, "
@@ -49,6 +50,7 @@ public final class CatalogSqlProvider {
                 + "JSON_EXTRACT(#{row.metadataJson}, '$.descriptor'), 'ACTIVE', 0, "
                 + "#{row.createdAt}, #{row.createdBy}, #{row.updatedAt}, #{row.updatedBy})";
         }
+
         return "INSERT INTO " + kind.tableName()
             + " (id, organization_id, project_id, asset_key, name, description, status, version, "
             + "created_at, created_by, updated_at, updated_by) VALUES (" + commonValues + ")";
@@ -114,6 +116,7 @@ public final class CatalogSqlProvider {
         String suffix = ", content_hash, status, created_at, created_by) VALUES (#{row.id}, "
             + "#{row.organizationId}, #{row.projectId}, #{row.ownerId}, #{row.versionNumber}, ";
         String tail = ", #{row.contentHash}, #{row.status}, #{row.createdAt}, #{row.createdBy})";
+
         return switch (kind) {
             case PROMPT -> prefix
                 + "template_text, variable_schema, purpose, payload_json" + suffix
@@ -163,8 +166,7 @@ public final class CatalogSqlProvider {
      */
     public String findVersion(java.util.Map<String, Object> parameters) {
         CatalogAssetKind kind = kind(parameters);
-        return versionSelect(kind) + " WHERE id = #{versionId} AND owner_id = #{ownerId} "
-            + "AND project_id = #{projectId}";
+        return versionSelect(kind) + " WHERE id = #{versionId} AND owner_id = #{ownerId} AND project_id = #{projectId}";
     }
 
     /**
@@ -185,6 +187,7 @@ public final class CatalogSqlProvider {
         String metadata = kind == CatalogAssetKind.MODEL_PROVIDER
             ? "JSON_OBJECT('providerType', provider_type, 'descriptor', descriptor_json)"
             : "JSON_OBJECT()";
+
         return "SELECT id, organization_id, project_id, asset_key, name, "
             + "COALESCE(description, '') AS description, " + metadata
             + " AS metadata_json, status, version, created_at, created_by, updated_at, updated_by "

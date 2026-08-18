@@ -20,8 +20,8 @@ import space.refinex.agentark.control.catalog.domain.CatalogAsset;
 import space.refinex.agentark.control.catalog.domain.CatalogAssetKind;
 import space.refinex.agentark.control.catalog.domain.CatalogVersion;
 import space.refinex.agentark.control.catalog.domain.McpToolDescriptorSnapshot;
-import space.refinex.agentark.kernel.id.ProjectId;
 import space.refinex.agentark.kernel.id.McpServerVersionId;
+import space.refinex.agentark.kernel.id.ProjectId;
 import space.refinex.agentark.kernel.id.StrongId;
 
 import java.time.Instant;
@@ -56,8 +56,7 @@ public interface CatalogRepository {
      * @param limit     读取上限
      * @return 按 Key 升序资产
      */
-    List<CatalogAsset> listAssets(
-        CatalogAssetKind kind, ProjectId projectId, String afterKey, int limit);
+    List<CatalogAsset> listAssets(CatalogAssetKind kind, ProjectId projectId, String afterKey, int limit);
 
     /**
      * @param kind            资产分类
@@ -68,13 +67,7 @@ public interface CatalogRepository {
      * @param now             操作时刻
      * @return 实际更新行数
      */
-    int archiveAsset(
-        CatalogAssetKind kind,
-        ProjectId projectId,
-        StrongId id,
-        long expectedVersion,
-        String actor,
-        Instant now);
+    int archiveAsset(CatalogAssetKind kind, ProjectId projectId, StrongId id, long expectedVersion, String actor, Instant now);
 
     /**
      * 锁定稳定身份并计算下一版本号，调用方必须在同一事务内立即插入版本。
@@ -84,16 +77,14 @@ public interface CatalogRepository {
      * @param ownerId   稳定身份
      * @return 下一正数版本号；Owner 不存在时为空
      */
-    Optional<Long> nextVersionNumber(
-        CatalogAssetKind kind, ProjectId projectId, StrongId ownerId);
+    Optional<Long> nextVersionNumber(CatalogAssetKind kind, ProjectId projectId, StrongId ownerId);
 
     /**
      * @param version 待追加不可变版本
      * @param tools   MCP Tool Descriptor 快照；非 MCP 版本必须为空
      * @param actor   创建主体稳定引用
      */
-    void insertVersion(
-        CatalogVersion version, List<McpToolDescriptorSnapshot> tools, String actor);
+    void insertVersion(CatalogVersion version, List<McpToolDescriptorSnapshot> tools, String actor);
 
     /**
      * @param kind      资产分类
@@ -102,8 +93,7 @@ public interface CatalogRepository {
      * @param versionId 版本标识
      * @return 同项目且同 Owner 的版本
      */
-    Optional<CatalogVersion> findVersion(
-        CatalogAssetKind kind, ProjectId projectId, StrongId ownerId, StrongId versionId);
+    Optional<CatalogVersion> findVersion(CatalogAssetKind kind, ProjectId projectId, StrongId ownerId, StrongId versionId);
 
     /**
      * @param kind               资产分类
@@ -113,12 +103,7 @@ public interface CatalogRepository {
      * @param limit              读取上限
      * @return 按版本号升序的不可变版本
      */
-    List<CatalogVersion> listVersions(
-        CatalogAssetKind kind,
-        ProjectId projectId,
-        StrongId ownerId,
-        long afterVersionNumber,
-        int limit);
+    List<CatalogVersion> listVersions(CatalogAssetKind kind, ProjectId projectId, StrongId ownerId, long afterVersionNumber, int limit);
 
     /**
      * 读取指定 MCP Server Version 在创建时固化的 Tool Descriptor。
@@ -127,6 +112,5 @@ public interface CatalogRepository {
      * @param serverVersionId MCP Server 版本标识
      * @return 按 Tool 名称排序的不可变描述快照
      */
-    List<McpToolDescriptorSnapshot> listToolDescriptors(
-        ProjectId projectId, McpServerVersionId serverVersionId);
+    List<McpToolDescriptorSnapshot> listToolDescriptors(ProjectId projectId, McpServerVersionId serverVersionId);
 }

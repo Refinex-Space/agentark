@@ -76,11 +76,8 @@ public record Role(
         key = IamFieldPolicy.slug(key, "key");
         name = IamFieldPolicy.text(name, "name", 128);
         Objects.requireNonNull(status, "status must not be null");
-        permissionKeys = Set.copyOf(
-            Objects.requireNonNull(permissionKeys, "permissionKeys must not be null"));
-        if (permissionKeys.isEmpty()
-            || permissionKeys.stream()
-            .anyMatch(value -> !value.matches("[a-z][a-z0-9_]*:[a-z][a-z0-9_]*"))) {
+        permissionKeys = Set.copyOf(Objects.requireNonNull(permissionKeys, "permissionKeys must not be null"));
+        if (permissionKeys.isEmpty() || permissionKeys.stream().anyMatch(value -> !value.matches("[a-z][a-z0-9_]*:[a-z][a-z0-9_]*"))) {
             throw new IllegalArgumentException("role must contain registered permission keys");
         }
         version = IamFieldPolicy.version(version);
@@ -108,6 +105,7 @@ public record Role(
         boolean builtIn,
         Set<String> permissionKeys,
         Instant now) {
+
         Instant timestamp = IamFieldPolicy.instant(now, "now");
         return new Role(
             RoleId.generate(),

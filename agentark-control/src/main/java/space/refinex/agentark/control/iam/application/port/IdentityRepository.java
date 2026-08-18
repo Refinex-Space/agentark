@@ -84,8 +84,7 @@ public interface IdentityRepository {
      * @param limit          正数结果上限
      * @return 按名称排序的账号
      */
-    List<ServiceAccount> listServiceAccounts(
-        OrganizationId organizationId, ProjectId projectId, int limit);
+    List<ServiceAccount> listServiceAccounts(OrganizationId organizationId, ProjectId projectId, int limit);
 
     /**
      * 插入成员关系。
@@ -103,11 +102,7 @@ public interface IdentityRepository {
      * @param principalId    主体 UUIDv7
      * @return 活动成员时为 {@code true}
      */
-    boolean isActiveMember(
-        OrganizationId organizationId,
-        ProjectId projectId,
-        PrincipalKind principalKind,
-        UUID principalId);
+    boolean isActiveMember(OrganizationId organizationId, ProjectId projectId, PrincipalKind principalKind, UUID principalId);
 
     /**
      * 列出项目成员关系。
@@ -117,6 +112,5 @@ public interface IdentityRepository {
      * @param limit          正数结果上限
      * @return 按创建时刻排序的成员关系
      */
-    List<Membership> listMemberships(
-        OrganizationId organizationId, ProjectId projectId, int limit);
+    List<Membership> listMemberships(OrganizationId organizationId, ProjectId projectId, int limit);
 }

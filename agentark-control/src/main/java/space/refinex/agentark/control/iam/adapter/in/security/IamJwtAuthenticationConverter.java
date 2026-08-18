@@ -23,13 +23,14 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.oauth2.jwt.Jwt;
 import space.refinex.agentark.foundation.security.AgentArkJwtPrincipalConverter;
 
+import java.util.Objects;
+
 /**
  * 将 Foundation 验证后的 JWT Principal 包装为 Spring Security 已认证 Token。
  *
  * @author refinex
  */
-public final class IamJwtAuthenticationConverter
-    implements Converter<Jwt, AbstractAuthenticationToken> {
+public final class IamJwtAuthenticationConverter implements Converter<Jwt, AbstractAuthenticationToken> {
 
     /**
      * Foundation 严格 Principal 转换器。
@@ -42,8 +43,7 @@ public final class IamJwtAuthenticationConverter
      * @param principalConverter Foundation Principal 转换器
      */
     public IamJwtAuthenticationConverter(AgentArkJwtPrincipalConverter principalConverter) {
-        this.principalConverter = java.util.Objects.requireNonNull(
-            principalConverter, "principalConverter must not be null");
+        this.principalConverter = Objects.requireNonNull(principalConverter, "principalConverter must not be null");
     }
 
     /**

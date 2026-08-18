@@ -52,6 +52,7 @@ public record Permission(
         if (key == null || !key.matches("[a-z][a-z0-9_]*:[a-z][a-z0-9_]*")) {
             throw new IllegalArgumentException("permission key must use resource:action format");
         }
+
         description = IamFieldPolicy.text(description, "description", 255);
         Objects.requireNonNull(riskLevel, "riskLevel must not be null");
         createdAt = IamFieldPolicy.instant(createdAt, "createdAt");

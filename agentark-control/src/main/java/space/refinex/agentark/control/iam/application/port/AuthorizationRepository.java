@@ -63,8 +63,7 @@ public interface AuthorizationRepository {
      * @param key            角色键
      * @return 存在时返回角色
      */
-    Optional<Role> findRoleByKey(
-        OrganizationId organizationId, Optional<ProjectId> projectId, String key);
+    Optional<Role> findRoleByKey(OrganizationId organizationId, Optional<ProjectId> projectId, String key);
 
     /**
      * 列出项目可用的组织级与项目级角色。
@@ -91,8 +90,7 @@ public interface AuthorizationRepository {
      * @param limit          正数结果上限
      * @return 角色绑定列表
      */
-    List<RoleBinding> listRoleBindings(
-        OrganizationId organizationId, ProjectId projectId, int limit);
+    List<RoleBinding> listRoleBindings(OrganizationId organizationId, ProjectId projectId, int limit);
 
     /**
      * 查询主体在目标资源 Scope 上由活动角色产生的有效权限。
@@ -104,12 +102,8 @@ public interface AuthorizationRepository {
      * @param principalId    主体 UUIDv7
      * @return 去重后的有效权限键
      */
-    Set<String> findEffectivePermissions(
-        OrganizationId organizationId,
-        Optional<ProjectId> projectId,
-        Optional<UUID> environmentId,
-        PrincipalKind principalKind,
-        UUID principalId);
+    Set<String> findEffectivePermissions(OrganizationId organizationId, Optional<ProjectId> projectId,
+                                         Optional<UUID> environmentId, PrincipalKind principalKind, UUID principalId);
 
     /**
      * 校验角色 Scope 能否绑定到目标资源 Scope。
@@ -121,10 +115,5 @@ public interface AuthorizationRepository {
      * @param projectId      目标可选项目
      * @return Scope 层级和归属一致时为 {@code true}
      */
-    boolean supportsBinding(
-        Role role,
-        IamScopeType scopeType,
-        UUID scopeId,
-        OrganizationId organizationId,
-        Optional<ProjectId> projectId);
+    boolean supportsBinding(Role role, IamScopeType scopeType, UUID scopeId, OrganizationId organizationId, Optional<ProjectId> projectId);
 }

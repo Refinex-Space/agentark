@@ -16,10 +16,9 @@
 
 package space.refinex.agentark.control.governance.adapter.in.web;
 
-import static space.refinex.agentark.control.governance.adapter.in.web.GovernanceApiModels.optional;
-
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -33,11 +32,7 @@ import space.refinex.agentark.kernel.id.EventId;
 import space.refinex.agentark.kernel.id.ProjectId;
 
 import java.time.Instant;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * 暴露 Governance Public 查询/管理 API 与受服务身份保护的 Internal 汇聚命令。
@@ -48,7 +43,9 @@ import java.util.UUID;
 @PreAuthorize("isAuthenticated()")
 public class GovernanceController {
 
-    /** Governance 应用服务。 */
+    /**
+     * Governance 应用服务。
+     */
     private final GovernanceApplicationService service;
 
     /**
@@ -68,8 +65,7 @@ public class GovernanceController {
      * @return 审计、用量、成本、配额和评估计数
      */
     @GetMapping("/api/v1/projects/{projectId}/governance/overview")
-    public Map<String, Object> overview(
-        Authentication authentication, @PathVariable String projectId) {
+    public Map<String, Object> overview(Authentication authentication, @PathVariable String projectId) {
         return service.overview(principal(authentication), ProjectId.parse(projectId));
     }
 
@@ -90,8 +86,11 @@ public class GovernanceController {
         @RequestParam(required = false) Instant before,
         @RequestParam(required = false) String beforeId,
         @RequestParam(defaultValue = "50") int limit) {
+
         return service.listAudit(
-            principal(authentication), ProjectId.parse(projectId), Optional.ofNullable(before),
+            principal(authentication),
+            ProjectId.parse(projectId),
+            Optional.ofNullable(before),
             Optional.ofNullable(beforeId).map(EventId::parse), limit);
     }
 
@@ -110,9 +109,8 @@ public class GovernanceController {
         @PathVariable String projectId,
         @RequestParam(required = false) Instant before,
         @RequestParam(defaultValue = "50") int limit) {
-        return service.listUsage(
-            principal(authentication), ProjectId.parse(projectId),
-            Optional.ofNullable(before), limit);
+
+        return service.listUsage(principal(authentication), ProjectId.parse(projectId), Optional.ofNullable(before), limit);
     }
 
     /**
@@ -132,8 +130,8 @@ public class GovernanceController {
         @RequestParam Instant from,
         @RequestParam Instant to,
         @RequestParam(defaultValue = "100") int limit) {
-        return service.listUsageAggregates(
-            principal(authentication), ProjectId.parse(projectId), from, to, limit);
+
+        return service.listUsageAggregates(principal(authentication), ProjectId.parse(projectId), from, to, limit);
     }
 
     /**
@@ -150,11 +148,18 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreatePriceTableRequest request) {
+
         return service.createPriceTable(
-            principal(authentication), ProjectId.parse(projectId),
+            principal(authentication),
+            ProjectId.parse(projectId),
             new PriceTableCommand(
-                request.key(), request.name(), request.currency(), request.effectiveFrom(),
-                request.entries()));
+                request.key(),
+                request.name(),
+                request.currency(),
+                request.effectiveFrom(),
+                request.entries()
+            )
+        );
     }
 
     /**
@@ -170,8 +175,8 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @RequestParam(defaultValue = "50") int limit) {
-        return service.listPriceTables(
-            principal(authentication), ProjectId.parse(projectId), limit);
+
+        return service.listPriceTables(principal(authentication), ProjectId.parse(projectId), limit);
     }
 
     /**
@@ -189,8 +194,8 @@ public class GovernanceController {
         @PathVariable String projectId,
         @PathVariable String priceTableId,
         @RequestParam(defaultValue = "50") int limit) {
-        return service.listPriceTableVersions(
-            principal(authentication), ProjectId.parse(projectId), uuidV7(priceTableId), limit);
+
+        return service.listPriceTableVersions(principal(authentication), ProjectId.parse(projectId), uuidV7(priceTableId), limit);
     }
 
     /**
@@ -207,13 +212,22 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreateQuotaPolicyRequest request) {
+
         return service.createQuotaPolicy(
-            principal(authentication), ProjectId.parse(projectId),
+            principal(authentication),
+            ProjectId.parse(projectId),
             new QuotaPolicyCommand(
-                request.scopeType(), request.scopeRef(), request.metric(), request.enforcement(),
-                request.limitValue(), Optional.ofNullable(request.windowSeconds()),
-                request.budgetAction(), request.effectiveFrom(),
-                Optional.ofNullable(request.effectiveUntil())));
+                request.scopeType(),
+                request.scopeRef(),
+                request.metric(),
+                request.enforcement(),
+                request.limitValue(),
+                Optional.ofNullable(request.windowSeconds()),
+                request.budgetAction(),
+                request.effectiveFrom(),
+                Optional.ofNullable(request.effectiveUntil())
+            )
+        );
     }
 
     /**
@@ -229,8 +243,8 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @RequestParam(defaultValue = "50") int limit) {
-        return service.listQuotaPolicies(
-            principal(authentication), ProjectId.parse(projectId), limit);
+
+        return service.listQuotaPolicies(principal(authentication), ProjectId.parse(projectId), limit);
     }
 
     /**
@@ -247,15 +261,24 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreateDatasetRequest request) {
+
         return service.createDataset(
             principal(authentication), ProjectId.parse(projectId),
             new DatasetCommand(
-                request.key(), request.name(), Optional.ofNullable(request.description()),
-                request.schema(), request.contentHash(), request.cases().stream()
-                .map(item -> new EvaluationCaseCommand(
-                    item.key(), item.inputObjectUri(), item.inputContentHash(), item.expected(),
-                    item.expectedContentHash(), item.weight()))
-                .toList()));
+                request.key(),
+                request.name(),
+                Optional.ofNullable(request.description()),
+                request.schema(),
+                request.contentHash(),
+                request.cases().stream()
+                    .map(item -> new EvaluationCaseCommand(
+                        item.key(),
+                        item.inputObjectUri(),
+                        item.inputContentHash(),
+                        item.expected(),
+                        item.expectedContentHash(),
+                        item.weight()))
+                    .toList()));
     }
 
     /**
@@ -271,6 +294,7 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @RequestParam(defaultValue = "50") int limit) {
+
         return service.listDatasets(principal(authentication), ProjectId.parse(projectId), limit);
     }
 
@@ -288,11 +312,17 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreateEvaluatorRequest request) {
+
         return service.createEvaluator(
             principal(authentication), ProjectId.parse(projectId),
             new EvaluatorCommand(
-                request.key(), request.name(), request.type(), request.config(),
-                request.contentHash()));
+                request.key(),
+                request.name(),
+                request.type(),
+                request.config(),
+                request.contentHash()
+            )
+        );
     }
 
     /**
@@ -308,6 +338,7 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @RequestParam(defaultValue = "50") int limit) {
+
         return service.listEvaluators(principal(authentication), ProjectId.parse(projectId), limit);
     }
 
@@ -325,12 +356,18 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody RunEvaluationRequest request) {
+
         return service.evaluateDeterministically(
             principal(authentication), ProjectId.parse(projectId),
             new EvaluationRunCommand(
-                request.candidateRevisionId(), request.datasetVersionId(),
-                request.evaluatorVersionId(), request.threshold(),
-                Optional.ofNullable(request.baselineRunId()), request.observedHashes()));
+                request.candidateRevisionId(),
+                request.datasetVersionId(),
+                request.evaluatorVersionId(),
+                request.threshold(),
+                Optional.ofNullable(request.baselineRunId()),
+                request.observedHashes()
+            )
+        );
     }
 
     /**
@@ -346,8 +383,8 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @RequestParam(defaultValue = "50") int limit) {
-        return service.listEvaluationRuns(
-            principal(authentication), ProjectId.parse(projectId), limit);
+
+        return service.listEvaluationRuns(principal(authentication), ProjectId.parse(projectId), limit);
     }
 
     /**
@@ -363,13 +400,19 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody SaveReleaseGateRequest request) {
-        return service.saveReleaseGate(
-            principal(authentication), ProjectId.parse(projectId),
+
+        return service.saveReleaseGate(principal(authentication), ProjectId.parse(projectId),
             new ReleaseGateCommand(
-                Optional.ofNullable(request.id()), request.agentId(),
-                Optional.ofNullable(request.environmentId()), request.datasetVersionId(),
-                request.evaluatorVersionId(), request.threshold(), request.enforcement(),
-                request.status(), Optional.ofNullable(request.expectedVersion())));
+                Optional.ofNullable(request.id()),
+                request.agentId(),
+                Optional.ofNullable(request.environmentId()),
+                request.datasetVersionId(),
+                request.evaluatorVersionId(),
+                request.threshold(),
+                request.enforcement(),
+                request.status(),
+                Optional.ofNullable(request.expectedVersion()))
+        );
     }
 
     /**
@@ -385,8 +428,8 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String projectId,
         @RequestParam(defaultValue = "50") int limit) {
-        return service.listReleaseGates(
-            principal(authentication), ProjectId.parse(projectId), limit);
+
+        return service.listReleaseGates(principal(authentication), ProjectId.parse(projectId), limit);
     }
 
     /**
@@ -397,16 +440,27 @@ public class GovernanceController {
      * @return 首次接收结果
      */
     @PostMapping("/internal/v1/governance/audit-events")
-    public IngestResponse ingestAudit(
-        Authentication authentication, @Valid @RequestBody AuditIngestRequest request) {
+    public IngestResponse ingestAudit(Authentication authentication, @Valid @RequestBody AuditIngestRequest request) {
         requireService(authentication);
         return new IngestResponse(service.ingestAudit(new AuditCommand(
-            request.sourceEventId(), request.sourcePlane(), optional(request.organizationId()),
-            optional(request.projectId()), request.principalType(), request.principalRef(),
-            request.scopeType(), request.scopeRef(), request.action(), request.result(),
-            request.resourceType(), request.resourceRef(), request.diffSummary(),
-            optional(request.policyVersion()), Optional.ofNullable(request.roleVersion()),
-            optional(request.traceId()), optional(request.requestId()), request.occurredAt())));
+            request.sourceEventId(),
+            request.sourcePlane(),
+            optional(request.organizationId()),
+            optional(request.projectId()),
+            request.principalType(),
+            request.principalRef(),
+            request.scopeType(),
+            request.scopeRef(),
+            request.action(),
+            request.result(),
+            request.resourceType(),
+            request.resourceRef(),
+            request.diffSummary(),
+            optional(request.policyVersion()),
+            Optional.ofNullable(request.roleVersion()),
+            optional(request.traceId()),
+            optional(request.requestId()),
+            request.occurredAt())));
     }
 
     /**
@@ -417,18 +471,34 @@ public class GovernanceController {
      * @return 首次接收结果
      */
     @PostMapping("/internal/v1/governance/usage-records")
-    public IngestResponse ingestUsage(
-        Authentication authentication, @Valid @RequestBody UsageIngestRequest request) {
+    public IngestResponse ingestUsage(Authentication authentication, @Valid @RequestBody UsageIngestRequest request) {
         requireService(authentication);
         return new IngestResponse(service.ingestUsage(new UsageCommand(
-            request.sourcePlane(), request.sourceRecordId(), request.organizationId(),
-            request.projectId(), optional(request.agentId()), optional(request.revisionId()),
-            optional(request.deploymentId()), optional(request.sessionId()), optional(request.turnId()),
-            optional(request.runId()), request.usageType(), request.provider(), optional(request.model()),
-            optional(request.tool()), request.inputTokens(), request.outputTokens(),
-            request.cachedTokens(), request.embeddingTokens(), request.toolCalls(),
-            request.sandboxDurationMs(), request.estimated(), optional(request.priceTableVersionId()),
-            optional(request.currency()), request.costAmount(), request.occurredAt())));
+            request.sourcePlane(),
+            request.sourceRecordId(),
+            request.organizationId(),
+            request.projectId(),
+            optional(request.agentId()),
+            optional(request.revisionId()),
+            optional(request.deploymentId()),
+            optional(request.sessionId()),
+            optional(request.turnId()),
+            optional(request.runId()),
+            request.usageType(),
+            request.provider(),
+            optional(request.model()),
+            optional(request.tool()),
+            request.inputTokens(),
+            request.outputTokens(),
+            request.cachedTokens(),
+            request.embeddingTokens(),
+            request.toolCalls(),
+            request.sandboxDurationMs(),
+            request.estimated(),
+            optional(request.priceTableVersionId()),
+            optional(request.currency()),
+            request.costAmount(),
+            request.occurredAt())));
     }
 
     /**
@@ -443,8 +513,14 @@ public class GovernanceController {
         Authentication authentication, @Valid @RequestBody QuotaReserveRequest request) {
         requireService(authentication);
         return service.reserveQuota(new QuotaReservationCommand(
-            request.organizationId(), request.projectId(), request.scopeType(), request.scopeRef(),
-            request.metric(), request.idempotencyKey(), request.subjectRef(), request.amount(),
+            request.organizationId(),
+            request.projectId(),
+            request.scopeType(),
+            request.scopeRef(),
+            request.metric(),
+            request.idempotencyKey(),
+            request.subjectRef(),
+            request.amount(),
             request.ttlSeconds()));
     }
 
@@ -461,9 +537,9 @@ public class GovernanceController {
         Authentication authentication,
         @PathVariable String reservationId,
         @Valid @RequestBody ReservationTransitionRequest request) {
+
         requireService(authentication);
-        return new IngestResponse(service.transitionReservation(
-            uuidV7(reservationId), request.target()));
+        return new IngestResponse(service.transitionReservation(uuidV7(reservationId), request.target()));
     }
 
     /**
@@ -473,10 +549,8 @@ public class GovernanceController {
      * @return AgentArk Principal
      */
     private AgentArkPrincipal principal(Authentication authentication) {
-        if (authentication == null
-            || !(authentication.getPrincipal() instanceof AgentArkPrincipal principal)) {
-            throw new org.springframework.security.access.AccessDeniedException(
-                "agentark principal is required");
+        if (authentication == null || !(authentication.getPrincipal() instanceof AgentArkPrincipal principal)) {
+            throw new AccessDeniedException("agentark principal is required");
         }
         return principal;
     }
@@ -488,11 +562,9 @@ public class GovernanceController {
      */
     private void requireService(Authentication authentication) {
         AgentArkPrincipal principal = principal(authentication);
-        if (principal.type() != PrincipalType.SERVICE
-            || principal.serviceIdentity().orElseThrow().audiences().stream()
+        if (principal.type() != PrincipalType.SERVICE || principal.serviceIdentity().orElseThrow().audiences().stream()
             .noneMatch(audience -> audience.equals("agentark-control"))) {
-            throw new org.springframework.security.access.AccessDeniedException(
-                "control service identity is required");
+            throw new AccessDeniedException("control service identity is required");
         }
     }
 
@@ -504,8 +576,7 @@ public class GovernanceController {
      */
     private UUID uuidV7(String value) {
         UUID parsed = UUID.fromString(value);
-        if (parsed.version() != 7 || parsed.variant() != 2
-            || !parsed.toString().equals(value)) {
+        if (parsed.version() != 7 || parsed.variant() != 2 || !parsed.toString().equals(value)) {
             throw new IllegalArgumentException("value must be canonical UUIDv7");
         }
         return parsed;

@@ -31,6 +31,7 @@ import space.refinex.agentark.kernel.id.*;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 /**
@@ -60,9 +61,8 @@ public class IamController {
      * @param apiKeyService API Key 服务
      */
     public IamController(IamApplicationService iamService, IamApiKeyService apiKeyService) {
-        this.iamService = java.util.Objects.requireNonNull(iamService, "iamService must not be null");
-        this.apiKeyService = java.util.Objects.requireNonNull(
-            apiKeyService, "apiKeyService must not be null");
+        this.iamService = Objects.requireNonNull(iamService, "iamService must not be null");
+        this.apiKeyService = Objects.requireNonNull(apiKeyService, "apiKeyService must not be null");
     }
 
     /**
@@ -76,10 +76,9 @@ public class IamController {
     public ResponseEntity<Organization> createOrganization(
         Authentication authentication,
         @Valid @RequestBody CreateOrganizationRequest request) {
-        Organization created = iamService.createOrganization(
-            principal(authentication), request.slug(), request.name());
-        return ResponseEntity.created(URI.create("/api/v1/organizations/" + created.id().asString()))
-            .body(created);
+
+        Organization created = iamService.createOrganization(principal(authentication), request.slug(), request.name());
+        return ResponseEntity.created(URI.create("/api/v1/organizations/" + created.id().asString())).body(created);
     }
 
     /**
@@ -106,11 +105,10 @@ public class IamController {
         Authentication authentication,
         @PathVariable String organizationId,
         @Valid @RequestBody CreateProjectRequest request) {
-        Project created = iamService.createProject(
-            principal(authentication), OrganizationId.parse(organizationId),
+
+        Project created = iamService.createProject(principal(authentication), OrganizationId.parse(organizationId),
             request.slug(), request.name());
-        return ResponseEntity.created(URI.create("/api/v1/projects/" + created.id().asString()))
-            .body(created);
+        return ResponseEntity.created(URI.create("/api/v1/projects/" + created.id().asString())).body(created);
     }
 
     /**
@@ -121,10 +119,8 @@ public class IamController {
      * @return 组织内项目
      */
     @GetMapping("/organizations/{organizationId}/projects")
-    public List<Project> listProjects(
-        Authentication authentication, @PathVariable String organizationId) {
-        return iamService.listProjects(
-            principal(authentication), OrganizationId.parse(organizationId));
+    public List<Project> listProjects(Authentication authentication, @PathVariable String organizationId) {
+        return iamService.listProjects(principal(authentication), OrganizationId.parse(organizationId));
     }
 
     /**
@@ -140,10 +136,9 @@ public class IamController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreateEnvironmentRequest request) {
-        Environment created = iamService.createEnvironment(
-            principal(authentication), ProjectId.parse(projectId), request.key(), request.name());
-        return ResponseEntity.created(URI.create("/api/v1/environments/" + created.id().asString()))
-            .body(created);
+
+        Environment created = iamService.createEnvironment(principal(authentication), ProjectId.parse(projectId), request.key(), request.name());
+        return ResponseEntity.created(URI.create("/api/v1/environments/" + created.id().asString())).body(created);
     }
 
     /**
@@ -172,13 +167,13 @@ public class IamController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreateMembershipRequest request) {
+
         Membership created = iamService.createMembership(
             principal(authentication),
             ProjectId.parse(projectId),
             enumValue(PrincipalKind.class, request.principalKind()),
             uuid(request.principalId()));
-        return ResponseEntity.created(URI.create("/api/v1/memberships/" + created.id().asString()))
-            .body(created);
+        return ResponseEntity.created(URI.create("/api/v1/memberships/" + created.id().asString())).body(created);
     }
 
     /**
@@ -207,11 +202,10 @@ public class IamController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreateRoleRequest request) {
-        Role created = iamService.createRole(
-            principal(authentication), ProjectId.parse(projectId), request.key(), request.name(),
-            request.permissions());
-        return ResponseEntity.created(URI.create("/api/v1/roles/" + created.id().asString()))
-            .body(created);
+
+        Role created = iamService.createRole(principal(authentication), ProjectId.parse(projectId), request.key(),
+            request.name(), request.permissions());
+        return ResponseEntity.created(URI.create("/api/v1/roles/" + created.id().asString())).body(created);
     }
 
     /**
@@ -239,6 +233,7 @@ public class IamController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreateRoleBindingRequest request) {
+
         RoleBinding created = iamService.createRoleBinding(
             principal(authentication),
             ProjectId.parse(projectId),
@@ -247,8 +242,7 @@ public class IamController {
             uuid(request.principalId()),
             enumValue(IamScopeType.class, request.scopeType()),
             uuid(request.scopeId()));
-        return ResponseEntity.created(URI.create("/api/v1/role-bindings/" + created.id().asString()))
-            .body(created);
+        return ResponseEntity.created(URI.create("/api/v1/role-bindings/" + created.id().asString())).body(created);
     }
 
     /**
@@ -259,8 +253,7 @@ public class IamController {
      * @return 当前项目相关的角色绑定
      */
     @GetMapping("/projects/{projectId}/role-bindings")
-    public List<RoleBinding> listRoleBindings(
-        Authentication authentication, @PathVariable String projectId) {
+    public List<RoleBinding> listRoleBindings(Authentication authentication, @PathVariable String projectId) {
         return iamService.listRoleBindings(principal(authentication), ProjectId.parse(projectId));
     }
 
@@ -277,10 +270,9 @@ public class IamController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreateServiceAccountRequest request) {
-        ServiceAccount created = iamService.createServiceAccount(
-            principal(authentication), ProjectId.parse(projectId), request.name());
-        return ResponseEntity.created(
-            URI.create("/api/v1/service-accounts/" + created.id().asString())).body(created);
+
+        ServiceAccount created = iamService.createServiceAccount(principal(authentication), ProjectId.parse(projectId), request.name());
+        return ResponseEntity.created(URI.create("/api/v1/service-accounts/" + created.id().asString())).body(created);
     }
 
     /**
@@ -291,10 +283,8 @@ public class IamController {
      * @return 项目服务账号
      */
     @GetMapping("/projects/{projectId}/service-accounts")
-    public List<ServiceAccount> listServiceAccounts(
-        Authentication authentication, @PathVariable String projectId) {
-        return iamService.listServiceAccounts(
-            principal(authentication), ProjectId.parse(projectId));
+    public List<ServiceAccount> listServiceAccounts(Authentication authentication, @PathVariable String projectId) {
+        return iamService.listServiceAccounts(principal(authentication), ProjectId.parse(projectId));
     }
 
     /**
@@ -305,8 +295,7 @@ public class IamController {
      * @return 全局权限注册项
      */
     @GetMapping("/projects/{projectId}/permissions")
-    public List<Permission> listPermissions(
-        Authentication authentication, @PathVariable String projectId) {
+    public List<Permission> listPermissions(Authentication authentication, @PathVariable String projectId) {
         return iamService.listPermissions(principal(authentication), ProjectId.parse(projectId));
     }
 
@@ -323,6 +312,7 @@ public class IamController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreateApiKeyRequest request) {
+
         var created = apiKeyService.create(
             principal(authentication),
             ProjectId.parse(projectId),
@@ -330,8 +320,7 @@ public class IamController {
             request.name(),
             request.scopes(),
             request.expiresAt());
-        return ResponseEntity.created(URI.create("/api/v1/projects/" + projectId
-                + "/api-keys/" + created.metadata().id().asString()))
+        return ResponseEntity.created(URI.create("/api/v1/projects/" + projectId + "/api-keys/" + created.metadata().id().asString()))
             .body(CreatedApiKeyResponse.from(created));
     }
 
@@ -343,10 +332,10 @@ public class IamController {
      * @return API Key 安全视图
      */
     @GetMapping("/projects/{projectId}/api-keys")
-    public List<ApiKeyView> listApiKeys(
-        Authentication authentication, @PathVariable String projectId) {
-        return apiKeyService.list(principal(authentication), ProjectId.parse(projectId))
-            .stream().map(ApiKeyView::from).toList();
+    public List<ApiKeyView> listApiKeys(Authentication authentication, @PathVariable String projectId) {
+        return apiKeyService.list(principal(authentication), ProjectId.parse(projectId)).stream()
+            .map(ApiKeyView::from)
+            .toList();
     }
 
     /**
@@ -364,9 +353,8 @@ public class IamController {
         @PathVariable String projectId,
         @PathVariable String apiKeyId,
         @Valid @RequestBody RevokeApiKeyRequest request) {
-        apiKeyService.revoke(
-            principal(authentication), ProjectId.parse(projectId), ApiKeyId.parse(apiKeyId),
-            request.expectedVersion());
+
+        apiKeyService.revoke(principal(authentication), ProjectId.parse(projectId), ApiKeyId.parse(apiKeyId), request.expectedVersion());
         return ResponseEntity.noContent().build();
     }
 
@@ -377,8 +365,7 @@ public class IamController {
      * @return AgentArk 协议主体
      */
     private AgentArkPrincipal principal(Authentication authentication) {
-        if (authentication == null
-            || !(authentication.getPrincipal() instanceof AgentArkPrincipal principal)) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof AgentArkPrincipal principal)) {
             throw new IamAccessDeniedException("authenticated AgentArk principal is required");
         }
         return principal;

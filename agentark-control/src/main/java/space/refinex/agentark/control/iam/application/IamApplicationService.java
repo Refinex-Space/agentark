@@ -29,10 +29,7 @@ import space.refinex.agentark.kernel.id.ProjectId;
 import space.refinex.agentark.kernel.id.RoleId;
 
 import java.time.Clock;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * 编排 IAM 租户目录、成员关系、角色和服务账号事务，不向 Controller 暴露 Mapper。
@@ -92,27 +89,17 @@ public class IamApplicationService {
      * @param auditPublisher          审计发布器
      * @param clock                   UTC 时钟
      */
-    public IamApplicationService(
-        TenantCatalogRepository tenantRepository,
-        IdentityRepository identityRepository,
-        AuthorizationRepository authorizationRepository,
-        IamAuthorizationService authorizationService,
-        ApplicationEventPublisher eventPublisher,
-        IamAuditPublisher auditPublisher,
-        Clock clock) {
-        this.tenantRepository = java.util.Objects.requireNonNull(
-            tenantRepository, "tenantRepository must not be null");
-        this.identityRepository = java.util.Objects.requireNonNull(
-            identityRepository, "identityRepository must not be null");
-        this.authorizationRepository = java.util.Objects.requireNonNull(
-            authorizationRepository, "authorizationRepository must not be null");
-        this.authorizationService = java.util.Objects.requireNonNull(
-            authorizationService, "authorizationService must not be null");
-        this.eventPublisher = java.util.Objects.requireNonNull(
-            eventPublisher, "eventPublisher must not be null");
-        this.auditPublisher = java.util.Objects.requireNonNull(
-            auditPublisher, "auditPublisher must not be null");
-        this.clock = java.util.Objects.requireNonNull(clock, "clock must not be null");
+    public IamApplicationService(TenantCatalogRepository tenantRepository, IdentityRepository identityRepository,
+                                 AuthorizationRepository authorizationRepository, IamAuthorizationService authorizationService,
+                                 ApplicationEventPublisher eventPublisher, IamAuditPublisher auditPublisher, Clock clock) {
+
+        this.tenantRepository = Objects.requireNonNull(tenantRepository, "tenantRepository must not be null");
+        this.identityRepository = Objects.requireNonNull(identityRepository, "identityRepository must not be null");
+        this.authorizationRepository = Objects.requireNonNull(authorizationRepository, "authorizationRepository must not be null");
+        this.authorizationService = Objects.requireNonNull(authorizationService, "authorizationService must not be null");
+        this.eventPublisher = Objects.requireNonNull(eventPublisher, "eventPublisher must not be null");
+        this.auditPublisher = Objects.requireNonNull(auditPublisher, "auditPublisher must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
     /**
@@ -124,10 +111,8 @@ public class IamApplicationService {
      * @return 新组织
      */
     @Transactional
-    public Organization createOrganization(
-        AgentArkPrincipal principal, String slug, String name) {
-        ResolvedPrincipal actor = authorizationService.requirePlatformPermission(
-            principal, PermissionRegistry.ORGANIZATION_CREATE);
+    public Organization createOrganization(AgentArkPrincipal principal, String slug, String name) {
+        ResolvedPrincipal actor = authorizationService.requirePlatformPermission(principal, PermissionRegistry.ORGANIZATION_CREATE);
         Organization organization = Organization.create(slug, name, clock.instant());
         tenantRepository.insertOrganization(organization);
 
@@ -165,8 +150,7 @@ public class IamApplicationService {
     @Transactional(readOnly = true)
     public List<Organization> listOrganizations(AgentArkPrincipal principal) {
         ResolvedPrincipal resolved = authorizationService.resolve(principal);
-        return tenantRepository.listOrganizationsForPrincipal(
-            resolved.kind(), resolved.id(), LIST_LIMIT);
+        return tenantRepository.listOrganizationsForPrincipal(resolved.kind(), resolved.id(), LIST_LIMIT);
     }
 
     /**
@@ -179,11 +163,7 @@ public class IamApplicationService {
      * @return 新项目
      */
     @Transactional
-    public Project createProject(
-        AgentArkPrincipal principal,
-        OrganizationId organizationId,
-        String slug,
-        String name) {
+    public Project createProject(AgentArkPrincipal principal, OrganizationId organizationId, String slug, String name) {
         requireOrganization(organizationId);
         ResolvedPrincipal actor = authorizationService.requirePermission(
             principal,
@@ -193,8 +173,7 @@ public class IamApplicationService {
             PermissionRegistry.PROJECT_CREATE);
         Project project = Project.create(organizationId, slug, name, clock.instant());
         tenantRepository.insertProject(project);
-        identityRepository.insertMembership(Membership.create(
-            organizationId, project.id(), actor.kind(), actor.id(), clock.instant()));
+        identityRepository.insertMembership(Membership.create(organizationId, project.id(), actor.kind(), actor.id(), clock.instant()));
 
         Role admin = createBuiltInProjectRoles(project).stream()
             .filter(role -> role.key().equals("project-admin"))
@@ -223,8 +202,7 @@ public class IamApplicationService {
      * @return 最多一百个项目
      */
     @Transactional(readOnly = true)
-    public List<Project> listProjects(
-        AgentArkPrincipal principal, OrganizationId organizationId) {
+    public List<Project> listProjects(AgentArkPrincipal principal, OrganizationId organizationId) {
         requireOrganization(organizationId);
         authorizationService.requirePermission(
             principal,
@@ -245,8 +223,7 @@ public class IamApplicationService {
      * @return 新环境
      */
     @Transactional
-    public Environment createEnvironment(
-        AgentArkPrincipal principal, ProjectId projectId, String key, String name) {
+    public Environment createEnvironment(AgentArkPrincipal principal, ProjectId projectId, String key, String name) {
         Project project = requireProject(projectId);
         authorizationService.requirePermission(
             principal,
@@ -254,8 +231,7 @@ public class IamApplicationService {
             Optional.of(project.id()),
             Optional.empty(),
             PermissionRegistry.ENVIRONMENT_CREATE);
-        Environment environment = Environment.create(
-            project.organizationId(), project.id(), key, name, clock.instant());
+        Environment environment = Environment.create(project.organizationId(), project.id(), key, name, clock.instant());
         tenantRepository.insertEnvironment(environment);
         audit(principal, "environment.create", "environment", environment.id().asString(),
             Optional.of(project.organizationId()), Optional.of(project.id()));
@@ -270,8 +246,7 @@ public class IamApplicationService {
      * @return 最多一百个环境
      */
     @Transactional(readOnly = true)
-    public List<Environment> listEnvironments(
-        AgentArkPrincipal principal, ProjectId projectId) {
+    public List<Environment> listEnvironments(AgentArkPrincipal principal, ProjectId projectId) {
         Project project = requireProject(projectId);
         authorizationService.requirePermission(
             principal,
@@ -279,8 +254,7 @@ public class IamApplicationService {
             Optional.of(project.id()),
             Optional.empty(),
             PermissionRegistry.ENVIRONMENT_READ);
-        return tenantRepository.listEnvironments(
-            project.organizationId(), project.id(), LIST_LIMIT);
+        return tenantRepository.listEnvironments(project.organizationId(), project.id(), LIST_LIMIT);
     }
 
     /**
@@ -293,23 +267,15 @@ public class IamApplicationService {
      * @return 新成员关系
      */
     @Transactional
-    public Membership createMembership(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        PrincipalKind principalKind,
-        UUID principalId) {
+    public Membership createMembership(AgentArkPrincipal principal, ProjectId projectId, PrincipalKind principalKind, UUID principalId) {
         Project project = requireProject(projectId);
-        authorizationService.requirePermission(
-            principal,
-            project.organizationId(),
-            Optional.of(project.id()),
-            Optional.empty(),
-            PermissionRegistry.MEMBERSHIP_MANAGE);
+        authorizationService.requirePermission(principal, project.organizationId(), Optional.of(project.id()),
+            Optional.empty(), PermissionRegistry.MEMBERSHIP_MANAGE);
         if (!identityRepository.principalExists(principalKind, principalId)) {
             throw new IamNotFoundException("principal was not found");
         }
-        Membership membership = Membership.create(
-            project.organizationId(), project.id(), principalKind, principalId, clock.instant());
+
+        Membership membership = Membership.create(project.organizationId(), project.id(), principalKind, principalId, clock.instant());
         identityRepository.insertMembership(membership);
         changed(project.organizationId(), Optional.of(project.id()));
         audit(principal, "membership.create", "membership", membership.id().asString(),
@@ -325,17 +291,11 @@ public class IamApplicationService {
      * @return 最多一百个成员关系
      */
     @Transactional(readOnly = true)
-    public List<Membership> listMemberships(
-        AgentArkPrincipal principal, ProjectId projectId) {
+    public List<Membership> listMemberships(AgentArkPrincipal principal, ProjectId projectId) {
         Project project = requireProject(projectId);
-        authorizationService.requirePermission(
-            principal,
-            project.organizationId(),
-            Optional.of(project.id()),
-            Optional.empty(),
-            PermissionRegistry.MEMBERSHIP_READ);
-        return identityRepository.listMemberships(
-            project.organizationId(), project.id(), LIST_LIMIT);
+        authorizationService.requirePermission(principal, project.organizationId(), Optional.of(project.id()),
+            Optional.empty(), PermissionRegistry.MEMBERSHIP_READ);
+        return identityRepository.listMemberships(project.organizationId(), project.id(), LIST_LIMIT);
     }
 
     /**
@@ -349,32 +309,14 @@ public class IamApplicationService {
      * @return 新自定义角色
      */
     @Transactional
-    public Role createRole(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        String key,
-        String name,
-        Set<String> permissionKeys) {
+    public Role createRole(AgentArkPrincipal principal, ProjectId projectId, String key, String name, Set<String> permissionKeys) {
         Project project = requireProject(projectId);
-        authorizationService.requirePermission(
-            principal,
-            project.organizationId(),
-            Optional.of(project.id()),
-            Optional.empty(),
-            PermissionRegistry.ROLE_MANAGE);
+        authorizationService.requirePermission(principal, project.organizationId(), Optional.of(project.id()), Optional.empty(), PermissionRegistry.ROLE_MANAGE);
         Set<String> checkedPermissions = PermissionRegistry.requireRegistered(permissionKeys);
-        Role role = Role.create(
-            project.organizationId(),
-            Optional.of(project.id()),
-            key,
-            name,
-            false,
-            checkedPermissions,
-            clock.instant());
+        Role role = Role.create(project.organizationId(), Optional.of(project.id()), key, name, false, checkedPermissions, clock.instant());
         authorizationRepository.insertRole(role);
         changed(project.organizationId(), Optional.of(project.id()));
-        audit(principal, "role.create", "role", role.id().asString(),
-            Optional.of(project.organizationId()), Optional.of(project.id()));
+        audit(principal, "role.create", "role", role.id().asString(), Optional.of(project.organizationId()), Optional.of(project.id()));
         return role;
     }
 
@@ -388,14 +330,8 @@ public class IamApplicationService {
     @Transactional(readOnly = true)
     public List<Role> listRoles(AgentArkPrincipal principal, ProjectId projectId) {
         Project project = requireProject(projectId);
-        authorizationService.requirePermission(
-            principal,
-            project.organizationId(),
-            Optional.of(project.id()),
-            Optional.empty(),
-            PermissionRegistry.ROLE_READ);
-        return authorizationRepository.listRoles(
-            project.organizationId(), project.id(), LIST_LIMIT);
+        authorizationService.requirePermission(principal, project.organizationId(), Optional.of(project.id()), Optional.empty(), PermissionRegistry.ROLE_READ);
+        return authorizationRepository.listRoles(project.organizationId(), project.id(), LIST_LIMIT);
     }
 
     /**
@@ -411,40 +347,24 @@ public class IamApplicationService {
      * @return 新角色绑定
      */
     @Transactional
-    public RoleBinding createRoleBinding(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        RoleId roleId,
-        PrincipalKind principalKind,
-        UUID principalId,
-        IamScopeType scopeType,
-        UUID scopeId) {
+    public RoleBinding createRoleBinding(AgentArkPrincipal principal, ProjectId projectId, RoleId roleId,
+                                         PrincipalKind principalKind, UUID principalId, IamScopeType scopeType, UUID scopeId) {
+
         Project project = requireProject(projectId);
-        authorizationService.requirePermission(
-            principal,
-            project.organizationId(),
-            Optional.of(project.id()),
-            Optional.empty(),
-            PermissionRegistry.ROLE_MANAGE);
-        if (!identityRepository.principalExists(principalKind, principalId)
-            || !identityRepository.isActiveMember(
+        authorizationService.requirePermission(principal, project.organizationId(), Optional.of(project.id()),
+            Optional.empty(), PermissionRegistry.ROLE_MANAGE);
+        if (!identityRepository.principalExists(principalKind, principalId) || !identityRepository.isActiveMember(
             project.organizationId(), project.id(), principalKind, principalId)) {
             throw new IamNotFoundException("project principal was not found");
         }
+
         Role role = authorizationRepository.findRole(roleId)
             .filter(value -> value.organizationId().equals(project.organizationId()))
             .filter(value -> value.projectId().isEmpty() || value.projectId().filter(projectId::equals).isPresent())
             .orElseThrow(() -> new IamNotFoundException("role was not found"));
         validateBindingScope(project, scopeType, scopeId);
-        RoleBinding binding = RoleBinding.create(
-            project.organizationId(),
-            Optional.of(project.id()),
-            role.id(),
-            principalKind,
-            principalId,
-            scopeType,
-            scopeId,
-            clock.instant());
+        RoleBinding binding = RoleBinding.create(project.organizationId(), Optional.of(project.id()), role.id(),
+            principalKind, principalId, scopeType, scopeId, clock.instant());
         authorizationRepository.insertRoleBinding(binding);
         changed(project.organizationId(), Optional.of(project.id()));
         audit(principal, "role_binding.create", "role-binding", binding.id().asString(),
@@ -460,17 +380,11 @@ public class IamApplicationService {
      * @return 最多一百个绑定
      */
     @Transactional(readOnly = true)
-    public List<RoleBinding> listRoleBindings(
-        AgentArkPrincipal principal, ProjectId projectId) {
+    public List<RoleBinding> listRoleBindings(AgentArkPrincipal principal, ProjectId projectId) {
         Project project = requireProject(projectId);
-        authorizationService.requirePermission(
-            principal,
-            project.organizationId(),
-            Optional.of(project.id()),
-            Optional.empty(),
-            PermissionRegistry.ROLE_READ);
-        return authorizationRepository.listRoleBindings(
-            project.organizationId(), project.id(), LIST_LIMIT);
+        authorizationService.requirePermission(principal, project.organizationId(), Optional.of(project.id()),
+            Optional.empty(), PermissionRegistry.ROLE_READ);
+        return authorizationRepository.listRoleBindings(project.organizationId(), project.id(), LIST_LIMIT);
     }
 
     /**
@@ -482,24 +396,14 @@ public class IamApplicationService {
      * @return 新服务账号
      */
     @Transactional
-    public ServiceAccount createServiceAccount(
-        AgentArkPrincipal principal, ProjectId projectId, String name) {
+    public ServiceAccount createServiceAccount(AgentArkPrincipal principal, ProjectId projectId, String name) {
         Project project = requireProject(projectId);
-        authorizationService.requirePermission(
-            principal,
-            project.organizationId(),
-            Optional.of(project.id()),
-            Optional.empty(),
-            PermissionRegistry.SERVICE_ACCOUNT_MANAGE);
-        ServiceAccount account = ServiceAccount.create(
-            project.organizationId(), project.id(), name, clock.instant());
+        authorizationService.requirePermission(principal, project.organizationId(), Optional.of(project.id()),
+            Optional.empty(), PermissionRegistry.SERVICE_ACCOUNT_MANAGE);
+        ServiceAccount account = ServiceAccount.create(project.organizationId(), project.id(), name, clock.instant());
         identityRepository.insertServiceAccount(account);
-        identityRepository.insertMembership(Membership.create(
-            project.organizationId(),
-            project.id(),
-            PrincipalKind.SERVICE_ACCOUNT,
-            account.id().value(),
-            clock.instant()));
+        identityRepository.insertMembership(Membership.create(project.organizationId(), project.id(),
+            PrincipalKind.SERVICE_ACCOUNT, account.id().value(), clock.instant()));
         changed(project.organizationId(), Optional.of(project.id()));
         audit(principal, "service_account.create", "service-account", account.id().asString(),
             Optional.of(project.organizationId()), Optional.of(project.id()));
@@ -514,17 +418,11 @@ public class IamApplicationService {
      * @return 最多一百个服务账号
      */
     @Transactional(readOnly = true)
-    public List<ServiceAccount> listServiceAccounts(
-        AgentArkPrincipal principal, ProjectId projectId) {
+    public List<ServiceAccount> listServiceAccounts(AgentArkPrincipal principal, ProjectId projectId) {
         Project project = requireProject(projectId);
-        authorizationService.requirePermission(
-            principal,
-            project.organizationId(),
-            Optional.of(project.id()),
-            Optional.empty(),
-            PermissionRegistry.SERVICE_ACCOUNT_READ);
-        return identityRepository.listServiceAccounts(
-            project.organizationId(), project.id(), LIST_LIMIT);
+        authorizationService.requirePermission(principal, project.organizationId(), Optional.of(project.id()),
+            Optional.empty(), PermissionRegistry.SERVICE_ACCOUNT_READ);
+        return identityRepository.listServiceAccounts(project.organizationId(), project.id(), LIST_LIMIT);
     }
 
     /**
@@ -535,15 +433,10 @@ public class IamApplicationService {
      * @return 全局权限注册项
      */
     @Transactional(readOnly = true)
-    public List<Permission> listPermissions(
-        AgentArkPrincipal principal, ProjectId projectId) {
+    public List<Permission> listPermissions(AgentArkPrincipal principal, ProjectId projectId) {
         Project project = requireProject(projectId);
-        authorizationService.requirePermission(
-            principal,
-            project.organizationId(),
-            Optional.of(project.id()),
-            Optional.empty(),
-            PermissionRegistry.ROLE_READ);
+        authorizationService.requirePermission(principal, project.organizationId(), Optional.of(project.id()),
+            Optional.empty(), PermissionRegistry.ROLE_READ);
         return authorizationRepository.listPermissions();
     }
 
@@ -599,6 +492,7 @@ public class IamApplicationService {
         if (scopeType == IamScopeType.PROJECT && project.id().value().equals(scopeId)) {
             return;
         }
+
         if (scopeType == IamScopeType.ENVIRONMENT) {
             EnvironmentId environmentId = new EnvironmentId(scopeId);
             if (tenantRepository.findEnvironment(environmentId)
@@ -631,13 +525,9 @@ public class IamApplicationService {
      * @param organizationId 可选组织
      * @param projectId      可选项目
      */
-    private void audit(
-        AgentArkPrincipal principal,
-        String action,
-        String resourceType,
-        String resourceId,
-        Optional<OrganizationId> organizationId,
-        Optional<ProjectId> projectId) {
+    private void audit(AgentArkPrincipal principal, String action, String resourceType, String resourceId,
+                       Optional<OrganizationId> organizationId, Optional<ProjectId> projectId) {
+
         auditPublisher.append(new IamAuditRecord(
             action,
             principal.subject(),

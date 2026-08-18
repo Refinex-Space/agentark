@@ -30,7 +30,9 @@ import java.util.Objects;
  */
 public final class GovernanceReleaseGatePolicy implements ReleaseGatePolicy {
 
-    /** 治理持久化仓储。 */
+    /**
+     * 治理持久化仓储。
+     */
     private final GovernanceRepository repository;
 
     /**
@@ -42,16 +44,12 @@ public final class GovernanceReleaseGatePolicy implements ReleaseGatePolicy {
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
     }
 
-    /** 硬 Gate 未满足时拒绝 Deployment 指针前移。 */
+    /**
+     * 硬 Gate 未满足时拒绝 Deployment 指针前移。
+     */
     @Override
-    public void requireEligible(
-        OrganizationId organizationId,
-        ProjectId projectId,
-        AgentId agentId,
-        EnvironmentId environmentId,
-        RevisionId revisionId) {
-        var decision = repository.evaluateReleaseGate(
-            organizationId, projectId, agentId, environmentId, revisionId);
+    public void requireEligible(OrganizationId organizationId, ProjectId projectId, AgentId agentId, EnvironmentId environmentId, RevisionId revisionId) {
+        var decision = repository.evaluateReleaseGate(organizationId, projectId, agentId, environmentId, revisionId);
         if (!decision.allowed()) {
             throw new IamConflictException("release gate requires a passing evaluation");
         }

@@ -20,10 +20,7 @@ import space.refinex.agentark.control.iam.application.port.AuthorizationReposito
 import space.refinex.agentark.control.iam.domain.*;
 import space.refinex.agentark.kernel.id.*;
 
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 
 /**
  * 使用 MyBatis 显式 Scope SQL 实现权限注册、角色、绑定和有效权限端口。
@@ -43,7 +40,7 @@ public final class MybatisAuthorizationRepository implements AuthorizationReposi
      * @param mapper 授权 Mapper
      */
     public MybatisAuthorizationRepository(AuthorizationMapper mapper) {
-        this.mapper = java.util.Objects.requireNonNull(mapper, "mapper must not be null");
+        this.mapper = Objects.requireNonNull(mapper, "mapper must not be null");
     }
 
     /**
@@ -70,7 +67,9 @@ public final class MybatisAuthorizationRepository implements AuthorizationReposi
             role.id().value(), role.organizationId().value(),
             role.projectId().map(ProjectId::value).orElse(null), role.key(), role.name(),
             role.builtIn(), role.status().name(), role.version(), role.createdAt(), role.updatedAt()));
-        role.permissionKeys().stream().sorted()
+
+        role.permissionKeys().stream()
+            .sorted()
             .forEach(key -> mapper.insertRolePermission(role.id().value(), key, role.createdAt()));
     }
 
@@ -94,10 +93,8 @@ public final class MybatisAuthorizationRepository implements AuthorizationReposi
      * @return 角色或空
      */
     @Override
-    public Optional<Role> findRoleByKey(
-        OrganizationId organizationId, Optional<ProjectId> projectId, String key) {
-        return mapper.findRoleByKey(organizationId.value(),
-                projectId.map(ProjectId::value).orElse(null), key)
+    public Optional<Role> findRoleByKey(OrganizationId organizationId, Optional<ProjectId> projectId, String key) {
+        return mapper.findRoleByKey(organizationId.value(), projectId.map(ProjectId::value).orElse(null), key)
             .map(this::role);
     }
 
@@ -110,10 +107,10 @@ public final class MybatisAuthorizationRepository implements AuthorizationReposi
      * @return 角色列表
      */
     @Override
-    public List<Role> listRoles(
-        OrganizationId organizationId, ProjectId projectId, int limit) {
+    public List<Role> listRoles(OrganizationId organizationId, ProjectId projectId, int limit) {
         return mapper.listRoles(organizationId.value(), projectId.value(), limit).stream()
-            .map(this::role).toList();
+            .map(this::role)
+            .toList();
     }
 
     /**
@@ -139,10 +136,10 @@ public final class MybatisAuthorizationRepository implements AuthorizationReposi
      * @return 绑定列表
      */
     @Override
-    public List<RoleBinding> listRoleBindings(
-        OrganizationId organizationId, ProjectId projectId, int limit) {
+    public List<RoleBinding> listRoleBindings(OrganizationId organizationId, ProjectId projectId, int limit) {
         return mapper.listRoleBindings(organizationId.value(), projectId.value(), limit).stream()
-            .map(this::binding).toList();
+            .map(this::binding)
+            .toList();
     }
 
     /**
@@ -156,15 +153,15 @@ public final class MybatisAuthorizationRepository implements AuthorizationReposi
      * @return 去重权限集合
      */
     @Override
-    public Set<String> findEffectivePermissions(
-        OrganizationId organizationId,
-        Optional<ProjectId> projectId,
-        Optional<UUID> environmentId,
-        PrincipalKind principalKind,
-        UUID principalId) {
+    public Set<String> findEffectivePermissions(OrganizationId organizationId, Optional<ProjectId> projectId,
+                                                Optional<UUID> environmentId, PrincipalKind principalKind, UUID principalId) {
+
         return Set.copyOf(mapper.findEffectivePermissions(
-            organizationId.value(), projectId.map(ProjectId::value).orElse(null),
-            environmentId.orElse(null), principalKind.name(), principalId));
+            organizationId.value(),
+            projectId.map(ProjectId::value).orElse(null),
+            environmentId.orElse(null),
+            principalKind.name(),
+            principalId));
     }
 
     /**
@@ -178,12 +175,7 @@ public final class MybatisAuthorizationRepository implements AuthorizationReposi
      * @return 层级一致时为 {@code true}
      */
     @Override
-    public boolean supportsBinding(
-        Role role,
-        IamScopeType scopeType,
-        UUID scopeId,
-        OrganizationId organizationId,
-        Optional<ProjectId> projectId) {
+    public boolean supportsBinding(Role role, IamScopeType scopeType, UUID scopeId, OrganizationId organizationId, Optional<ProjectId> projectId) {
         if (!role.organizationId().equals(organizationId)) {
             return false;
         }
@@ -192,8 +184,7 @@ public final class MybatisAuthorizationRepository implements AuthorizationReposi
                 && role.projectId().isEmpty()
                 && scopeId.equals(organizationId.value());
         }
-        return projectId.isPresent()
-            && role.projectId().map(projectId.orElseThrow()::equals).orElse(true);
+        return projectId.isPresent() && role.projectId().map(projectId.orElseThrow()::equals).orElse(true);
     }
 
     /**

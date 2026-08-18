@@ -107,17 +107,17 @@ public class CatalogApplicationService {
     private final JsonMapper jsonMapper;
 
     /**
-     * @param repository           资产持久化端口
-     * @param tenantRepository     IAM 租户端口
-     * @param authorizationService IAM 授权服务
-     * @param auditPublisher       审计发布器
-     * @param payloadValidator     载荷校验器
-     * @param secretRepository     SecretRef 检查端口
-     * @param objectStore          可选对象存储
-     * @param properties           Catalog 配置
+     * @param repository               资产持久化端口
+     * @param tenantRepository         IAM 租户端口
+     * @param authorizationService     IAM 授权服务
+     * @param auditPublisher           审计发布器
+     * @param payloadValidator         载荷校验器
+     * @param secretRepository         SecretRef 检查端口
+     * @param objectStore              可选对象存储
+     * @param properties               Catalog 配置
      * @param skillSupplyChainVerifier Skill 供应链验证器
-     * @param clock                UTC 时钟
-     * @param jsonMapper           JSON 映射器
+     * @param clock                    UTC 时钟
+     * @param jsonMapper               JSON 映射器
      */
     public CatalogApplicationService(
         CatalogRepository repository,
@@ -131,21 +131,16 @@ public class CatalogApplicationService {
         SkillSupplyChainVerifier skillSupplyChainVerifier,
         Clock clock,
         JsonMapper jsonMapper) {
+
         this.repository = Objects.requireNonNull(repository, "repository must not be null");
-        this.tenantRepository = Objects.requireNonNull(
-            tenantRepository, "tenantRepository must not be null");
-        this.authorizationService = Objects.requireNonNull(
-            authorizationService, "authorizationService must not be null");
-        this.auditPublisher = Objects.requireNonNull(
-            auditPublisher, "auditPublisher must not be null");
-        this.payloadValidator = Objects.requireNonNull(
-            payloadValidator, "payloadValidator must not be null");
-        this.secretRepository = Objects.requireNonNull(
-            secretRepository, "secretRepository must not be null");
+        this.tenantRepository = Objects.requireNonNull(tenantRepository, "tenantRepository must not be null");
+        this.authorizationService = Objects.requireNonNull(authorizationService, "authorizationService must not be null");
+        this.auditPublisher = Objects.requireNonNull(auditPublisher, "auditPublisher must not be null");
+        this.payloadValidator = Objects.requireNonNull(payloadValidator, "payloadValidator must not be null");
+        this.secretRepository = Objects.requireNonNull(secretRepository, "secretRepository must not be null");
         this.objectStore = Objects.requireNonNull(objectStore, "objectStore must not be null");
         this.properties = Objects.requireNonNull(properties, "properties must not be null");
-        this.skillSupplyChainVerifier = Objects.requireNonNull(
-            skillSupplyChainVerifier, "skillSupplyChainVerifier must not be null");
+        this.skillSupplyChainVerifier = Objects.requireNonNull(skillSupplyChainVerifier, "skillSupplyChainVerifier must not be null");
         this.clock = Objects.requireNonNull(clock, "clock must not be null");
         this.jsonMapper = Objects.requireNonNull(jsonMapper, "jsonMapper must not be null");
     }
@@ -161,19 +156,23 @@ public class CatalogApplicationService {
      * @return 新稳定身份
      */
     @Transactional
-    public CatalogAsset createAsset(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        CatalogAssetKind kind,
-        String key,
-        String name,
-        String description,
-        Map<String, Object> metadata) {
+    public CatalogAsset createAsset(AgentArkPrincipal principal, ProjectId projectId, CatalogAssetKind kind, String key,
+                                    String name, String description, Map<String, Object> metadata) {
+
         Project project = authorize(principal, projectId, PermissionRegistry.CATALOG_MANAGE);
         Instant now = Instant.now(clock);
         CatalogAsset asset = new CatalogAsset(
-            kind.generateId(), kind, project.organizationId(), project.id(), key, name, description,
-            payloadValidator.validateMetadata(kind, metadata), CatalogAssetStatus.ACTIVE, 0, now,
+            kind.generateId(),
+            kind,
+            project.organizationId(),
+            project.id(),
+            key,
+            name,
+            description,
+            payloadValidator.validateMetadata(kind, metadata),
+            CatalogAssetStatus.ACTIVE,
+            0,
+            now,
             now);
         repository.insertAsset(asset, actor(principal));
         audit(principal, "catalog.create", kind.apiValue(), asset.id(), project, now);
@@ -189,20 +188,16 @@ public class CatalogApplicationService {
      * @return 资产游标页
      */
     @Transactional(readOnly = true)
-    public CursorPage<CatalogAsset> listAssets(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        CatalogAssetKind kind,
-        String cursor,
-        int limit) {
+    public CursorPage<CatalogAsset> listAssets(AgentArkPrincipal principal, ProjectId projectId, CatalogAssetKind kind,
+                                               String cursor, int limit) {
+
         authorize(principal, projectId, PermissionRegistry.CATALOG_READ);
         int pageSize = requireLimit(limit);
-        List<CatalogAsset> loaded = repository.listAssets(
-            kind, projectId, CatalogCursorCodec.decode(cursor, ""), pageSize + 1);
+        List<CatalogAsset> loaded = repository.listAssets(kind, projectId, CatalogCursorCodec.decode(cursor, ""), pageSize + 1);
         boolean hasMore = loaded.size() > pageSize;
         List<CatalogAsset> items = loaded.stream().limit(pageSize).toList();
         Optional<String> next = hasMore
-            ? Optional.of(CatalogCursorCodec.encode(items.get(items.size() - 1).key()))
+            ? Optional.of(CatalogCursorCodec.encode(items.getLast().key()))
             : Optional.empty();
         return new CursorPage<>(items, next, hasMore);
     }
@@ -215,12 +210,7 @@ public class CatalogApplicationService {
      * @param expectedVersion 乐观锁版本
      */
     @Transactional
-    public void archiveAsset(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        CatalogAssetKind kind,
-        String assetId,
-        long expectedVersion) {
+    public void archiveAsset(AgentArkPrincipal principal, ProjectId projectId, CatalogAssetKind kind, String assetId, long expectedVersion) {
         Project project = authorize(principal, projectId, PermissionRegistry.CATALOG_MANAGE);
         StrongId id = kind.parseId(assetId);
         Instant now = Instant.now(clock);
@@ -241,32 +231,26 @@ public class CatalogApplicationService {
      * @return 新不可变版本
      */
     @Transactional
-    public CatalogVersion createVersion(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        CatalogAssetKind kind,
-        String assetId,
-        Map<String, Object> payload,
-        CatalogVersionStatus status) {
+    public CatalogVersion createVersion(AgentArkPrincipal principal, ProjectId projectId, CatalogAssetKind kind,
+                                        String assetId, Map<String, Object> payload, CatalogVersionStatus status) {
+
         Project project = authorize(principal, projectId, PermissionRegistry.CATALOG_MANAGE);
         StrongId ownerId = kind.parseId(assetId);
         CatalogValidatedPayload validated = payloadValidator.validateVersion(kind, payload);
-        if (payloadValidator.secretRefs(payload).stream()
-            .anyMatch(ref -> !secretRepository.existsReference(projectId, ref))) {
+        if (payloadValidator.secretRefs(payload).stream().anyMatch(ref -> !secretRepository.existsReference(projectId, ref))) {
             throw new IamNotFoundException("secret reference is not visible");
         }
         if (kind == CatalogAssetKind.SKILL) {
             verifySkillArtifact(payload);
         }
+
         long number = repository.nextVersionNumber(kind, projectId, ownerId)
             .orElseThrow(() -> new IamNotFoundException("asset is missing or archived"));
         Instant now = Instant.now(clock);
         StrongId versionId = kind.generateVersionId();
-        CatalogVersion version = new CatalogVersion(
-            versionId, kind, project.organizationId(), project.id(), ownerId, number,
+        CatalogVersion version = new CatalogVersion(versionId, kind, project.organizationId(), project.id(), ownerId, number,
             validated.canonicalJson(), Checksum.sha256(validated.canonicalJson()), status, now);
-        List<McpToolDescriptorSnapshot> tools = descriptors(
-            kind, project, versionId, validated.toolPayloads(), now);
+        List<McpToolDescriptorSnapshot> tools = descriptors(kind, project, versionId, validated.toolPayloads(), now);
         repository.insertVersion(version, tools, actor(principal));
         audit(principal, "catalog.version.create", kind.apiValue(), version.id(), project, now);
         return version;
@@ -282,24 +266,18 @@ public class CatalogApplicationService {
      * @return 不可变版本游标页
      */
     @Transactional(readOnly = true)
-    public CursorPage<CatalogVersion> listVersions(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        CatalogAssetKind kind,
-        String assetId,
-        String cursor,
-        int limit) {
+    public CursorPage<CatalogVersion> listVersions(AgentArkPrincipal principal, ProjectId projectId, CatalogAssetKind kind,
+                                                   String assetId, String cursor, int limit) {
+
         authorize(principal, projectId, PermissionRegistry.CATALOG_READ);
         StrongId ownerId = kind.parseId(assetId);
         int pageSize = requireLimit(limit);
         long after = parseVersionCursor(cursor);
-        List<CatalogVersion> loaded = repository.listVersions(
-            kind, projectId, ownerId, after, pageSize + 1);
+        List<CatalogVersion> loaded = repository.listVersions(kind, projectId, ownerId, after, pageSize + 1);
         boolean hasMore = loaded.size() > pageSize;
         List<CatalogVersion> items = loaded.stream().limit(pageSize).toList();
         Optional<String> next = hasMore
-            ? Optional.of(CatalogCursorCodec.encode(
-            Long.toString(items.get(items.size() - 1).versionNumber())))
+            ? Optional.of(CatalogCursorCodec.encode(Long.toString(items.getLast().versionNumber())))
             : Optional.empty();
         return new CursorPage<>(items, next, hasMore);
     }
@@ -314,21 +292,14 @@ public class CatalogApplicationService {
      * @return 不回显值的变更路径
      */
     @Transactional(readOnly = true)
-    public CatalogVersionDiff diff(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        CatalogAssetKind kind,
-        String assetId,
-        String baseVersionId,
-        String targetVersionId) {
+    public CatalogVersionDiff diff(AgentArkPrincipal principal, ProjectId projectId, CatalogAssetKind kind, String assetId,
+                                   String baseVersionId, String targetVersionId) {
+
         authorize(principal, projectId, PermissionRegistry.CATALOG_READ);
         StrongId ownerId = kind.parseId(assetId);
-        CatalogVersion base = requiredVersion(
-            kind, projectId, ownerId, kind.parseVersionId(baseVersionId));
-        CatalogVersion target = requiredVersion(
-            kind, projectId, ownerId, kind.parseVersionId(targetVersionId));
-        return new CatalogVersionDiff(
-            base.id(), target.id(), changedPaths(base.payloadJson(), target.payloadJson()));
+        CatalogVersion base = requiredVersion(kind, projectId, ownerId, kind.parseVersionId(baseVersionId));
+        CatalogVersion target = requiredVersion(kind, projectId, ownerId, kind.parseVersionId(targetVersionId));
+        return new CatalogVersionDiff(base.id(), target.id(), changedPaths(base.payloadJson(), target.payloadJson()));
     }
 
     /**
@@ -340,23 +311,17 @@ public class CatalogApplicationService {
      * @param expectedChecksum 可选预期校验和
      * @return 已完整性校验的持久 ObjectRef
      */
-    public ObjectRef uploadSkillArtifact(
-        AgentArkPrincipal principal,
-        ProjectId projectId,
-        InputStream content,
-        long size,
-        String contentType,
-        Optional<Checksum> expectedChecksum) {
+    public ObjectRef uploadSkillArtifact(AgentArkPrincipal principal, ProjectId projectId, InputStream content, long size,
+                                         String contentType, Optional<Checksum> expectedChecksum) {
+
         authorize(principal, projectId, PermissionRegistry.CATALOG_MANAGE);
         if (size < 0 || size > properties.getMaxArtifactSize().toBytes()) {
             throw new IllegalArgumentException("artifact size exceeds configured limit");
         }
-        ObjectStore store = objectStore.orElseThrow(
-            () -> new IamConflictException("object store is not configured"));
+
+        ObjectStore store = objectStore.orElseThrow(() -> new IamConflictException("object store is not configured"));
         try {
-            return store.put(new PutObjectCommand(
-                new ObjectNamespace("skill-artifacts"), content, size, contentType,
-                expectedChecksum));
+            return store.put(new PutObjectCommand(new ObjectNamespace("skill-artifacts"), content, size, contentType, expectedChecksum));
         } catch (IOException exception) {
             throw new IamConflictException("artifact upload failed");
         }
@@ -368,13 +333,10 @@ public class CatalogApplicationService {
      * @param permission 必需权限
      * @return 已授权项目
      */
-    private Project authorize(
-        AgentArkPrincipal principal, ProjectId projectId, String permission) {
+    private Project authorize(AgentArkPrincipal principal, ProjectId projectId, String permission) {
         Project project = tenantRepository.findProject(projectId)
             .orElseThrow(() -> new IamNotFoundException("project is not visible"));
-        authorizationService.requirePermission(
-            principal, project.organizationId(), Optional.of(projectId), Optional.empty(),
-            permission);
+        authorizationService.requirePermission(principal, project.organizationId(), Optional.of(projectId), Optional.empty(), permission);
         return project;
     }
 
@@ -389,13 +351,11 @@ public class CatalogApplicationService {
             new Checksum(String.valueOf(artifact.get("checksum"))),
             ((Number) artifact.get("size")).longValue(),
             String.valueOf(artifact.get("mediaType")));
-        ObjectStore store = objectStore.orElseThrow(
-            () -> new IamConflictException("object store is not configured"));
+        ObjectStore store = objectStore.orElseThrow(() -> new IamConflictException("object store is not configured"));
+
         try {
             ObjectMetadata metadata = store.head(ref);
-            if (!metadata.checksum().equals(ref.checksum())
-                || metadata.size() != ref.size()
-                || !metadata.contentType().equals(ref.mediaType())) {
+            if (!metadata.checksum().equals(ref.checksum()) || metadata.size() != ref.size() || !metadata.contentType().equals(ref.mediaType())) {
                 throw new IamConflictException("artifact metadata does not match object store");
             }
             skillSupplyChainVerifier.verify(payload, store);
@@ -412,25 +372,30 @@ public class CatalogApplicationService {
      * @param now       创建时刻
      * @return MCP Tool Descriptor 快照
      */
-    private List<McpToolDescriptorSnapshot> descriptors(
-        CatalogAssetKind kind,
-        Project project,
-        StrongId versionId,
-        List<Map<String, Object>> payloads,
-        Instant now) {
+    private List<McpToolDescriptorSnapshot> descriptors(CatalogAssetKind kind, Project project, StrongId versionId,
+                                                        List<Map<String, Object>> payloads, Instant now) {
+
         if (kind != CatalogAssetKind.MCP_SERVER) {
             return List.of();
         }
+
         McpServerVersionId serverVersionId = (McpServerVersionId) versionId;
         return payloads.stream().map(payload -> {
             String json = write(payload);
             return new McpToolDescriptorSnapshot(
-                McpToolDescriptorId.generate(), project.organizationId(), project.id(),
-                serverVersionId, String.valueOf(payload.get("name")),
+                McpToolDescriptorId.generate(),
+                project.organizationId(),
+                project.id(),
+                serverVersionId,
+                String.valueOf(payload.get("name")),
                 Objects.toString(payload.get("description"), ""),
-                write(payload.get("argumentSchema")), String.valueOf(payload.get("accessMode")),
-                String.valueOf(payload.get("riskLevel")), String.valueOf(payload.get("idempotency")),
-                write(payload.get("permissionMetadata")), Checksum.sha256(json), now);
+                write(payload.get("argumentSchema")),
+                String.valueOf(payload.get("accessMode")),
+                String.valueOf(payload.get("riskLevel")),
+                String.valueOf(payload.get("idempotency")),
+                write(payload.get("permissionMetadata")),
+                Checksum.sha256(json),
+                now);
         }).toList();
     }
 
@@ -441,11 +406,7 @@ public class CatalogApplicationService {
      * @param versionId 版本标识
      * @return 必须存在的版本
      */
-    private CatalogVersion requiredVersion(
-        CatalogAssetKind kind,
-        ProjectId projectId,
-        StrongId ownerId,
-        StrongId versionId) {
+    private CatalogVersion requiredVersion(CatalogAssetKind kind, ProjectId projectId, StrongId ownerId, StrongId versionId) {
         return repository.findVersion(kind, projectId, ownerId, versionId)
             .orElseThrow(() -> new IamNotFoundException("asset version is not visible"));
     }
@@ -463,6 +424,7 @@ public class CatalogApplicationService {
             Set<String> keys = new TreeSet<>();
             keys.addAll(base.keySet());
             keys.addAll(target.keySet());
+
             return keys.stream()
                 .filter(key -> !Objects.equals(base.get(key), target.get(key)))
                 .map(key -> "/" + key.replace("~", "~0").replace("/", "~1"))
@@ -528,15 +490,15 @@ public class CatalogApplicationService {
      * @param project      项目
      * @param now          操作时刻
      */
-    private void audit(
-        AgentArkPrincipal principal,
-        String action,
-        String resourceType,
-        StrongId resourceId,
-        Project project,
-        Instant now) {
+    private void audit(AgentArkPrincipal principal, String action, String resourceType, StrongId resourceId, Project project, Instant now) {
         auditPublisher.append(new IamAuditRecord(
-            action, actor(principal), resourceType, resourceId.asString(),
-            Optional.of(project.organizationId()), Optional.of(project.id()), "SUCCEEDED", now));
+            action,
+            actor(principal),
+            resourceType,
+            resourceId.asString(),
+            Optional.of(project.organizationId()),
+            Optional.of(project.id()),
+            "SUCCEEDED",
+            now));
     }
 }

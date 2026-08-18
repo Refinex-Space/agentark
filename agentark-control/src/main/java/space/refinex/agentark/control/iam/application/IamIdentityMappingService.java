@@ -22,6 +22,7 @@ import space.refinex.agentark.control.iam.application.port.IdentityRepository;
 import space.refinex.agentark.control.iam.domain.UserIdentity;
 
 import java.time.Clock;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -48,9 +49,8 @@ public class IamIdentityMappingService {
      * @param clock              UTC 时钟
      */
     public IamIdentityMappingService(IdentityRepository identityRepository, Clock clock) {
-        this.identityRepository = java.util.Objects.requireNonNull(
-            identityRepository, "identityRepository must not be null");
-        this.clock = java.util.Objects.requireNonNull(clock, "clock must not be null");
+        this.identityRepository = Objects.requireNonNull(identityRepository, "identityRepository must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
     /**

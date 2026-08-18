@@ -18,6 +18,7 @@ package space.refinex.agentark.control.iam.domain;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 
 /**
  * 集中维护 IAM 字段的稳定格式和 MySQL 微秒精度边界，不承担领域流程。
@@ -86,7 +87,7 @@ final class IamFieldPolicy {
      * @return 微秒精度时刻
      */
     static Instant instant(Instant value, String name) {
-        return java.util.Objects.requireNonNull(value, name + " must not be null")
+        return Objects.requireNonNull(value, name + " must not be null")
             .truncatedTo(ChronoUnit.MICROS);
     }
 }

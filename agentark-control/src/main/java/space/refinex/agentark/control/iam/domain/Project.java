@@ -80,8 +80,7 @@ public record Project(
      * @param now            创建时刻
      * @return 版本为零的新项目
      */
-    public static Project create(
-        OrganizationId organizationId, String slug, String name, Instant now) {
+    public static Project create(OrganizationId organizationId, String slug, String name, Instant now) {
         Instant timestamp = IamFieldPolicy.instant(now, "now");
         return new Project(
             ProjectId.generate(),

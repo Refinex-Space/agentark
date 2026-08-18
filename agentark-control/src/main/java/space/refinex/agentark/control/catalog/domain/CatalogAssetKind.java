@@ -32,57 +32,101 @@ public enum CatalogAssetKind {
     /**
      * Agent 稳定身份；Draft、Revision 和 Snapshot 由 Phase 10 Release 边界拥有。
      */
-    AGENT("agent", null, AgentId::generate, AgentId::parse, null, null),
+    AGENT(
+        "agent",
+        null,
+        AgentId::generate,
+        AgentId::parse,
+        null,
+        null),
 
     /**
      * Prompt 稳定身份与 PromptVersion。
      */
-    PROMPT("prompt", "prompt_version", PromptId::generate, PromptId::parse,
-        PromptVersionId::generate, PromptVersionId::parse),
+    PROMPT(
+        "prompt",
+        "prompt_version",
+        PromptId::generate,
+        PromptId::parse,
+        PromptVersionId::generate,
+        PromptVersionId::parse),
 
     /**
      * Model Provider 稳定描述符与 ModelProfile。
      */
-    MODEL_PROVIDER("model_provider", "model_profile", ModelProviderId::generate,
-        ModelProviderId::parse, ModelProfileId::generate, ModelProfileId::parse),
+    MODEL_PROVIDER(
+        "model_provider",
+        "model_profile",
+        ModelProviderId::generate,
+        ModelProviderId::parse,
+        ModelProfileId::generate,
+        ModelProfileId::parse),
 
     /**
      * MCP Server 稳定身份与连接版本。
      */
-    MCP_SERVER("mcp_server", "mcp_server_version", McpServerId::generate, McpServerId::parse,
-        McpServerVersionId::generate, McpServerVersionId::parse),
+    MCP_SERVER(
+        "mcp_server",
+        "mcp_server_version",
+        McpServerId::generate,
+        McpServerId::parse,
+        McpServerVersionId::generate,
+        McpServerVersionId::parse),
 
     /**
      * Skill 稳定身份与 Artifact 版本。
      */
-    SKILL("skill", "skill_version", SkillId::generate, SkillId::parse,
-        SkillVersionId::generate, SkillVersionId::parse),
+    SKILL(
+        "skill",
+        "skill_version",
+        SkillId::generate,
+        SkillId::parse,
+        SkillVersionId::generate,
+        SkillVersionId::parse),
 
     /**
      * Memory Profile 稳定身份与策略版本。
      */
-    MEMORY_PROFILE("memory_profile", "memory_profile_version", MemoryProfileId::generate,
-        MemoryProfileId::parse, MemoryProfileVersionId::generate, MemoryProfileVersionId::parse),
+    MEMORY_PROFILE(
+        "memory_profile",
+        "memory_profile_version",
+        MemoryProfileId::generate,
+        MemoryProfileId::parse,
+        MemoryProfileVersionId::generate,
+        MemoryProfileVersionId::parse),
 
     /**
      * Workspace Profile 稳定身份与隔离版本。
      */
-    WORKSPACE_PROFILE("workspace_profile", "workspace_profile_version",
-        WorkspaceProfileId::generate, WorkspaceProfileId::parse,
-        WorkspaceProfileVersionId::generate, WorkspaceProfileVersionId::parse),
+    WORKSPACE_PROFILE(
+        "workspace_profile",
+        "workspace_profile_version",
+        WorkspaceProfileId::generate,
+        WorkspaceProfileId::parse,
+        WorkspaceProfileVersionId::generate,
+        WorkspaceProfileVersionId::parse),
 
     /**
      * Sandbox Profile 稳定身份与运行策略版本。
      */
-    SANDBOX_PROFILE("sandbox_profile", "sandbox_profile_version", SandboxProfileId::generate,
-        SandboxProfileId::parse, SandboxProfileVersionId::generate, SandboxProfileVersionId::parse),
+    SANDBOX_PROFILE(
+        "sandbox_profile",
+        "sandbox_profile_version",
+        SandboxProfileId::generate,
+        SandboxProfileId::parse,
+        SandboxProfileVersionId::generate,
+        SandboxProfileVersionId::parse),
 
     /**
      * Permission Policy 稳定身份与组合规则版本。
      */
-    PERMISSION_POLICY("permission_policy", "permission_policy_version",
-        PermissionPolicyId::generate, PermissionPolicyId::parse,
-        PermissionPolicyVersionId::generate, PermissionPolicyVersionId::parse);
+    PERMISSION_POLICY(
+        "permission_policy",
+        "permission_policy_version",
+        PermissionPolicyId::generate,
+        PermissionPolicyId::parse,
+        PermissionPolicyVersionId::generate,
+        PermissionPolicyVersionId::parse);
 
     /**
      * 受信稳定身份表名，仅持久化适配器使用。
@@ -124,13 +168,10 @@ public enum CatalogAssetKind {
      * @param versionIdGenerator 可选版本标识生成器
      * @param versionIdParser    可选版本标识解析器
      */
-    CatalogAssetKind(
-        String tableName,
-        String versionTableName,
-        Supplier<? extends StrongId> idGenerator,
-        Function<String, ? extends StrongId> idParser,
-        Supplier<? extends StrongId> versionIdGenerator,
-        Function<String, ? extends StrongId> versionIdParser) {
+    CatalogAssetKind(String tableName, String versionTableName, Supplier<? extends StrongId> idGenerator,
+                     Function<String, ? extends StrongId> idParser, Supplier<? extends StrongId> versionIdGenerator,
+                     Function<String, ? extends StrongId> versionIdParser) {
+
         this.tableName = tableName;
         this.versionTableName = versionTableName;
         this.idGenerator = idGenerator;

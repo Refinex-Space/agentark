@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import space.refinex.agentark.control.iam.application.IamAccessDeniedException;
 import space.refinex.agentark.control.iam.application.IamConflictException;
 import space.refinex.agentark.control.iam.application.IamNotFoundException;
+import space.refinex.agentark.foundation.web.RequestContext;
 import space.refinex.agentark.foundation.web.RequestContextAccessor;
 
 import java.net.URI;
@@ -48,8 +49,7 @@ public final class CatalogProblemDetailAdvice {
      * @param requestContextAccessor 请求关联上下文
      */
     public CatalogProblemDetailAdvice(RequestContextAccessor requestContextAccessor) {
-        this.requestContextAccessor = java.util.Objects.requireNonNull(
-            requestContextAccessor, "requestContextAccessor must not be null");
+        this.requestContextAccessor = java.util.Objects.requireNonNull(requestContextAccessor, "requestContextAccessor must not be null");
     }
 
     /**
@@ -58,8 +58,7 @@ public final class CatalogProblemDetailAdvice {
      */
     @ExceptionHandler({IamAccessDeniedException.class, AccessDeniedException.class})
     public ProblemDetail forbidden(RuntimeException exception) {
-        return problem(HttpStatus.FORBIDDEN, "ARK-CATALOG-FORBIDDEN-00001", "没有访问权限",
-            "当前主体无权访问该资产");
+        return problem(HttpStatus.FORBIDDEN, "ARK-CATALOG-FORBIDDEN-00001", "没有访问权限", "当前主体无权访问该资产");
     }
 
     /**
@@ -68,8 +67,7 @@ public final class CatalogProblemDetailAdvice {
      */
     @ExceptionHandler(IamNotFoundException.class)
     public ProblemDetail notFound(IamNotFoundException exception) {
-        return problem(HttpStatus.NOT_FOUND, "ARK-CATALOG-NOT-FOUND-00001", "资源不存在",
-            "请求的资产不存在或不可见");
+        return problem(HttpStatus.NOT_FOUND, "ARK-CATALOG-NOT-FOUND-00001", "资源不存在", "请求的资产不存在或不可见");
     }
 
     /**
@@ -78,8 +76,7 @@ public final class CatalogProblemDetailAdvice {
      */
     @ExceptionHandler({IamConflictException.class, DataIntegrityViolationException.class})
     public ProblemDetail conflict(RuntimeException exception) {
-        return problem(HttpStatus.CONFLICT, "ARK-CATALOG-CONFLICT-00001", "资源状态冲突",
-            "资产状态、版本或外部对象不满足请求前置条件");
+        return problem(HttpStatus.CONFLICT, "ARK-CATALOG-CONFLICT-00001", "资源状态冲突", "资产状态、版本或外部对象不满足请求前置条件");
     }
 
     /**
@@ -88,8 +85,7 @@ public final class CatalogProblemDetailAdvice {
      */
     @ExceptionHandler({IllegalArgumentException.class, MethodArgumentNotValidException.class})
     public ProblemDetail invalid(Exception exception) {
-        return problem(HttpStatus.BAD_REQUEST, "ARK-CATALOG-INVALID-REQUEST-00001", "请求参数无效",
-            "资产分类、载荷、游标或安全元数据不符合契约");
+        return problem(HttpStatus.BAD_REQUEST, "ARK-CATALOG-INVALID-REQUEST-00001", "请求参数无效", "资产分类、载荷、游标或安全元数据不符合契约");
     }
 
     /**
@@ -99,14 +95,14 @@ public final class CatalogProblemDetailAdvice {
      * @param detail 安全详情
      * @return RFC 9457 响应
      */
-    private ProblemDetail problem(
-        HttpStatus status, String code, String title, String detail) {
+    private ProblemDetail problem(HttpStatus status, String code, String title, String detail) {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setType(URI.create("urn:agentark:error:" + code));
         problem.setTitle(title);
         problem.setProperty("code", code);
         problem.setProperty("requestId", requestContextAccessor.current()
-            .map(context -> context.requestId()).orElseGet(() -> UUID.randomUUID().toString()));
+            .map(RequestContext::requestId)
+            .orElseGet(() -> UUID.randomUUID().toString()));
         return problem;
     }
 }

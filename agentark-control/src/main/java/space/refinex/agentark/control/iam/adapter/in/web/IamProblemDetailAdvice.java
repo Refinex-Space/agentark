@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import space.refinex.agentark.control.iam.application.IamAccessDeniedException;
 import space.refinex.agentark.control.iam.application.IamConflictException;
 import space.refinex.agentark.control.iam.application.IamNotFoundException;
+import space.refinex.agentark.foundation.web.RequestContext;
 import space.refinex.agentark.foundation.web.RequestContextAccessor;
 
 import java.net.URI;
@@ -62,8 +63,7 @@ public final class IamProblemDetailAdvice {
      */
     @ExceptionHandler({IamAccessDeniedException.class, AccessDeniedException.class})
     public ProblemDetail forbidden(RuntimeException exception) {
-        return problem(HttpStatus.FORBIDDEN, "ARK-IAM-FORBIDDEN-00001", "没有访问权限",
-            "当前主体无权执行该操作");
+        return problem(HttpStatus.FORBIDDEN, "ARK-IAM-FORBIDDEN-00001", "没有访问权限", "当前主体无权执行该操作");
     }
 
     /**
@@ -74,8 +74,7 @@ public final class IamProblemDetailAdvice {
      */
     @ExceptionHandler(IamNotFoundException.class)
     public ProblemDetail notFound(IamNotFoundException exception) {
-        return problem(HttpStatus.NOT_FOUND, "ARK-IAM-NOT-FOUND-00001", "资源不存在",
-            "请求的 IAM 资源不存在或不可见");
+        return problem(HttpStatus.NOT_FOUND, "ARK-IAM-NOT-FOUND-00001", "资源不存在", "请求的 IAM 资源不存在或不可见");
     }
 
     /**
@@ -86,8 +85,7 @@ public final class IamProblemDetailAdvice {
      */
     @ExceptionHandler({IamConflictException.class, DataIntegrityViolationException.class})
     public ProblemDetail conflict(RuntimeException exception) {
-        return problem(HttpStatus.CONFLICT, "ARK-IAM-CONFLICT-00001", "资源状态冲突",
-            "资源已存在或已经被其他请求修改");
+        return problem(HttpStatus.CONFLICT, "ARK-IAM-CONFLICT-00001", "资源状态冲突", "资源已存在或已经被其他请求修改");
     }
 
     /**
@@ -98,8 +96,7 @@ public final class IamProblemDetailAdvice {
      */
     @ExceptionHandler({IllegalArgumentException.class, MethodArgumentNotValidException.class})
     public ProblemDetail invalidRequest(Exception exception) {
-        return problem(HttpStatus.BAD_REQUEST, "ARK-IAM-INVALID-REQUEST-00001", "请求参数无效",
-            "请求字段、标识或资源范围不符合契约");
+        return problem(HttpStatus.BAD_REQUEST, "ARK-IAM-INVALID-REQUEST-00001", "请求参数无效", "请求字段、标识或资源范围不符合契约");
     }
 
     /**
@@ -117,7 +114,7 @@ public final class IamProblemDetailAdvice {
         problem.setTitle(title);
         problem.setProperty("code", code);
         problem.setProperty("requestId", requestContextAccessor.current()
-            .map(context -> context.requestId()).orElseGet(() -> UUID.randomUUID().toString()));
+            .map(RequestContext::requestId).orElseGet(() -> UUID.randomUUID().toString()));
         return problem;
     }
 }

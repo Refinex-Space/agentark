@@ -18,6 +18,7 @@ package space.refinex.agentark.control.catalog.domain;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Objects;
 
 /**
  * 集中维护资产字段格式和 MySQL 微秒精度，不负责序列化或业务流程。
@@ -85,7 +86,7 @@ final class CatalogFieldPolicy {
      * @return MySQL 可稳定往返的微秒精度时刻
      */
     static Instant instant(Instant value, String name) {
-        return java.util.Objects.requireNonNull(value, name + " must not be null")
+        return Objects.requireNonNull(value, name + " must not be null")
             .truncatedTo(ChronoUnit.MICROS);
     }
 }

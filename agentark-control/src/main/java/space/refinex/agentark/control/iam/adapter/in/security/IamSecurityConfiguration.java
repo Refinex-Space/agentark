@@ -23,6 +23,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.server.resource.web.authentication.BearerTokenAuthenticationFilter;
@@ -54,7 +55,6 @@ public class IamSecurityConfiguration {
      * @param jwtDecoders         可选 Foundation JWT Decoder
      * @param principalConverters 可选 Foundation Principal 转换器
      * @return 无状态安全过滤链
-     * @throws Exception Spring Security 配置失败时抛出
      */
     @Bean
     public SecurityFilterChain iamSecurityFilterChain(
@@ -62,10 +62,10 @@ public class IamSecurityConfiguration {
         IamApiKeyAuthenticationFilter apiKeyFilter,
         IamSecurityProblemWriter problemWriter,
         ObjectProvider<JwtDecoder> jwtDecoders,
-        ObjectProvider<AgentArkJwtPrincipalConverter> principalConverters) throws Exception {
+        ObjectProvider<AgentArkJwtPrincipalConverter> principalConverters) {
+
         http.csrf(csrf -> csrf.disable())
-            .sessionManagement(session ->
-                session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authorize -> authorize
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
                 .requestMatchers("/api/v1/**").authenticated()
@@ -77,16 +77,15 @@ public class IamSecurityConfiguration {
                 .accessDeniedHandler((request, response, exception) ->
                     problemWriter.forbidden(request, response)))
             .addFilterBefore(apiKeyFilter, BearerTokenAuthenticationFilter.class)
-            .httpBasic(basic -> basic.disable())
-            .formLogin(form -> form.disable())
-            .logout(logout -> logout.disable());
+            .httpBasic(AbstractHttpConfigurer::disable)
+            .formLogin(AbstractHttpConfigurer::disable)
+            .logout(AbstractHttpConfigurer::disable);
 
         JwtDecoder jwtDecoder = jwtDecoders.getIfAvailable();
         if (jwtDecoder != null) {
             AgentArkJwtPrincipalConverter converter = principalConverters.getIfAvailable();
             if (converter == null) {
-                throw new IllegalStateException(
-                    "AgentArkJwtPrincipalConverter is required when JwtDecoder is configured");
+                throw new IllegalStateException("AgentArkJwtPrincipalConverter is required when JwtDecoder is configured");
             }
             http.oauth2ResourceServer(oauth -> oauth
                 .authenticationEntryPoint((request, response, exception) ->
@@ -110,8 +109,7 @@ public class IamSecurityConfiguration {
     @Bean
     public FilterRegistrationBean<IamApiKeyAuthenticationFilter> apiKeyFilterRegistration(
         IamApiKeyAuthenticationFilter apiKeyFilter) {
-        FilterRegistrationBean<IamApiKeyAuthenticationFilter> registration =
-            new FilterRegistrationBean<>(apiKeyFilter);
+        FilterRegistrationBean<IamApiKeyAuthenticationFilter> registration = new FilterRegistrationBean<>(apiKeyFilter);
         registration.setEnabled(false);
         return registration;
     }

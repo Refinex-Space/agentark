@@ -166,8 +166,7 @@ public final class IamApiModels {
      * @param name 项目内唯一稳定名称
      * @author refinex
      */
-    public record CreateServiceAccountRequest(
-        @NotBlank @Pattern(regexp = "[a-z][a-z0-9-]{1,62}[a-z0-9]") String name) {
+    public record CreateServiceAccountRequest(@NotBlank @Pattern(regexp = "[a-z][a-z0-9-]{1,62}[a-z0-9]") String name) {
 
         /**
          * 创建服务账号请求模型。
@@ -297,8 +296,7 @@ public final class IamApiModels {
          * @return 安全单次交付响应
          */
         public static CreatedApiKeyResponse from(CreatedApiKey created) {
-            return new CreatedApiKeyResponse(
-                ApiKeyView.from(created.metadata()), created.plaintext());
+            return new CreatedApiKeyResponse(ApiKeyView.from(created.metadata()), created.plaintext());
         }
     }
 }

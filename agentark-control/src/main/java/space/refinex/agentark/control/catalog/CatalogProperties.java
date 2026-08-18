@@ -55,8 +55,7 @@ public class CatalogProperties {
     /**
      * 允许进入 Runtime 的 SPDX 许可证标识集合。
      */
-    private Set<String> allowedSkillLicenses = new LinkedHashSet<>(Set.of(
-        "Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause"));
+    private Set<String> allowedSkillLicenses = new LinkedHashSet<>(Set.of("Apache-2.0", "MIT", "BSD-2-Clause", "BSD-3-Clause"));
 
     /**
      * Skill 签名 Key ID 到 Base64 X.509 Ed25519 公钥的部署级信任根。
@@ -88,7 +87,8 @@ public class CatalogProperties {
      * @param maxArtifactSize 正数且不超过 64 MiB 的大小
      */
     public void setMaxArtifactSize(DataSize maxArtifactSize) {
-        if (maxArtifactSize == null || maxArtifactSize.toBytes() < 1
+        if (maxArtifactSize == null
+            || maxArtifactSize.toBytes() < 1
             || maxArtifactSize.toBytes() > DataSize.ofMegabytes(64).toBytes()) {
             throw new IllegalArgumentException("maxArtifactSize must be between 1 byte and 64 MiB");
         }
@@ -120,7 +120,8 @@ public class CatalogProperties {
      * @param maxSkillSbomSize 1 字节到 8 MiB 的大小
      */
     public void setMaxSkillSbomSize(DataSize maxSkillSbomSize) {
-        if (maxSkillSbomSize == null || maxSkillSbomSize.toBytes() < 1
+        if (maxSkillSbomSize == null
+            || maxSkillSbomSize.toBytes() < 1
             || maxSkillSbomSize.toBytes() > DataSize.ofMegabytes(8).toBytes()) {
             throw new IllegalArgumentException("maxSkillSbomSize must be between 1 byte and 8 MiB");
         }
@@ -138,7 +139,8 @@ public class CatalogProperties {
      * @param allowedSkillLicenses 非空 SPDX 许可证白名单
      */
     public void setAllowedSkillLicenses(Set<String> allowedSkillLicenses) {
-        if (allowedSkillLicenses == null || allowedSkillLicenses.isEmpty()
+        if (allowedSkillLicenses == null
+            || allowedSkillLicenses.isEmpty()
             || allowedSkillLicenses.stream().anyMatch(value -> value == null || value.isBlank())) {
             throw new IllegalArgumentException("allowedSkillLicenses must not be empty");
         }
@@ -156,7 +158,6 @@ public class CatalogProperties {
      * @param trustedSkillSigningKeys 部署 Secret 或受保护配置注入的信任根
      */
     public void setTrustedSkillSigningKeys(Map<String, String> trustedSkillSigningKeys) {
-        this.trustedSkillSigningKeys = new LinkedHashMap<>(trustedSkillSigningKeys == null
-            ? Map.of() : trustedSkillSigningKeys);
+        this.trustedSkillSigningKeys = new LinkedHashMap<>(trustedSkillSigningKeys == null ? Map.of() : trustedSkillSigningKeys);
     }
 }

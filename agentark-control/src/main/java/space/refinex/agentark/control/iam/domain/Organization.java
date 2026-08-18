@@ -76,7 +76,6 @@ public record Organization(
      */
     public static Organization create(String slug, String name, Instant now) {
         Instant timestamp = IamFieldPolicy.instant(now, "now");
-        return new Organization(
-            OrganizationId.generate(), slug, name, IamStatus.ACTIVE, 0, timestamp, timestamp);
+        return new Organization(OrganizationId.generate(), slug, name, IamStatus.ACTIVE, 0, timestamp, timestamp);
     }
 }

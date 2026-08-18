@@ -78,8 +78,7 @@ public record ServiceAccount(
      * @param now            当前时刻
      * @return 新服务账号
      */
-    public static ServiceAccount create(
-        OrganizationId organizationId, ProjectId projectId, String name, Instant now) {
+    public static ServiceAccount create(OrganizationId organizationId, ProjectId projectId, String name, Instant now) {
         Instant timestamp = IamFieldPolicy.instant(now, "now");
         return new ServiceAccount(
             ServiceAccountId.generate(),

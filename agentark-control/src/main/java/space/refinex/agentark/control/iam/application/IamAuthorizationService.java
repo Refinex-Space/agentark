@@ -30,6 +30,7 @@ import space.refinex.agentark.kernel.id.ServiceAccountId;
 
 import java.time.Clock;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -74,21 +75,14 @@ public final class IamAuthorizationService {
      * @param authorizationCache      短 TTL 缓存
      * @param clock                   UTC 时钟
      */
-    public IamAuthorizationService(
-        IdentityRepository identityRepository,
-        IamIdentityMappingService identityMappingService,
-        AuthorizationRepository authorizationRepository,
-        AuthorizationCache authorizationCache,
-        Clock clock) {
-        this.identityRepository = java.util.Objects.requireNonNull(
-            identityRepository, "identityRepository must not be null");
-        this.identityMappingService = java.util.Objects.requireNonNull(
-            identityMappingService, "identityMappingService must not be null");
-        this.authorizationRepository = java.util.Objects.requireNonNull(
-            authorizationRepository, "authorizationRepository must not be null");
-        this.authorizationCache = java.util.Objects.requireNonNull(
-            authorizationCache, "authorizationCache must not be null");
-        this.clock = java.util.Objects.requireNonNull(clock, "clock must not be null");
+    public IamAuthorizationService(IdentityRepository identityRepository, IamIdentityMappingService identityMappingService,
+                                   AuthorizationRepository authorizationRepository, AuthorizationCache authorizationCache, Clock clock) {
+
+        this.identityRepository = Objects.requireNonNull(identityRepository, "identityRepository must not be null");
+        this.identityMappingService = Objects.requireNonNull(identityMappingService, "identityMappingService must not be null");
+        this.authorizationRepository = Objects.requireNonNull(authorizationRepository, "authorizationRepository must not be null");
+        this.authorizationCache = Objects.requireNonNull(authorizationCache, "authorizationCache must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
     }
 
     /**
@@ -99,11 +93,9 @@ public final class IamAuthorizationService {
      * @return 映射后的用户主体
      * @throws IamAccessDeniedException 当主体不是用户或缺少平台权限时抛出
      */
-    public ResolvedPrincipal requirePlatformPermission(
-        AgentArkPrincipal principal, String permission) {
+    public ResolvedPrincipal requirePlatformPermission(AgentArkPrincipal principal, String permission) {
         PermissionRegistry.requireRegistered(Set.of(permission));
-        if (principal.type() != PrincipalType.USER
-            || !principal.authorities().contains(permission)) {
+        if (principal.type() != PrincipalType.USER || !principal.authorities().contains(permission)) {
             throw new IamAccessDeniedException("platform permission is required");
         }
         return resolve(principal);
@@ -126,17 +118,16 @@ public final class IamAuthorizationService {
         Optional<ProjectId> projectId,
         Optional<EnvironmentId> environmentId,
         String permission) {
-        java.util.Objects.requireNonNull(principal, "principal must not be null");
-        java.util.Objects.requireNonNull(organizationId, "organizationId must not be null");
-        projectId = java.util.Objects.requireNonNull(projectId, "projectId must not be null");
-        environmentId = java.util.Objects.requireNonNull(
-            environmentId, "environmentId must not be null");
+
+        Objects.requireNonNull(principal, "principal must not be null");
+        Objects.requireNonNull(organizationId, "organizationId must not be null");
+        projectId = Objects.requireNonNull(projectId, "projectId must not be null");
+        environmentId = Objects.requireNonNull(environmentId, "environmentId must not be null");
         PermissionRegistry.requireRegistered(Set.of(permission));
         requireClaimScope(principal.tenantSelection(), organizationId, projectId, environmentId);
 
         ResolvedPrincipal resolved = resolve(principal);
-        Set<String> permissions = effectivePermissions(
-            principal, resolved, organizationId, projectId, environmentId);
+        Set<String> permissions = effectivePermissions(principal, resolved, organizationId, projectId, environmentId);
         if (!permissions.contains(permission)) {
             throw new IamAccessDeniedException("resource permission is required");
         }
@@ -151,10 +142,7 @@ public final class IamAuthorizationService {
      * @param serviceAccountId 服务账号标识
      * @return 不可变有效权限集合
      */
-    public Set<String> serviceAccountPermissions(
-        OrganizationId organizationId,
-        ProjectId projectId,
-        ServiceAccountId serviceAccountId) {
+    public Set<String> serviceAccountPermissions(OrganizationId organizationId, ProjectId projectId, ServiceAccountId serviceAccountId) {
         return authorizationRepository.findEffectivePermissions(
             organizationId,
             Optional.of(projectId),
@@ -170,12 +158,10 @@ public final class IamAuthorizationService {
      * @return 持久主体引用
      */
     public ResolvedPrincipal resolve(AgentArkPrincipal principal) {
-        java.util.Objects.requireNonNull(principal, "principal must not be null");
+        Objects.requireNonNull(principal, "principal must not be null");
         if (principal.type() == PrincipalType.USER) {
-            var identity = identityRepository.findUserIdentity(
-                    principal.issuer(), principal.subject())
-                .orElseGet(() -> identityMappingService.resolveOrCreate(
-                    principal.issuer(), principal.subject()));
+            var identity = identityRepository.findUserIdentity(principal.issuer(), principal.subject())
+                .orElseGet(() -> identityMappingService.resolveOrCreate(principal.issuer(), principal.subject()));
             return new ResolvedPrincipal(PrincipalKind.USER, identity.id().value());
         }
 
@@ -188,8 +174,7 @@ public final class IamAuthorizationService {
         if (identityRepository.findServiceAccount(serviceAccountId).isEmpty()) {
             throw new IamAccessDeniedException("service principal is not active");
         }
-        return new ResolvedPrincipal(
-            PrincipalKind.SERVICE_ACCOUNT, serviceAccountId.value());
+        return new ResolvedPrincipal(PrincipalKind.SERVICE_ACCOUNT, serviceAccountId.value());
     }
 
     /**
@@ -203,6 +188,7 @@ public final class IamAuthorizationService {
         if (selection.isEmpty()) {
             return Optional.empty();
         }
+
         try {
             TenantSelection tenant = selection.orElseThrow();
             ResolvedPrincipal resolved = resolve(principal);
@@ -234,8 +220,8 @@ public final class IamAuthorizationService {
         OrganizationId organizationId,
         Optional<ProjectId> projectId,
         Optional<EnvironmentId> environmentId) {
-        AuthorizationCacheKey key = new AuthorizationCacheKey(
-            resolved.kind(), resolved.id(), organizationId, projectId, environmentId);
+
+        AuthorizationCacheKey key = new AuthorizationCacheKey(resolved.kind(), resolved.id(), organizationId, projectId, environmentId);
         Set<String> permissions = authorizationCache.get(key).orElseGet(
             () -> {
                 Set<String> loaded = authorizationRepository.findEffectivePermissions(
@@ -268,9 +254,11 @@ public final class IamAuthorizationService {
         OrganizationId organizationId,
         Optional<ProjectId> projectId,
         Optional<EnvironmentId> environmentId) {
+
         if (selection.isEmpty()) {
             return;
         }
+
         TenantSelection selected = selection.orElseThrow();
         if (!selected.organizationId().equals(organizationId)
             || selected.projectId().isPresent() && !selected.projectId().equals(projectId)

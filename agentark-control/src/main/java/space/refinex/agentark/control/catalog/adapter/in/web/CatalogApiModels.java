@@ -128,10 +128,18 @@ public final class CatalogApiModels {
         public static CatalogAssetView from(CatalogAsset asset, JsonMapper mapper) {
             try {
                 return new CatalogAssetView(
-                    asset.id().asString(), asset.kind().apiValue(),
-                    asset.organizationId().asString(), asset.projectId().asString(), asset.key(),
-                    asset.name(), asset.description(), mapper.readValue(asset.metadataJson(), Map.class),
-                    asset.status().name(), asset.version(), asset.createdAt(), asset.updatedAt());
+                    asset.id().asString(),
+                    asset.kind().apiValue(),
+                    asset.organizationId().asString(),
+                    asset.projectId().asString(),
+                    asset.key(),
+                    asset.name(),
+                    asset.description(),
+                    mapper.readValue(asset.metadataJson(), Map.class),
+                    asset.status().name(),
+                    asset.version(),
+                    asset.createdAt(),
+                    asset.updatedAt());
             } catch (tools.jackson.core.JacksonException exception) {
                 throw new IllegalStateException("stored catalog metadata is invalid", exception);
             }
@@ -179,11 +187,16 @@ public final class CatalogApiModels {
         public static CatalogVersionView from(CatalogVersion version, JsonMapper mapper) {
             try {
                 return new CatalogVersionView(
-                    version.id().asString(), version.kind().apiValue(),
-                    version.organizationId().asString(), version.projectId().asString(),
-                    version.ownerId().asString(), version.versionNumber(),
+                    version.id().asString(),
+                    version.kind().apiValue(),
+                    version.organizationId().asString(),
+                    version.projectId().asString(),
+                    version.ownerId().asString(),
+                    version.versionNumber(),
                     mapper.readValue(version.payloadJson(), Map.class),
-                    version.contentHash().toString(), version.status().name(), version.createdAt());
+                    version.contentHash().toString(),
+                    version.status().name(),
+                    version.createdAt());
             } catch (tools.jackson.core.JacksonException exception) {
                 throw new IllegalStateException("stored catalog payload is invalid", exception);
             }
@@ -206,8 +219,7 @@ public final class CatalogApiModels {
          * @return 字符串化的 Public API 视图
          */
         public static ObjectRefView from(ObjectRef ref) {
-            return new ObjectRefView(
-                ref.uri().toString(), ref.checksum().toString(), ref.size(), ref.mediaType());
+            return new ObjectRefView(ref.uri().toString(), ref.checksum().toString(), ref.size(), ref.mediaType());
         }
     }
 }

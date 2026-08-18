@@ -92,6 +92,7 @@ public record Environment(
         String key,
         String name,
         Instant now) {
+
         Instant timestamp = IamFieldPolicy.instant(now, "now");
         return new Environment(
             EnvironmentId.generate(),

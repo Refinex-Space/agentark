@@ -81,6 +81,7 @@ public class ReleaseController {
         AgentPublisher publisher,
         RuntimeInternalContractService internalService,
         ObjectMapper objectMapper) {
+
         this.service = Objects.requireNonNull(service, "service must not be null");
         this.publisher = Objects.requireNonNull(publisher, "publisher must not be null");
         this.internalService = Objects.requireNonNull(internalService, "internalService must not be null");
@@ -102,10 +103,9 @@ public class ReleaseController {
         @PathVariable String projectId,
         @RequestParam(required = false) String cursor,
         @RequestParam(defaultValue = "50") int limit) {
-        CursorPage<Agent> page = service.listAgents(
-            principal(authentication), ProjectId.parse(projectId), cursor, limit);
-        return new AgentPageResponse(
-            page.items(), page.nextCursor().orElse(null), page.hasMore());
+
+        CursorPage<Agent> page = service.listAgents(principal(authentication), ProjectId.parse(projectId), cursor, limit);
+        return new AgentPageResponse(page.items(), page.nextCursor().orElse(null), page.hasMore());
     }
 
     /**
@@ -121,11 +121,10 @@ public class ReleaseController {
         Authentication authentication,
         @PathVariable String projectId,
         @Valid @RequestBody CreateAgentRequest request) {
-        Agent created = service.createAgent(
-            principal(authentication), ProjectId.parse(projectId), request.key(), request.name(),
+
+        Agent created = service.createAgent(principal(authentication), ProjectId.parse(projectId), request.key(), request.name(),
             request.description(), request.draft());
-        return ResponseEntity.created(URI.create(
-                "/api/v1/projects/" + projectId + "/agents/" + created.id().asString()))
+        return ResponseEntity.created(URI.create("/api/v1/projects/" + projectId + "/agents/" + created.id().asString()))
             .body(created);
     }
 
@@ -142,8 +141,8 @@ public class ReleaseController {
         Authentication authentication,
         @PathVariable String projectId,
         @PathVariable String agentId) {
-        return service.getAgent(
-            principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId));
+
+        return service.getAgent(principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId));
     }
 
     /**
@@ -159,8 +158,8 @@ public class ReleaseController {
         Authentication authentication,
         @PathVariable String projectId,
         @PathVariable String agentId) {
-        return service.getDraft(
-            principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId));
+
+        return service.getDraft(principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId));
     }
 
     /**
@@ -178,8 +177,8 @@ public class ReleaseController {
         @PathVariable String projectId,
         @PathVariable String agentId,
         @Valid @RequestBody UpdateDraftRequest request) {
-        return service.updateDraft(
-            principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
+
+        return service.updateDraft(principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
             request.draft(), request.expectedVersion());
     }
 
@@ -196,8 +195,8 @@ public class ReleaseController {
         Authentication authentication,
         @PathVariable String projectId,
         @PathVariable String agentId) {
-        return publisher.validate(
-            principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId));
+
+        return publisher.validate(principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId));
     }
 
     /**
@@ -215,12 +214,11 @@ public class ReleaseController {
         @PathVariable String projectId,
         @PathVariable String agentId,
         @Valid @RequestBody PublishRequest request) {
-        AgentRevision revision = publisher.publish(
-            principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
+
+        AgentRevision revision = publisher.publish(principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
             request.idempotencyKey(), request.expectedDraftVersion());
-        return ResponseEntity.created(URI.create(
-            "/api/v1/projects/" + projectId + "/agents/" + agentId + "/revisions/"
-                + revision.id().asString())).body(revision);
+        return ResponseEntity.created(URI.create("/api/v1/projects/" + projectId + "/agents/" + agentId + "/revisions/"
+            + revision.id().asString())).body(revision);
     }
 
     /**
@@ -236,8 +234,8 @@ public class ReleaseController {
         Authentication authentication,
         @PathVariable String projectId,
         @PathVariable String agentId) {
-        return service.listRevisions(
-            principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId));
+
+        return service.listRevisions(principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId));
     }
 
     /**
@@ -255,8 +253,8 @@ public class ReleaseController {
         @PathVariable String projectId,
         @PathVariable String agentId,
         @PathVariable String revisionId) {
-        return service.getRevision(
-            principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
+
+        return service.getRevision(principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
             RevisionId.parse(revisionId));
     }
 
@@ -275,13 +273,13 @@ public class ReleaseController {
         @PathVariable String projectId,
         @PathVariable String agentId,
         @PathVariable String revisionId) {
-        StoredSnapshot stored = service.getSnapshot(
-            principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
+
+        StoredSnapshot stored = service.getSnapshot(principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
             RevisionId.parse(revisionId));
         String etag = "\"" + stored.revision().contentHash().hex() + "\"";
+
         try {
-            return ResponseEntity.ok().eTag(etag).body(new SnapshotResponse(
-                revisionId, stored.revision().contentHash().toString(),
+            return ResponseEntity.ok().eTag(etag).body(new SnapshotResponse(revisionId, stored.revision().contentHash().toString(),
                 objectMapper.readTree(stored.canonicalJson())));
         } catch (tools.jackson.core.JacksonException exception) {
             throw new IllegalStateException("stored snapshot JSON is invalid", exception);
@@ -291,10 +289,10 @@ public class ReleaseController {
     /**
      * 比较两个不可变 Agent Revision 的安全顶层区段。
      *
-     * @param authentication Spring Security 已认证上下文
-     * @param projectId      所属项目 UUIDv7
-     * @param agentId        Agent UUIDv7
-     * @param baseRevisionId 基准 Revision UUIDv7
+     * @param authentication   Spring Security 已认证上下文
+     * @param projectId        所属项目 UUIDv7
+     * @param agentId          Agent UUIDv7
+     * @param baseRevisionId   基准 Revision UUIDv7
      * @param targetRevisionId 目标 Revision UUIDv7
      * @return 不含资产正文的 Revision 差异摘要
      */
@@ -305,9 +303,11 @@ public class ReleaseController {
         @PathVariable String agentId,
         @RequestParam String baseRevisionId,
         @RequestParam String targetRevisionId) {
+
         RevisionComparison comparison = service.compareRevisions(
             principal(authentication), ProjectId.parse(projectId), AgentId.parse(agentId),
             RevisionId.parse(baseRevisionId), RevisionId.parse(targetRevisionId));
+
         return new RevisionComparisonResponse(
             comparison.baseRevisionId().asString(), comparison.targetRevisionId().asString(),
             comparison.baseContentHash().toString(), comparison.targetContentHash().toString(),
@@ -331,11 +331,11 @@ public class ReleaseController {
         @PathVariable String environmentId,
         @RequestParam(required = false) String cursor,
         @RequestParam(defaultValue = "50") int limit) {
+
         CursorPage<Deployment> page = service.listDeployments(
             principal(authentication), ProjectId.parse(projectId),
             EnvironmentId.parse(environmentId), cursor, limit);
-        return new DeploymentPageResponse(
-            page.items(), page.nextCursor().orElse(null), page.hasMore());
+        return new DeploymentPageResponse(page.items(), page.nextCursor().orElse(null), page.hasMore());
     }
 
     /**
@@ -353,13 +353,13 @@ public class ReleaseController {
         @PathVariable String projectId,
         @PathVariable String environmentId,
         @Valid @RequestBody CreateDeploymentRequest request) {
-        Deployment deployment = service.createDeployment(
-            principal(authentication), ProjectId.parse(projectId),
+
+        Deployment deployment = service.createDeployment(principal(authentication), ProjectId.parse(projectId),
             EnvironmentId.parse(environmentId), AgentId.parse(request.agentId()),
             RevisionId.parse(request.revisionId()), request.policy());
-        return ResponseEntity.created(URI.create(
-            "/api/v1/projects/" + projectId + "/environments/" + environmentId
-                + "/deployments/" + deployment.id().asString())).body(deployment);
+
+        return ResponseEntity.created(URI.create("/api/v1/projects/" + projectId + "/environments/" + environmentId
+            + "/deployments/" + deployment.id().asString())).body(deployment);
     }
 
     /**
@@ -377,8 +377,8 @@ public class ReleaseController {
         @PathVariable String projectId,
         @PathVariable String environmentId,
         @PathVariable String deploymentId) {
-        return service.getDeployment(
-            principal(authentication), ProjectId.parse(projectId),
+
+        return service.getDeployment(principal(authentication), ProjectId.parse(projectId),
             EnvironmentId.parse(environmentId), DeploymentId.parse(deploymentId));
     }
 
@@ -399,10 +399,9 @@ public class ReleaseController {
         @PathVariable String environmentId,
         @PathVariable String deploymentId,
         @Valid @RequestBody MoveDeploymentRequest request) {
-        return service.promote(
-            principal(authentication), ProjectId.parse(projectId), EnvironmentId.parse(environmentId),
-            DeploymentId.parse(deploymentId), RevisionId.parse(request.revisionId()),
-            request.expectedVersion());
+
+        return service.promote(principal(authentication), ProjectId.parse(projectId), EnvironmentId.parse(environmentId),
+            DeploymentId.parse(deploymentId), RevisionId.parse(request.revisionId()), request.expectedVersion());
     }
 
     /**
@@ -422,10 +421,9 @@ public class ReleaseController {
         @PathVariable String environmentId,
         @PathVariable String deploymentId,
         @Valid @RequestBody MoveDeploymentRequest request) {
-        return service.rollback(
-            principal(authentication), ProjectId.parse(projectId), EnvironmentId.parse(environmentId),
-            DeploymentId.parse(deploymentId), RevisionId.parse(request.revisionId()),
-            request.expectedVersion());
+
+        return service.rollback(principal(authentication), ProjectId.parse(projectId), EnvironmentId.parse(environmentId),
+            DeploymentId.parse(deploymentId), RevisionId.parse(request.revisionId()), request.expectedVersion());
     }
 
     /**
@@ -445,8 +443,8 @@ public class ReleaseController {
         @PathVariable String environmentId,
         @PathVariable String deploymentId,
         @Valid @RequestBody ChangeDeploymentStatusRequest request) {
-        return service.enable(
-            principal(authentication), ProjectId.parse(projectId), EnvironmentId.parse(environmentId),
+
+        return service.enable(principal(authentication), ProjectId.parse(projectId), EnvironmentId.parse(environmentId),
             DeploymentId.parse(deploymentId), request.expectedVersion());
     }
 
@@ -467,8 +465,8 @@ public class ReleaseController {
         @PathVariable String environmentId,
         @PathVariable String deploymentId,
         @Valid @RequestBody ChangeDeploymentStatusRequest request) {
-        return service.disable(
-            principal(authentication), ProjectId.parse(projectId), EnvironmentId.parse(environmentId),
+
+        return service.disable(principal(authentication), ProjectId.parse(projectId), EnvironmentId.parse(environmentId),
             DeploymentId.parse(deploymentId), request.expectedVersion());
     }
 
@@ -491,15 +489,17 @@ public class ReleaseController {
         @RequestHeader("X-AgentArk-Snapshot-Schema-Versions") String schemaVersions,
         @RequestHeader(value = "X-AgentArk-Runtime-Capabilities", defaultValue = "") String capabilities,
         @RequestHeader(value = HttpHeaders.IF_NONE_MATCH, required = false) String ifNoneMatch) {
-        StoredSnapshot snapshot = internalService.snapshot(
-            principal(authentication), RevisionId.parse(revisionId), runtimeProvider,
+
+        StoredSnapshot snapshot = internalService.snapshot(principal(authentication), RevisionId.parse(revisionId), runtimeProvider,
             integers(schemaVersions), strings(capabilities));
         String etag = "\"" + snapshot.revision().contentHash().hex() + "\"";
-        if (ifNoneMatch != null && Arrays.stream(ifNoneMatch.split(","))
-            .map(String::trim).anyMatch(etag::equals)) {
+        if (ifNoneMatch != null && Arrays.stream(ifNoneMatch.split(",")).map(String::trim).anyMatch(etag::equals)) {
             return ResponseEntity.status(HttpStatus.NOT_MODIFIED).eTag(etag).build();
         }
-        return ResponseEntity.ok().eTag(etag).contentType(MediaType.APPLICATION_JSON)
+
+        return ResponseEntity.ok()
+            .eTag(etag)
+            .contentType(MediaType.APPLICATION_JSON)
             .body(snapshot.canonicalJson());
     }
 
@@ -511,10 +511,8 @@ public class ReleaseController {
      * @return 语言中立 Deployment Descriptor
      */
     @GetMapping("/internal/v1/deployments/{deploymentId}")
-    public DeploymentDescriptor internalDeployment(
-        Authentication authentication, @PathVariable String deploymentId) {
-        return internalService.deployment(
-            principal(authentication), DeploymentId.parse(deploymentId));
+    public DeploymentDescriptor internalDeployment(Authentication authentication, @PathVariable String deploymentId) {
+        return internalService.deployment(principal(authentication), DeploymentId.parse(deploymentId));
     }
 
     /**
@@ -524,8 +522,7 @@ public class ReleaseController {
      * @return AgentArk 主体
      */
     private AgentArkPrincipal principal(Authentication authentication) {
-        if (authentication == null
-            || !(authentication.getPrincipal() instanceof AgentArkPrincipal principal)) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof AgentArkPrincipal principal)) {
             throw new IamAccessDeniedException("authenticated AgentArk principal is required");
         }
         return principal;

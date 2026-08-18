@@ -29,8 +29,7 @@ import java.util.Optional;
  * @param projectId      项目级变化的可选项目
  * @author refinex
  */
-public record IamAuthorizationChanged(
-    OrganizationId organizationId, Optional<ProjectId> projectId) {
+public record IamAuthorizationChanged(OrganizationId organizationId, Optional<ProjectId> projectId) {
 
     /**
      * 校验事件 Scope。

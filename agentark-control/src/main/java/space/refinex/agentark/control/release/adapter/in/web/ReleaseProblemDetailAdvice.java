@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import space.refinex.agentark.control.iam.application.IamAccessDeniedException;
 import space.refinex.agentark.control.iam.application.IamConflictException;
 import space.refinex.agentark.control.iam.application.IamNotFoundException;
+import space.refinex.agentark.foundation.web.RequestContext;
 import space.refinex.agentark.foundation.web.RequestContextAccessor;
 
 import java.net.URI;
@@ -61,8 +62,7 @@ public final class ReleaseProblemDetailAdvice {
      */
     @ExceptionHandler({IamAccessDeniedException.class, AccessDeniedException.class})
     public ProblemDetail forbidden(RuntimeException exception) {
-        return problem(HttpStatus.FORBIDDEN, "ARK-RELEASE-FORBIDDEN-00001",
-            "没有访问权限", "当前主体无权执行该发布或部署操作");
+        return problem(HttpStatus.FORBIDDEN, "ARK-RELEASE-FORBIDDEN-00001", "没有访问权限", "当前主体无权执行该发布或部署操作");
     }
 
     /**
@@ -73,8 +73,7 @@ public final class ReleaseProblemDetailAdvice {
      */
     @ExceptionHandler(IamNotFoundException.class)
     public ProblemDetail notFound(IamNotFoundException exception) {
-        return problem(HttpStatus.NOT_FOUND, "ARK-RELEASE-NOT-FOUND-00001",
-            "资源不存在", "请求的发布资源不存在或不可见");
+        return problem(HttpStatus.NOT_FOUND, "ARK-RELEASE-NOT-FOUND-00001", "资源不存在", "请求的发布资源不存在或不可见");
     }
 
     /**
@@ -85,8 +84,7 @@ public final class ReleaseProblemDetailAdvice {
      */
     @ExceptionHandler({IamConflictException.class, DataIntegrityViolationException.class})
     public ProblemDetail conflict(RuntimeException exception) {
-        return problem(HttpStatus.CONFLICT, "ARK-RELEASE-CONFLICT-00001",
-            "资源状态冲突", "Draft、资产、Runtime 能力或 Deployment 版本不满足前置条件");
+        return problem(HttpStatus.CONFLICT, "ARK-RELEASE-CONFLICT-00001", "资源状态冲突", "Draft、资产、Runtime 能力或 Deployment 版本不满足前置条件");
     }
 
     /**
@@ -97,8 +95,7 @@ public final class ReleaseProblemDetailAdvice {
      */
     @ExceptionHandler({IllegalArgumentException.class, MethodArgumentNotValidException.class})
     public ProblemDetail invalid(Exception exception) {
-        return problem(HttpStatus.BAD_REQUEST, "ARK-RELEASE-INVALID-REQUEST-00001",
-            "请求参数无效", "发布、部署或 Runtime 能力声明不符合契约");
+        return problem(HttpStatus.BAD_REQUEST, "ARK-RELEASE-INVALID-REQUEST-00001", "请求参数无效", "发布、部署或 Runtime 能力声明不符合契约");
     }
 
     /**
@@ -116,8 +113,7 @@ public final class ReleaseProblemDetailAdvice {
         problem.setType(URI.create("urn:agentark:error:" + code));
         problem.setTitle(title);
         problem.setProperty("code", code);
-        problem.setProperty("requestId", accessor.current()
-            .map(context -> context.requestId()).orElseGet(() -> UUID.randomUUID().toString()));
+        problem.setProperty("requestId", accessor.current().map(RequestContext::requestId).orElseGet(() -> UUID.randomUUID().toString()));
         return problem;
     }
 }

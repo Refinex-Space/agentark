@@ -16,13 +16,14 @@
 
 package space.refinex.agentark.control.iam.application.port;
 
-import java.time.Instant;
-import java.util.List;
-import java.util.Optional;
 import space.refinex.agentark.control.iam.domain.ApiKey;
 import space.refinex.agentark.kernel.id.ApiKeyId;
 import space.refinex.agentark.kernel.id.OrganizationId;
 import space.refinex.agentark.kernel.id.ProjectId;
+
+import java.time.Instant;
+import java.util.List;
+import java.util.Optional;
 
 /**
  * 定义 API Key 摘要、Scope、到期和吊销元数据的持久化端口。
@@ -59,17 +60,12 @@ public interface ApiKeyRepository {
     /**
      * 使用乐观锁吊销 API Key。
      *
-     * @param organizationId 组织标识
-     * @param projectId      项目标识
-     * @param apiKeyId       API Key 标识
-     * @param revokedAt      吊销时刻
+     * @param organizationId  组织标识
+     * @param projectId       项目标识
+     * @param apiKeyId        API Key 标识
+     * @param revokedAt       吊销时刻
      * @param expectedVersion 期望版本
      * @return 成功更新时为 {@code true}
      */
-    boolean revoke(
-        OrganizationId organizationId,
-        ProjectId projectId,
-        ApiKeyId apiKeyId,
-        Instant revokedAt,
-        long expectedVersion);
+    boolean revoke(OrganizationId organizationId, ProjectId projectId, ApiKeyId apiKeyId, Instant revokedAt, long expectedVersion);
 }

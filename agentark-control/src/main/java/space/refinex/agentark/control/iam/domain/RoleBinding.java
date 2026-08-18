@@ -80,8 +80,7 @@ public record RoleBinding(
         Objects.requireNonNull(scopeType, "scopeType must not be null");
         requireUuidV7(scopeId, "scopeId");
         if ((scopeType == IamScopeType.ORGANIZATION) != projectId.isEmpty()) {
-            throw new IllegalArgumentException(
-                "organization binding must omit projectId and child binding must include it");
+            throw new IllegalArgumentException("organization binding must omit projectId and child binding must include it");
         }
         version = IamFieldPolicy.version(version);
         createdAt = IamFieldPolicy.instant(createdAt, "createdAt");
@@ -110,6 +109,7 @@ public record RoleBinding(
         IamScopeType scopeType,
         UUID scopeId,
         Instant now) {
+
         Instant timestamp = IamFieldPolicy.instant(now, "now");
         return new RoleBinding(
             RoleBindingId.generate(),

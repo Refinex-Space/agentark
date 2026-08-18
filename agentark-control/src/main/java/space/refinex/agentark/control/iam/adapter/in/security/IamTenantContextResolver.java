@@ -23,6 +23,7 @@ import space.refinex.agentark.foundation.security.AgentArkPrincipal;
 import space.refinex.agentark.foundation.web.TenantContext;
 import space.refinex.agentark.foundation.web.TenantContextResolver;
 
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -43,8 +44,7 @@ public final class IamTenantContextResolver implements TenantContextResolver {
      * @param authorizationService IAM 授权服务
      */
     public IamTenantContextResolver(IamAuthorizationService authorizationService) {
-        this.authorizationService = java.util.Objects.requireNonNull(
-            authorizationService, "authorizationService must not be null");
+        this.authorizationService = Objects.requireNonNull(authorizationService, "authorizationService must not be null");
     }
 
     /**
@@ -60,8 +60,8 @@ public final class IamTenantContextResolver implements TenantContextResolver {
             || !(authentication.getPrincipal() instanceof AgentArkPrincipal principal)) {
             return Optional.empty();
         }
+
         return authorizationService.authorizedTenantSelection(principal)
-            .map(selection -> new TenantContext(
-                selection.organizationId(), selection.projectId(), selection.environmentId()));
+            .map(selection -> new TenantContext(selection.organizationId(), selection.projectId(), selection.environmentId()));
     }
 }

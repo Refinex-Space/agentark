@@ -24,8 +24,10 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import space.refinex.agentark.control.governance.adapter.in.web.GovernanceController;
 import space.refinex.agentark.control.governance.adapter.out.audit.PersistentIamAuditAdapter;
-import space.refinex.agentark.control.governance.adapter.out.persistence.*;
-import space.refinex.agentark.control.governance.application.*;
+import space.refinex.agentark.control.governance.adapter.out.persistence.GovernanceMapper;
+import space.refinex.agentark.control.governance.adapter.out.persistence.MybatisGovernanceRepository;
+import space.refinex.agentark.control.governance.application.GovernanceApplicationService;
+import space.refinex.agentark.control.governance.application.GovernanceReleaseGatePolicy;
 import space.refinex.agentark.control.governance.application.port.GovernanceRepository;
 import space.refinex.agentark.control.iam.application.IamAuthorizationService;
 import space.refinex.agentark.control.iam.application.port.IamAuditPort;
@@ -52,7 +54,9 @@ import java.time.Clock;
 @MapperScan(basePackageClasses = GovernanceMapper.class)
 public class GovernanceControlConfiguration {
 
-    /** 创建无状态 Governance 配置。 */
+    /**
+     * 创建无状态 Governance 配置。
+     */
     public GovernanceControlConfiguration() {
         // Spring 通过公开无参构造器创建配置实例。
     }
@@ -87,8 +91,7 @@ public class GovernanceControlConfiguration {
         IamAuthorizationService authorizationService,
         ReleaseRepository releaseRepository,
         Clock clock) {
-        return new GovernanceApplicationService(
-            repository, tenantRepository, authorizationService, releaseRepository, clock);
+        return new GovernanceApplicationService(repository, tenantRepository, authorizationService, releaseRepository, clock);
     }
 
     /**
@@ -112,10 +115,7 @@ public class GovernanceControlConfiguration {
      */
     @Bean
     @Primary
-    public IamAuditPort governanceIamAuditPort(
-        GovernanceRepository repository,
-        RequestContextAccessor requestContextAccessor,
-        Clock clock) {
+    public IamAuditPort governanceIamAuditPort(GovernanceRepository repository, RequestContextAccessor requestContextAccessor, Clock clock) {
         return new PersistentIamAuditAdapter(repository, requestContextAccessor, clock);
     }
 

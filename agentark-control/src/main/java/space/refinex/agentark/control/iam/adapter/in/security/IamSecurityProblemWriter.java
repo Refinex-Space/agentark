@@ -55,8 +55,7 @@ public final class IamSecurityProblemWriter {
      * @param response 当前响应
      * @throws IOException 响应写入失败时抛出
      */
-    public void unauthorized(HttpServletRequest request, HttpServletResponse response)
-        throws IOException {
+    public void unauthorized(HttpServletRequest request, HttpServletResponse response) throws IOException {
         write(request, response, HttpStatus.UNAUTHORIZED, "ARK-IAM-UNAUTHORIZED-00001",
             "身份认证失败", "请求需要有效的 Bearer Token 或 API Key");
     }
@@ -68,8 +67,7 @@ public final class IamSecurityProblemWriter {
      * @param response 当前响应
      * @throws IOException 响应写入失败时抛出
      */
-    public void forbidden(HttpServletRequest request, HttpServletResponse response)
-        throws IOException {
+    public void forbidden(HttpServletRequest request, HttpServletResponse response) throws IOException {
         write(request, response, HttpStatus.FORBIDDEN, "ARK-IAM-FORBIDDEN-00001",
             "没有访问权限", "当前主体无权执行该操作");
     }
@@ -85,13 +83,7 @@ public final class IamSecurityProblemWriter {
      * @param detail   安全详情
      * @throws IOException 响应写入失败时抛出
      */
-    private void write(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        HttpStatus status,
-        String code,
-        String title,
-        String detail) throws IOException {
+    private void write(HttpServletRequest request, HttpServletResponse response, HttpStatus status, String code, String title, String detail) throws IOException {
         ProblemDetail problem = ProblemDetail.forStatusAndDetail(status, detail);
         problem.setTitle(title);
         problem.setType(URI.create("urn:agentark:error:" + code));

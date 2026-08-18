@@ -25,6 +25,7 @@ import space.refinex.agentark.kernel.id.ServiceAccountId;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -46,7 +47,7 @@ public final class MybatisApiKeyRepository implements ApiKeyRepository {
      * @param mapper API Key Mapper
      */
     public MybatisApiKeyRepository(ApiKeyMapper mapper) {
-        this.mapper = java.util.Objects.requireNonNull(mapper, "mapper must not be null");
+        this.mapper = Objects.requireNonNull(mapper, "mapper must not be null");
     }
 
     /**
@@ -61,7 +62,9 @@ public final class MybatisApiKeyRepository implements ApiKeyRepository {
             apiKey.serviceAccountId().value(), apiKey.name(), apiKey.prefix(), apiKey.digest(),
             apiKey.expiresAt().orElse(null), apiKey.revokedAt().orElse(null), apiKey.version(),
             apiKey.createdAt(), apiKey.updatedAt()));
-        apiKey.scopes().stream().sorted()
+
+        apiKey.scopes().stream()
+            .sorted()
             .forEach(scope -> mapper.insertScope(apiKey.id().value(), scope, apiKey.createdAt()));
     }
 
@@ -85,10 +88,10 @@ public final class MybatisApiKeyRepository implements ApiKeyRepository {
      * @return 非秘密元数据列表
      */
     @Override
-    public List<ApiKey> list(
-        OrganizationId organizationId, ProjectId projectId, int limit) {
+    public List<ApiKey> list(OrganizationId organizationId, ProjectId projectId, int limit) {
         return mapper.list(organizationId.value(), projectId.value(), limit).stream()
-            .map(this::apiKey).toList();
+            .map(this::apiKey)
+            .toList();
     }
 
     /**
@@ -102,14 +105,8 @@ public final class MybatisApiKeyRepository implements ApiKeyRepository {
      * @return 更新成功时为 {@code true}
      */
     @Override
-    public boolean revoke(
-        OrganizationId organizationId,
-        ProjectId projectId,
-        ApiKeyId apiKeyId,
-        Instant revokedAt,
-        long expectedVersion) {
-        return mapper.revoke(organizationId.value(), projectId.value(), apiKeyId.value(),
-            revokedAt, expectedVersion) == 1;
+    public boolean revoke(OrganizationId organizationId, ProjectId projectId, ApiKeyId apiKeyId, Instant revokedAt, long expectedVersion) {
+        return mapper.revoke(organizationId.value(), projectId.value(), apiKeyId.value(), revokedAt, expectedVersion) == 1;
     }
 
     /**

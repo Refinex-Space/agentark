@@ -24,7 +24,6 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
 /**
  * 定义 Governance Public/Internal API 进入应用层的中立命令。
@@ -33,7 +32,9 @@ import java.util.UUID;
  */
 public final class GovernanceCommands {
 
-    /** 禁止实例化命令容器。 */
+    /**
+     * 禁止实例化命令容器。
+     */
     private GovernanceCommands() {
     }
 
@@ -80,12 +81,13 @@ public final class GovernanceCommands {
         Optional<String> requestId,
         Instant occurredAt) {
 
-        /** 校验命令容器和枚举字段非空。 */
+        /**
+         * 校验命令容器和枚举字段非空。
+         */
         public AuditCommand {
             organizationId = requireOptional(organizationId, "organizationId");
             projectId = requireOptional(projectId, "projectId");
-            diffSummary = Map.copyOf(java.util.Objects.requireNonNull(
-                diffSummary, "diffSummary must not be null"));
+            diffSummary = Map.copyOf(java.util.Objects.requireNonNull(diffSummary, "diffSummary must not be null"));
             policyVersion = requireOptional(policyVersion, "policyVersion");
             roleVersion = requireOptional(roleVersion, "roleVersion");
             traceId = requireOptional(traceId, "traceId");
@@ -110,7 +112,9 @@ public final class GovernanceCommands {
         Instant effectiveFrom,
         Map<String, BigDecimal> entries) {
 
-        /** 防御性复制价格项。 */
+        /**
+         * 防御性复制价格项。
+         */
         public PriceTableCommand {
             entries = Map.copyOf(java.util.Objects.requireNonNull(entries, "entries must not be null"));
         }
@@ -173,7 +177,9 @@ public final class GovernanceCommands {
         BigDecimal costAmount,
         Instant occurredAt) {
 
-        /** 校验所有 Optional 容器非空。 */
+        /**
+         * 校验所有 Optional 容器非空。
+         */
         public UsageCommand {
             agentId = requireOptional(agentId, "agentId");
             revisionId = requireOptional(revisionId, "revisionId");
@@ -213,7 +219,9 @@ public final class GovernanceCommands {
         Instant effectiveFrom,
         Optional<Instant> effectiveUntil) {
 
-        /** 校验 Optional 容器非空。 */
+        /**
+         * 校验 Optional 容器非空。
+         */
         public QuotaPolicyCommand {
             windowSeconds = requireOptional(windowSeconds, "windowSeconds");
             effectiveUntil = requireOptional(effectiveUntil, "effectiveUntil");
@@ -249,12 +257,12 @@ public final class GovernanceCommands {
     /**
      * Evaluation Test Case 创建命令。
      *
-     * @param key               用例键
-     * @param inputObjectUri    输入 ObjectRef URI
-     * @param inputContentHash  输入 Hash
-     * @param expected          期望投影
+     * @param key                 用例键
+     * @param inputObjectUri      输入 ObjectRef URI
+     * @param inputContentHash    输入 Hash
+     * @param expected            期望投影
      * @param expectedContentHash 期望 Hash
-     * @param weight            权重
+     * @param weight              权重
      * @author refinex
      */
     public record EvaluationCaseCommand(
@@ -265,7 +273,9 @@ public final class GovernanceCommands {
         Checksum expectedContentHash,
         BigDecimal weight) {
 
-        /** 防御性复制安全期望投影。 */
+        /**
+         * 防御性复制安全期望投影。
+         */
         public EvaluationCaseCommand {
             expected = Map.copyOf(java.util.Objects.requireNonNull(expected, "expected must not be null"));
         }
@@ -290,7 +300,9 @@ public final class GovernanceCommands {
         Checksum contentHash,
         List<EvaluationCaseCommand> cases) {
 
-        /** 防御性复制 Dataset 版本内容。 */
+        /**
+         * 防御性复制 Dataset 版本内容。
+         */
         public DatasetCommand {
             description = requireOptional(description, "description");
             schema = Map.copyOf(java.util.Objects.requireNonNull(schema, "schema must not be null"));
@@ -315,7 +327,9 @@ public final class GovernanceCommands {
         Map<String, Object> config,
         Checksum contentHash) {
 
-        /** 防御性复制 Evaluator 配置。 */
+        /**
+         * 防御性复制 Evaluator 配置。
+         */
         public EvaluatorCommand {
             config = Map.copyOf(java.util.Objects.requireNonNull(config, "config must not be null"));
         }
@@ -340,11 +354,12 @@ public final class GovernanceCommands {
         Optional<String> baselineRunId,
         Map<String, Checksum> observedHashes) {
 
-        /** 防御性复制回归引用和输出 Hash。 */
+        /**
+         * 防御性复制回归引用和输出 Hash。
+         */
         public EvaluationRunCommand {
             baselineRunId = requireOptional(baselineRunId, "baselineRunId");
-            observedHashes = Map.copyOf(java.util.Objects.requireNonNull(
-                observedHashes, "observedHashes must not be null"));
+            observedHashes = Map.copyOf(java.util.Objects.requireNonNull(observedHashes, "observedHashes must not be null"));
         }
     }
 
@@ -373,7 +388,9 @@ public final class GovernanceCommands {
         String status,
         Optional<Long> expectedVersion) {
 
-        /** 校验所有 Optional 容器非空。 */
+        /**
+         * 校验所有 Optional 容器非空。
+         */
         public ReleaseGateCommand {
             id = requireOptional(id, "id");
             environmentId = requireOptional(environmentId, "environmentId");
@@ -381,7 +398,9 @@ public final class GovernanceCommands {
         }
     }
 
-    /** 校验 Optional 容器非空并原样返回。 */
+    /**
+     * 校验 Optional 容器非空并原样返回。
+     */
     private static <T> Optional<T> requireOptional(Optional<T> value, String name) {
         return java.util.Objects.requireNonNull(value, name + " must not be null");
     }

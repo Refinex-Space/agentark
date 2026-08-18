@@ -18,10 +18,7 @@ package space.refinex.agentark.control.iam.application;
 
 import space.refinex.agentark.control.iam.domain.PermissionRiskLevel;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 定义 Control 可授予权限的唯一代码注册表，并提供内置角色权限集合。
@@ -135,40 +132,64 @@ public final class PermissionRegistry {
      */
     public static final String KNOWLEDGE_INGEST = "knowledge:ingest";
 
-    /** 允许读取 Agent、Draft、Revision 和校验报告。 */
+    /**
+     * 允许读取 Agent、Draft、Revision 和校验报告。
+     */
     public static final String AGENT_READ = "agent:read";
 
-    /** 允许创建 Agent 并更新 Draft。 */
+    /**
+     * 允许创建 Agent 并更新 Draft。
+     */
     public static final String AGENT_MANAGE = "agent:manage";
 
-    /** 允许把已校验 Draft 发布为不可变 Revision。 */
+    /**
+     * 允许把已校验 Draft 发布为不可变 Revision。
+     */
     public static final String AGENT_PUBLISH = "agent:publish";
 
-    /** 允许读取 Environment Deployment 与历史。 */
+    /**
+     * 允许读取 Environment Deployment 与历史。
+     */
     public static final String DEPLOYMENT_READ = "deployment:read";
 
-    /** 允许创建、Promote、Rollback、Enable 和 Disable Deployment。 */
+    /**
+     * 允许创建、Promote、Rollback、Enable 和 Disable Deployment。
+     */
     public static final String DEPLOYMENT_MANAGE = "deployment:manage";
 
-    /** 允许严格查询所属项目的安全审计事实。 */
+    /**
+     * 允许严格查询所属项目的安全审计事实。
+     */
     public static final String AUDIT_READ = "audit:read";
 
-    /** 允许读取所属项目的 Usage 与 Cost 明细和聚合。 */
+    /**
+     * 允许读取所属项目的 Usage 与 Cost 明细和聚合。
+     */
     public static final String USAGE_READ = "usage:read";
 
-    /** 允许读取所属项目的 Quota Policy 与 Reservation 摘要。 */
+    /**
+     * 允许读取所属项目的 Quota Policy 与 Reservation 摘要。
+     */
     public static final String QUOTA_READ = "quota:read";
 
-    /** 允许创建和更新所属项目的软硬配额策略。 */
+    /**
+     * 允许创建和更新所属项目的软硬配额策略。
+     */
     public static final String QUOTA_MANAGE = "quota:manage";
 
-    /** 允许读取版本化 Evaluation 与 Release Gate。 */
+    /**
+     * 允许读取版本化 Evaluation 与 Release Gate。
+     */
     public static final String EVALUATION_READ = "evaluation:read";
 
-    /** 允许管理 Dataset、Evaluator、Evaluation Run 与 Release Gate。 */
+    /**
+     * 允许管理 Dataset、Evaluator、Evaluation Run 与 Release Gate。
+     */
     public static final String EVALUATION_MANAGE = "evaluation:manage";
 
-    /** 允许管理版本化 Price Table 和计费规则。 */
+    /**
+     * 允许管理版本化 Price Table 和计费规则。
+     */
     public static final String PRICE_MANAGE = "price:manage";
 
     /**
@@ -283,8 +304,7 @@ public final class PermissionRegistry {
      * @throws IllegalArgumentException 当集合为空或包含未知权限时抛出
      */
     public static Set<String> requireRegistered(Set<String> permissionKeys) {
-        Set<String> checked = Set.copyOf(
-            java.util.Objects.requireNonNull(permissionKeys, "permissionKeys must not be null"));
+        Set<String> checked = Set.copyOf(Objects.requireNonNull(permissionKeys, "permissionKeys must not be null"));
         if (checked.isEmpty() || !DEFINITIONS.keySet().containsAll(checked)) {
             throw new IllegalArgumentException("permission keys must be registered and non-empty");
         }
@@ -387,8 +407,7 @@ public final class PermissionRegistry {
          */
         public Definition {
             if (description == null || description.isBlank() || description.length() > 255) {
-                throw new IllegalArgumentException(
-                    "permission description must contain 1 to 255 characters");
+                throw new IllegalArgumentException("permission description must contain 1 to 255 characters");
             }
             java.util.Objects.requireNonNull(riskLevel, "riskLevel must not be null");
         }

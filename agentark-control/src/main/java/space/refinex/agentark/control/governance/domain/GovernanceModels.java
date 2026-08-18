@@ -21,11 +21,11 @@ import space.refinex.agentark.kernel.ref.Checksum;
 
 import java.math.BigDecimal;
 import java.time.Instant;
-import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
  * 集中定义审计、用量成本、配额和版本化评估的语言中立治理模型。
@@ -34,7 +34,9 @@ import java.util.UUID;
  */
 public final class GovernanceModels {
 
-    /** 禁止实例化治理模型容器。 */
+    /**
+     * 禁止实例化治理模型容器。
+     */
     private GovernanceModels() {
     }
 
@@ -44,13 +46,24 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum AuditPlane {
-        /** 公共 Gateway。 */
+        /**
+         * 公共 Gateway。
+         */
         GATEWAY,
-        /** 控制平面。 */
+
+        /**
+         * 控制平面。
+         */
         CONTROL,
-        /** 运行平面。 */
+
+        /**
+         * 运行平面。
+         */
         RUNTIME,
-        /** 调度平面。 */
+
+        /**
+         * 调度平面。
+         */
         SCHEDULER
     }
 
@@ -60,15 +73,29 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum AuditPrincipalType {
-        /** 外部用户。 */
+        /**
+         * 外部用户。
+         */
         USER,
-        /** 服务账号。 */
+
+        /**
+         * 服务账号。
+         */
         SERVICE_ACCOUNT,
-        /** 接口密钥主体。 */
+
+        /**
+         * 接口密钥主体。
+         */
         API_KEY,
-        /** 内部服务身份。 */
+
+        /**
+         * 内部服务身份。
+         */
         SERVICE,
-        /** 平台后台任务。 */
+
+        /**
+         * 平台后台任务。
+         */
         SYSTEM
     }
 
@@ -78,11 +105,19 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum AuditResult {
-        /** 操作成功。 */
+        /**
+         * 操作成功。
+         */
         SUCCEEDED,
-        /** 授权拒绝。 */
+
+        /**
+         * 授权拒绝。
+         */
         DENIED,
-        /** 业务或基础设施失败。 */
+
+        /**
+         * 业务或基础设施失败。
+         */
         FAILED
     }
 
@@ -92,17 +127,34 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum AuditScopeType {
-        /** 平台。 */
+        /**
+         * 平台。
+         */
         PLATFORM,
-        /** 组织。 */
+
+        /**
+         * 组织。
+         */
         ORGANIZATION,
-        /** 项目。 */
+
+        /**
+         * 项目。
+         */
         PROJECT,
-        /** 环境。 */
+
+        /**
+         * 环境。
+         */
         ENVIRONMENT,
-        /** 运行实例。 */
+
+        /**
+         * 运行实例。
+         */
         RUN,
-        /** 调度任务。 */
+
+        /**
+         * 调度任务。
+         */
         JOB
     }
 
@@ -112,13 +164,24 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum UsageType {
-        /** 模型调用。 */
+        /**
+         * 模型调用。
+         */
         MODEL,
-        /** Embedding 调用。 */
+
+        /**
+         * Embedding 调用。
+         */
         EMBEDDING,
-        /** Tool 或 MCP 调用。 */
+
+        /**
+         * Tool 或 MCP 调用。
+         */
         TOOL,
-        /** Sandbox 执行。 */
+
+        /**
+         * Sandbox 执行。
+         */
         SANDBOX
     }
 
@@ -128,13 +191,24 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum QuotaScopeType {
-        /** 组织。 */
+        /**
+         * 组织。
+         */
         ORGANIZATION,
-        /** 项目。 */
+
+        /**
+         * 项目。
+         */
         PROJECT,
-        /** 部署。 */
+
+        /**
+         * 部署。
+         */
         DEPLOYMENT,
-        /** 模型。 */
+
+        /**
+         * 模型。
+         */
         MODEL
     }
 
@@ -144,15 +218,29 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum QuotaMetric {
-        /** 请求速率。 */
+        /**
+         * 请求速率。
+         */
         REQUEST_RATE,
-        /** 输入 Token。 */
+
+        /**
+         * 输入 Token。
+         */
         INPUT_TOKEN,
-        /** 输出 Token。 */
+
+        /**
+         * 输出 Token。
+         */
         OUTPUT_TOKEN,
-        /** 成本金额。 */
+
+        /**
+         * 成本金额。
+         */
         COST,
-        /** 并发 Run。 */
+
+        /**
+         * 并发 Run。
+         */
         CONCURRENT_RUN
     }
 
@@ -162,9 +250,14 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum QuotaEnforcement {
-        /** 仅告警。 */
+        /**
+         * 仅告警。
+         */
         SOFT,
-        /** 拒绝超限预留。 */
+
+        /**
+         * 拒绝超限预留。
+         */
         HARD
     }
 
@@ -174,11 +267,19 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum BudgetAction {
-        /** 记录告警并继续。 */
+        /**
+         * 记录告警并继续。
+         */
         WARN,
-        /** 请求人工审批。 */
+
+        /**
+         * 请求人工审批。
+         */
         REQUIRE_APPROVAL,
-        /** 明确停止运行。 */
+
+        /**
+         * 明确停止运行。
+         */
         STOP
     }
 
@@ -188,13 +289,24 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum ReservationStatus {
-        /** 正在占用额度。 */
+        /**
+         * 正在占用额度。
+         */
         HELD,
-        /** 已计入最终使用。 */
+
+        /**
+         * 已计入最终使用。
+         */
         COMMITTED,
-        /** 主动释放。 */
+
+        /**
+         * 主动释放。
+         */
         RELEASED,
-        /** 超时回收。 */
+
+        /**
+         * 超时回收。
+         */
         EXPIRED
     }
 
@@ -204,11 +316,19 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum EvaluatorType {
-        /** 固定规则确定性评估。 */
+        /**
+         * 固定规则确定性评估。
+         */
         DETERMINISTIC,
-        /** 模型评分。 */
+
+        /**
+         * 模型评分。
+         */
         MODEL,
-        /** 人工评分。 */
+
+        /**
+         * 人工评分。
+         */
         HUMAN
     }
 
@@ -218,43 +338,60 @@ public final class GovernanceModels {
      * @author refinex
      */
     public enum EvaluationStatus {
-        /** 等待执行。 */
+        /**
+         * 等待执行。
+         */
         QUEUED,
-        /** 正在执行。 */
+
+        /**
+         * 正在执行。
+         */
         RUNNING,
-        /** 通过阈值。 */
+
+        /**
+         * 通过阈值。
+         */
         PASSED,
-        /** 未通过阈值。 */
+
+        /**
+         * 未通过阈值。
+         */
         FAILED,
-        /** 评估器错误。 */
+
+        /**
+         * 评估器错误。
+         */
         ERROR,
-        /** 已取消。 */
+
+        /**
+         * 已取消。
+         */
         CANCELLED
     }
 
     /**
      * append-only 审计事实。
      *
-     * @param id              审计 UUIDv7
-     * @param sourceEventId   来源幂等事件标识
-     * @param sourcePlane     来源平面
-     * @param organizationId  可选组织
-     * @param projectId       可选项目
-     * @param principalType   主体类型
-     * @param principalRef    主体稳定引用
-     * @param scopeType       作用域类型
-     * @param scopeRef        作用域引用
-     * @param action          动作代码
-     * @param result          操作结果
-     * @param resourceType    资源类型
-     * @param resourceRef     资源引用
-     * @param diffSummary     不含正文的差异摘要
-     * @param policyVersion   可选策略版本
-     * @param roleVersion     可选角色版本
-     * @param traceId         可选 W3C Trace ID
-     * @param requestId       可选请求 ID
-     * @param occurredAt      发生时间
-     * @param ingestedAt      Control 接收时间
+     * @param id             审计 UUIDv7
+     * @param sourceEventId  来源幂等事件标识
+     * @param sourcePlane    来源平面
+     * @param organizationId 可选组织
+     * @param projectId      可选项目
+     * @param principalType  主体类型
+     * @param principalRef   主体稳定引用
+     * @param scopeType      作用域类型
+     * @param scopeRef       作用域引用
+     * @param action         动作代码
+     * @param result         操作结果
+     * @param resourceType   资源类型
+     * @param resourceRef    资源引用
+     * @param diffSummary    不含正文的差异摘要
+     * @param policyVersion  可选策略版本
+     * @param roleVersion    可选角色版本
+     * @param traceId        可选 W3C Trace ID
+     * @param requestId      可选请求 ID
+     * @param occurredAt     发生时间
+     * @param ingestedAt     Control 接收时间
      * @author refinex
      */
     public record AuditEvent(
@@ -279,7 +416,9 @@ public final class GovernanceModels {
         Instant occurredAt,
         Instant ingestedAt) {
 
-        /** 校验审计 Scope、关联字段和敏感数据最小化边界。 */
+        /**
+         * 校验审计 Scope、关联字段和敏感数据最小化边界。
+         */
         public AuditEvent {
             Objects.requireNonNull(id, "id must not be null");
             sourceEventId = text(sourceEventId, "sourceEventId", 128);
@@ -342,7 +481,9 @@ public final class GovernanceModels {
         Instant createdAt,
         Instant updatedAt) {
 
-        /** 校验价格表稳定身份。 */
+        /**
+         * 校验价格表稳定身份。
+         */
         public PriceTable {
             uuidV7(id, "id");
             Objects.requireNonNull(organizationId, "organizationId must not be null");
@@ -383,7 +524,9 @@ public final class GovernanceModels {
         Checksum contentHash,
         Instant createdAt) {
 
-        /** 校验不可变价格版本。 */
+        /**
+         * 校验不可变价格版本。
+         */
         public PriceTableVersion {
             uuidV7(id, "id");
             Objects.requireNonNull(organizationId, "organizationId must not be null");
@@ -462,7 +605,9 @@ public final class GovernanceModels {
         Instant occurredAt,
         Instant ingestedAt) {
 
-        /** 校验计量维度、金额和价格版本一致。 */
+        /**
+         * 校验计量维度、金额和价格版本一致。
+         */
         public UsageLedgerEntry {
             uuidV7(id, "id");
             oneOf(sourcePlane, "sourcePlane", "RUNTIME", "SCHEDULER", "CONTROL");
@@ -489,8 +634,7 @@ public final class GovernanceModels {
             currency = optionalText(currency, "currency", 3);
             currency.ifPresent(GovernanceModels::currency);
             Objects.requireNonNull(costAmount, "costAmount must not be null");
-            if (costAmount.signum() < 0 || costAmount.signum() > 0
-                && (priceTableVersionId.isEmpty() || currency.isEmpty())) {
+            if (costAmount.signum() < 0 || costAmount.signum() > 0 && (priceTableVersionId.isEmpty() || currency.isEmpty())) {
                 throw new IllegalArgumentException("positive cost requires price version and currency");
             }
             Objects.requireNonNull(occurredAt, "occurredAt must not be null");
@@ -501,22 +645,22 @@ public final class GovernanceModels {
     /**
      * Usage 与 Cost 查询聚合。
      *
-     * @param periodStart      窗口开始
-     * @param periodEnd        窗口结束
-     * @param dimensionType    聚合维度类型
-     * @param dimensionRef     维度引用
-     * @param provider         供应方标识
-     * @param model            模型或 none
-     * @param inputTokens      输入 Token
-     * @param outputTokens     输出 Token
-     * @param cachedTokens     缓存 Token
-     * @param embeddingTokens  嵌入令牌数
-     * @param toolCalls        Tool 调用次数
+     * @param periodStart       窗口开始
+     * @param periodEnd         窗口结束
+     * @param dimensionType     聚合维度类型
+     * @param dimensionRef      维度引用
+     * @param provider          供应方标识
+     * @param model             模型或 none
+     * @param inputTokens       输入 Token
+     * @param outputTokens      输出 Token
+     * @param cachedTokens      缓存 Token
+     * @param embeddingTokens   嵌入令牌数
+     * @param toolCalls         Tool 调用次数
      * @param sandboxDurationMs Sandbox 毫秒数
-     * @param estimatedRecords 估算记录数
-     * @param sourceRecords    明细数
-     * @param costAmount       成本
-     * @param currency         币种
+     * @param estimatedRecords  估算记录数
+     * @param sourceRecords     明细数
+     * @param costAmount        成本
+     * @param currency          币种
      * @author refinex
      */
     public record UsageAggregate(
@@ -537,7 +681,9 @@ public final class GovernanceModels {
         BigDecimal costAmount,
         String currency) {
 
-        /** 校验聚合窗口和非负计量。 */
+        /**
+         * 校验聚合窗口和非负计量。
+         */
         public UsageAggregate {
             Objects.requireNonNull(periodStart, "periodStart must not be null");
             Objects.requireNonNull(periodEnd, "periodEnd must not be null");
@@ -599,7 +745,9 @@ public final class GovernanceModels {
         String status,
         long version) {
 
-        /** 校验 Quota Policy 的窗口、上限和有效期。 */
+        /**
+         * 校验 Quota Policy 的窗口、上限和有效期。
+         */
         public QuotaPolicy {
             uuidV7(id, "id");
             Objects.requireNonNull(organizationId, "organizationId must not be null");
@@ -652,7 +800,9 @@ public final class GovernanceModels {
         Optional<BigDecimal> remaining,
         Optional<Instant> expiresAt) {
 
-        /** 校验预留结果字段组合。 */
+        /**
+         * 校验预留结果字段组合。
+         */
         public QuotaDecision {
             reservationId = optional(reservationId, "reservationId");
             reservationId.ifPresent(value -> uuidV7(value, "reservationId"));
@@ -685,7 +835,9 @@ public final class GovernanceModels {
         String status,
         long version) {
 
-        /** 校验 Dataset 稳定身份。 */
+        /**
+         * 校验 Dataset 稳定身份。
+         */
         public EvaluationDataset {
             uuidV7(id, "id");
             key = GovernanceModels.key(key, "key");
@@ -713,7 +865,9 @@ public final class GovernanceModels {
         Map<String, Object> schema,
         Checksum contentHash) {
 
-        /** 校验不可变 Dataset Version。 */
+        /**
+         * 校验不可变 Dataset Version。
+         */
         public DatasetVersion {
             uuidV7(id, "id");
             uuidV7(datasetId, "datasetId");
@@ -746,7 +900,9 @@ public final class GovernanceModels {
         Checksum expectedContentHash,
         BigDecimal weight) {
 
-        /** 校验 Test Case ObjectRef、Hash 和权重。 */
+        /**
+         * 校验 Test Case ObjectRef、Hash 和权重。
+         */
         public EvaluationTestCase {
             uuidV7(id, "id");
             uuidV7(datasetVersionId, "datasetVersionId");
@@ -774,7 +930,9 @@ public final class GovernanceModels {
      */
     public record Evaluator(UUID id, String key, String name, String status, long version) {
 
-        /** 校验 Evaluator 稳定身份。 */
+        /**
+         * 校验 Evaluator 稳定身份。
+         */
         public Evaluator {
             uuidV7(id, "id");
             key = GovernanceModels.key(key, "key");
@@ -803,7 +961,9 @@ public final class GovernanceModels {
         Map<String, Object> config,
         Checksum contentHash) {
 
-        /** 校验不可变 Evaluator Version。 */
+        /**
+         * 校验不可变 Evaluator Version。
+         */
         public EvaluatorVersion {
             uuidV7(id, "id");
             uuidV7(evaluatorId, "evaluatorId");
@@ -849,7 +1009,9 @@ public final class GovernanceModels {
         Instant createdAt,
         Optional<Instant> completedAt) {
 
-        /** 校验 Evaluation Run 固定引用、阈值和终态字段。 */
+        /**
+         * 校验 Evaluation Run 固定引用、阈值和终态字段。
+         */
         public EvaluationRun {
             uuidV7(id, "id");
             Objects.requireNonNull(candidateRevisionId, "candidateRevisionId must not be null");
@@ -867,8 +1029,7 @@ public final class GovernanceModels {
             regressionDelta = optional(regressionDelta, "regressionDelta");
             Objects.requireNonNull(createdAt, "createdAt must not be null");
             completedAt = optional(completedAt, "completedAt");
-            if ((status == EvaluationStatus.QUEUED || status == EvaluationStatus.RUNNING)
-                == completedAt.isPresent()) {
+            if ((status == EvaluationStatus.QUEUED || status == EvaluationStatus.RUNNING) == completedAt.isPresent()) {
                 throw new IllegalArgumentException("evaluation terminal time does not match status");
             }
         }
@@ -877,13 +1038,13 @@ public final class GovernanceModels {
     /**
      * 单个 Test Case 的只追加评分。
      *
-     * @param id           评分标识
-     * @param runId        评估运行标识
-     * @param testCaseId   测试用例标识
-     * @param metricKey    指标 Key
-     * @param score        0 到 1 分数
-     * @param passed       是否通过
-     * @param details      安全详情
+     * @param id         评分标识
+     * @param runId      评估运行标识
+     * @param testCaseId 测试用例标识
+     * @param metricKey  指标 Key
+     * @param score      0 到 1 分数
+     * @param passed     是否通过
+     * @param details    安全详情
      * @author refinex
      */
     public record EvaluationScore(
@@ -895,7 +1056,9 @@ public final class GovernanceModels {
         boolean passed,
         Map<String, Object> details) {
 
-        /** 校验评分范围和详情最小化。 */
+        /**
+         * 校验评分范围和详情最小化。
+         */
         public EvaluationScore {
             uuidV7(id, "id");
             uuidV7(runId, "runId");
@@ -935,7 +1098,9 @@ public final class GovernanceModels {
         String status,
         long version) {
 
-        /** 校验 Gate 作用域与固定版本。 */
+        /**
+         * 校验 Gate 作用域与固定版本。
+         */
         public ReleaseGate {
             uuidV7(id, "id");
             Objects.requireNonNull(organizationId, "organizationId must not be null");
@@ -968,7 +1133,9 @@ public final class GovernanceModels {
         Optional<UUID> evaluationRun,
         String reason) {
 
-        /** 校验 Gate 决策关联字段。 */
+        /**
+         * 校验 Gate 决策关联字段。
+         */
         public ReleaseGateDecision {
             gateId = optional(gateId, "gateId");
             gateId.ifPresent(value -> uuidV7(value, "gateId"));
@@ -981,16 +1148,19 @@ public final class GovernanceModels {
         }
     }
 
-    /** 校验字符串为非空短文本。 */
+    /**
+     * 校验字符串为非空短文本。
+     */
     private static String text(String value, String name, int maxLength) {
-        if (value == null || value.isBlank() || value.length() > maxLength
-            || value.chars().anyMatch(character -> Character.isISOControl(character))) {
+        if (value == null || value.isBlank() || value.length() > maxLength || value.chars().anyMatch(Character::isISOControl)) {
             throw new IllegalArgumentException(name + " has invalid text");
         }
         return value;
     }
 
-    /** 校验字符串为稳定代码。 */
+    /**
+     * 校验字符串为稳定代码。
+     */
     private static String code(String value, String name, int maxLength) {
         text(value, name, maxLength);
         if (!value.matches("[a-z][a-z0-9_.:-]{0," + (maxLength - 1) + "}")) {
@@ -999,7 +1169,9 @@ public final class GovernanceModels {
         return value;
     }
 
-    /** 校验项目内资源 Key。 */
+    /**
+     * 校验项目内资源 Key。
+     */
     private static String key(String value, String name) {
         if (value == null || !value.matches("[a-z][a-z0-9-]{0,62}")) {
             throw new IllegalArgumentException(name + " must be a normalized key");
@@ -1007,35 +1179,45 @@ public final class GovernanceModels {
         return value;
     }
 
-    /** 校验枚举字符串来自给定集合。 */
+    /**
+     * 校验枚举字符串来自给定集合。
+     */
     private static void oneOf(String value, String name, String... allowed) {
-        if (value == null || List.of(allowed).stream().noneMatch(value::equals)) {
+        if (value == null || Stream.of(allowed).noneMatch(value::equals)) {
             throw new IllegalArgumentException(name + " has unsupported value");
         }
     }
 
-    /** 校验 RFC 9562 UUIDv7。 */
+    /**
+     * 校验 RFC 9562 UUIDv7。
+     */
     private static void uuidV7(UUID value, String name) {
         if (value == null || value.version() != 7 || value.variant() != 2) {
             throw new IllegalArgumentException(name + " must be UUIDv7");
         }
     }
 
-    /** 校验非负长整数。 */
+    /**
+     * 校验非负长整数。
+     */
     private static void nonNegative(long value, String name) {
         if (value < 0) {
             throw new IllegalArgumentException(name + " must not be negative");
         }
     }
 
-    /** 校验正长整数。 */
+    /**
+     * 校验正长整数。
+     */
     private static void positive(long value, String name) {
         if (value < 1) {
             throw new IllegalArgumentException(name + " must be positive");
         }
     }
 
-    /** 校验 0 到 1 的比例。 */
+    /**
+     * 校验 0 到 1 的比例。
+     */
     private static void ratio(BigDecimal value, String name) {
         Objects.requireNonNull(value, name + " must not be null");
         if (value.compareTo(BigDecimal.ZERO) < 0 || value.compareTo(BigDecimal.ONE) > 0) {
@@ -1043,7 +1225,9 @@ public final class GovernanceModels {
         }
     }
 
-    /** 校验 ISO 4217 三字符币种。 */
+    /**
+     * 校验 ISO 4217 三字符币种。
+     */
     private static String currency(String value) {
         if (value == null || !value.matches("[A-Z]{3}")) {
             throw new IllegalArgumentException("currency must use ISO 4217 format");
@@ -1051,12 +1235,16 @@ public final class GovernanceModels {
         return value;
     }
 
-    /** 校验 Optional 容器本身非空。 */
+    /**
+     * 校验 Optional 容器本身非空。
+     */
     private static <T> Optional<T> optional(Optional<T> value, String name) {
         return Objects.requireNonNull(value, name + " must not be null");
     }
 
-    /** 校验 Optional 文本存在时满足长度。 */
+    /**
+     * 校验 Optional 文本存在时满足长度。
+     */
     private static Optional<String> optionalText(
         Optional<String> value, String name, int maxLength) {
         Optional<String> checked = optional(value, name);

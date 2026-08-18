@@ -92,6 +92,7 @@ public record UserIdentity(
         Optional<String> displayName,
         Optional<String> email,
         Instant now) {
+
         Instant timestamp = IamFieldPolicy.instant(now, "now");
         return new UserIdentity(
             UserIdentityId.generate(),

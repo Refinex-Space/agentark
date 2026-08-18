@@ -113,8 +113,7 @@ public record IamAuditRecord(
         /**
          * 允许的审计结果代码。
          */
-        private static final java.util.Set<String> OUTCOMES = java.util.Set.of(
-            "SUCCEEDED", "DENIED", "FAILED");
+        private static final java.util.Set<String> OUTCOMES = java.util.Set.of("SUCCEEDED", "DENIED", "FAILED");
 
         /**
          * 禁止实例化常量持有类。

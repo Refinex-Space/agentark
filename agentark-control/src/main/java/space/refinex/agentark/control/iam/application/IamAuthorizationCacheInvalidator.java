@@ -48,9 +48,7 @@ public final class IamAuthorizationCacheInvalidator {
      *
      * @param event 授权事实变化事件
      */
-    @TransactionalEventListener(
-        phase = TransactionPhase.AFTER_COMMIT,
-        fallbackExecution = true)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void invalidate(IamAuthorizationChanged event) {
         Objects.requireNonNull(event, "event must not be null");
         if (event.projectId().isPresent()) {

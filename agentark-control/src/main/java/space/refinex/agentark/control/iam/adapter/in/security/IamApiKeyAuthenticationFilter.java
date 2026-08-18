@@ -20,9 +20,9 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpHeaders;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -39,9 +39,10 @@ import java.util.Arrays;
  */
 public final class IamApiKeyAuthenticationFilter extends OncePerRequestFilter {
 
-    /** 只记录 API Key 认证阶段结果而不记录凭据、前缀或主体的安全诊断日志。 */
-    private static final Logger LOGGER = LoggerFactory.getLogger(
-        IamApiKeyAuthenticationFilter.class);
+    /**
+     * 只记录 API Key 认证阶段结果而不记录凭据、前缀或主体的安全诊断日志。
+     */
+    private static final Logger LOGGER = LoggerFactory.getLogger(IamApiKeyAuthenticationFilter.class);
 
     /**
      * API Key 的认证方案前缀。
@@ -66,10 +67,8 @@ public final class IamApiKeyAuthenticationFilter extends OncePerRequestFilter {
      */
     public IamApiKeyAuthenticationFilter(
         IamApiKeyService apiKeyService, IamSecurityProblemWriter problemWriter) {
-        this.apiKeyService = java.util.Objects.requireNonNull(
-            apiKeyService, "apiKeyService must not be null");
-        this.problemWriter = java.util.Objects.requireNonNull(
-            problemWriter, "problemWriter must not be null");
+        this.apiKeyService = java.util.Objects.requireNonNull(apiKeyService, "apiKeyService must not be null");
+        this.problemWriter = java.util.Objects.requireNonNull(problemWriter, "problemWriter must not be null");
     }
 
     /**
@@ -82,15 +81,13 @@ public final class IamApiKeyAuthenticationFilter extends OncePerRequestFilter {
      * @throws IOException      响应或后续过滤器写入失败时抛出
      */
     @Override
-    protected void doFilterInternal(
-        HttpServletRequest request,
-        HttpServletResponse response,
-        FilterChain filterChain) throws ServletException, IOException {
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
         if (authorization == null || !authorization.startsWith(SCHEME)) {
             filterChain.doFilter(request, response);
             return;
         }
+
         LOGGER.debug("API key authentication requested");
         String credential = authorization.substring(SCHEME.length());
         if (!credential.matches("ark_[A-Za-z0-9_-]{12}_[A-Za-z0-9_-]{43}")) {
@@ -98,8 +95,10 @@ public final class IamApiKeyAuthenticationFilter extends OncePerRequestFilter {
             problemWriter.unauthorized(request, response);
             return;
         }
+
         String prefix = credential.substring(4, 16);
         char[] secret = credential.substring(17).toCharArray();
+
         try {
             var principal = apiKeyService.authenticate(prefix, secret, "agentark-control");
             if (principal.isEmpty()) {
@@ -111,9 +110,8 @@ public final class IamApiKeyAuthenticationFilter extends OncePerRequestFilter {
             var authorities = authenticated.authorities().stream()
                 .map(SimpleGrantedAuthority::new)
                 .toList();
-            SecurityContextHolder.getContext().setAuthentication(
-                UsernamePasswordAuthenticationToken.authenticated(
-                    authenticated, null, authorities));
+            SecurityContextHolder.getContext()
+                .setAuthentication(UsernamePasswordAuthenticationToken.authenticated(authenticated, null, authorities));
             LOGGER.debug("API key authentication succeeded");
             filterChain.doFilter(request, response);
         } finally {

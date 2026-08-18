@@ -19,9 +19,13 @@ package space.refinex.agentark.control.iam.adapter.in.security;
 import com.baomidou.mybatisplus.extension.plugins.handler.TenantLineHandler;
 import net.sf.jsqlparser.expression.Expression;
 import net.sf.jsqlparser.expression.HexValue;
+import space.refinex.agentark.foundation.web.RequestContext;
 import space.refinex.agentark.foundation.web.RequestContextAccessor;
 
+import java.nio.ByteBuffer;
 import java.util.HexFormat;
+import java.util.Locale;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -55,8 +59,7 @@ public final class ControlTenantLineHandler implements TenantLineHandler {
      * @param requestContextAccessor 请求上下文访问器
      */
     public ControlTenantLineHandler(RequestContextAccessor requestContextAccessor) {
-        this.requestContextAccessor = java.util.Objects.requireNonNull(
-            requestContextAccessor, "requestContextAccessor must not be null");
+        this.requestContextAccessor = Objects.requireNonNull(requestContextAccessor, "requestContextAccessor must not be null");
     }
 
     /**
@@ -67,11 +70,10 @@ public final class ControlTenantLineHandler implements TenantLineHandler {
     @Override
     public Expression getTenantId() {
         var organizationId = requestContextAccessor.current()
-            .flatMap(context -> context.tenant())
+            .flatMap(RequestContext::tenant)
             .map(tenant -> tenant.organizationId().value())
-            .orElseThrow(() -> new IllegalStateException(
-                "authorized tenant context is required for implicit tenant SQL"));
-        byte[] bytes = java.nio.ByteBuffer.allocate(16)
+            .orElseThrow(() -> new IllegalStateException("authorized tenant context is required for implicit tenant SQL"));
+        byte[] bytes = ByteBuffer.allocate(16)
             .putLong(organizationId.getMostSignificantBits())
             .putLong(organizationId.getLeastSignificantBits())
             .array();
@@ -96,6 +98,6 @@ public final class ControlTenantLineHandler implements TenantLineHandler {
      */
     @Override
     public boolean ignoreTable(String tableName) {
-        return GLOBAL_TABLES.contains(tableName.toLowerCase(java.util.Locale.ROOT));
+        return GLOBAL_TABLES.contains(tableName.toLowerCase(Locale.ROOT));
     }
 }

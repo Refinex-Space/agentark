@@ -82,6 +82,7 @@ public record ApiKey(
         Objects.requireNonNull(organizationId, "organizationId must not be null");
         Objects.requireNonNull(projectId, "projectId must not be null");
         Objects.requireNonNull(serviceAccountId, "serviceAccountId must not be null");
+
         name = IamFieldPolicy.text(name, "name", 128);
         if (prefix == null || !prefix.matches("[A-Za-z0-9_-]{12}")) {
             throw new IllegalArgumentException("prefix must contain 12 base64url characters");
@@ -91,9 +92,7 @@ public record ApiKey(
         }
         digest = Arrays.copyOf(digest, digest.length);
         scopes = Set.copyOf(Objects.requireNonNull(scopes, "scopes must not be null"));
-        if (scopes.isEmpty()
-            || scopes.stream()
-            .anyMatch(value -> !value.matches("[a-z][a-z0-9_]*:[a-z][a-z0-9_]*"))) {
+        if (scopes.isEmpty() || scopes.stream().anyMatch(value -> !value.matches("[a-z][a-z0-9_]*:[a-z][a-z0-9_]*"))) {
             throw new IllegalArgumentException("scopes must contain permission keys");
         }
         expiresAt = normalize(expiresAt);
@@ -151,6 +150,7 @@ public record ApiKey(
         Set<String> scopes,
         Optional<Instant> expiresAt,
         Instant now) {
+
         Instant timestamp = IamFieldPolicy.instant(now, "now");
         return new ApiKey(
             ApiKeyId.generate(),

@@ -19,6 +19,7 @@ package space.refinex.agentark.control.catalog.application;
 import space.refinex.agentark.kernel.id.StrongId;
 
 import java.util.List;
+import java.util.Objects;
 
 /**
  * 表示两个不可变版本间发生变化的 JSON Pointer 路径，不回显 Secret 值。
@@ -29,14 +30,16 @@ import java.util.List;
  * @author refinex
  */
 public record CatalogVersionDiff(
-    StrongId baseVersionId, StrongId targetVersionId, List<String> changedPaths) {
+    StrongId baseVersionId,
+    StrongId targetVersionId,
+    List<String> changedPaths) {
 
     /**
      * 防御性复制差异路径。
      */
     public CatalogVersionDiff {
-        java.util.Objects.requireNonNull(baseVersionId, "baseVersionId must not be null");
-        java.util.Objects.requireNonNull(targetVersionId, "targetVersionId must not be null");
+        Objects.requireNonNull(baseVersionId, "baseVersionId must not be null");
+        Objects.requireNonNull(targetVersionId, "targetVersionId must not be null");
         changedPaths = List.copyOf(changedPaths);
     }
 }

@@ -69,7 +69,7 @@ public final class SkillSupplyChainVerifier {
     /**
      * 验证 Skill 供应链证明；本地开发显式关闭时只保留既有 ObjectRef 完整性检查。
      *
-     * @param payload Skill Version 载荷
+     * @param payload     Skill Version 载荷
      * @param objectStore Object Store
      */
     public void verify(Map<String, Object> payload, ObjectStore objectStore) {
@@ -78,10 +78,12 @@ public final class SkillSupplyChainVerifier {
         if (!properties.isSkillSupplyChainRequired()) {
             return;
         }
+
         String license = text(payload, "license");
         if (!properties.getAllowedSkillLicenses().contains(license)) {
             throw rejected("skill license is not allowlisted");
         }
+
         ObjectRef artifact = objectRef(object(payload, "artifact"));
         ObjectRef sbom = objectRef(object(payload, "sbom"));
         Map<String, Object> scan = object(payload, "scanAttestation");
@@ -103,19 +105,19 @@ public final class SkillSupplyChainVerifier {
         if (encodedKey == null) {
             throw rejected("skill signing key is not trusted");
         }
-        String manifest = manifest(
-            artifact, text(payload, "sourceUri"), license, sbom, scanner, scannedAt, scanStatus);
+        String manifest = manifest(artifact, text(payload, "sourceUri"), license, sbom, scanner, scannedAt, scanStatus);
         verifySignature(encodedKey, text(signature, "value"), manifest);
     }
 
     /**
-     * @param ref SBOM 对象引用
+     * @param ref         SBOM 对象引用
      * @param objectStore Object Store
      */
     private void verifyObject(ObjectRef ref, ObjectStore objectStore) {
         try {
             ObjectMetadata metadata = objectStore.head(ref);
-            if (!metadata.checksum().equals(ref.checksum()) || metadata.size() != ref.size()
+            if (!metadata.checksum().equals(ref.checksum())
+                || metadata.size() != ref.size()
                 || !metadata.contentType().equals(ref.mediaType())) {
                 throw rejected("skill SBOM metadata does not match object store");
             }
@@ -125,7 +127,7 @@ public final class SkillSupplyChainVerifier {
     }
 
     /**
-     * @param ref SBOM 对象引用
+     * @param ref         SBOM 对象引用
      * @param objectStore Object Store
      */
     @SuppressWarnings("unchecked")
@@ -135,12 +137,13 @@ public final class SkillSupplyChainVerifier {
             || !"application/vnd.cyclonedx+json".equals(ref.mediaType())) {
             throw rejected("skill SBOM size or media type is invalid");
         }
+
         try (InputStream input = objectStore.get(ref)) {
             byte[] bytes = input.readNBytes(Math.toIntExact(maximum + 1));
-            if (bytes.length != ref.size() || bytes.length > maximum
-                || !Checksum.sha256(bytes).equals(ref.checksum())) {
+            if (bytes.length != ref.size() || bytes.length > maximum || !Checksum.sha256(bytes).equals(ref.checksum())) {
                 throw rejected("skill SBOM content does not match ObjectRef");
             }
+
             Map<String, Object> document = jsonMapper.readValue(bytes, Map.class);
             if (!"CycloneDX".equals(document.get("bomFormat"))
                 || !(document.get("specVersion") instanceof String version)
@@ -153,14 +156,14 @@ public final class SkillSupplyChainVerifier {
     }
 
     /**
-     * @param encodedKey Base64 X.509 Ed25519 公钥
+     * @param encodedKey       Base64 X.509 Ed25519 公钥
      * @param encodedSignature Base64 签名
-     * @param manifest 被签名稳定清单
+     * @param manifest         被签名稳定清单
      */
     private void verifySignature(String encodedKey, String encodedSignature, String manifest) {
         try {
-            PublicKey key = KeyFactory.getInstance("Ed25519").generatePublic(
-                new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey)));
+            PublicKey key = KeyFactory.getInstance("Ed25519")
+                .generatePublic(new X509EncodedKeySpec(Base64.getDecoder().decode(encodedKey)));
             Signature verifier = Signature.getInstance("Ed25519");
             verifier.initVerify(key);
             verifier.update(manifest.getBytes(StandardCharsets.UTF_8));
@@ -173,30 +176,25 @@ public final class SkillSupplyChainVerifier {
     }
 
     /**
-     * @param artifact Skill Artifact 引用
+     * @param artifact  Skill Artifact 引用
      * @param sourceUri 来源 URI
-     * @param license SPDX 许可证
-     * @param sbom CycloneDX SBOM 引用
-     * @param scanner 扫描器名称与版本
+     * @param license   SPDX 许可证
+     * @param sbom      CycloneDX SBOM 引用
+     * @param scanner   扫描器名称与版本
      * @param scannedAt 扫描时刻
-     * @param status 扫描结果
+     * @param status    扫描结果
      * @return 用换行分隔且版本化的稳定签名清单
      */
-    public static String manifest(
-        ObjectRef artifact,
-        String sourceUri,
-        String license,
-        ObjectRef sbom,
-        String scanner,
-        Instant scannedAt,
-        String status) {
+    public static String manifest(ObjectRef artifact, String sourceUri, String license, ObjectRef sbom, String scanner,
+                                  Instant scannedAt, String status) {
+
         return String.join("\n", "agentark-skill-v1", artifact.checksum().toString(), sourceUri,
             license, sbom.checksum().toString(), scanner, scannedAt.toString(), status);
     }
 
     /**
      * @param values JSON 对象
-     * @param key 字段名
+     * @param key    字段名
      * @return 必需嵌套对象
      */
     @SuppressWarnings("unchecked")
@@ -210,7 +208,7 @@ public final class SkillSupplyChainVerifier {
 
     /**
      * @param values JSON 对象
-     * @param key 字段名
+     * @param key    字段名
      * @return 必需非空文本
      */
     private String text(Map<String, Object> values, String key) {
@@ -223,7 +221,7 @@ public final class SkillSupplyChainVerifier {
 
     /**
      * @param values JSON 对象
-     * @param key 字段名
+     * @param key    字段名
      * @return ISO-8601 时刻
      */
     private Instant instant(Map<String, Object> values, String key) {
@@ -243,8 +241,13 @@ public final class SkillSupplyChainVerifier {
         if (!(size instanceof Number number)) {
             throw rejected("skill ObjectRef size must be a number");
         }
-        return ObjectRef.of(text(value, "uri"), new Checksum(text(value, "checksum")),
-            number.longValue(), text(value, "mediaType"));
+
+        return ObjectRef.of(
+            text(value, "uri"),
+            new Checksum(text(value, "checksum")),
+            number.longValue(),
+            text(value, "mediaType")
+        );
     }
 
     /**

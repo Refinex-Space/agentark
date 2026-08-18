@@ -90,6 +90,7 @@ public record Membership(
         PrincipalKind principalKind,
         UUID principalId,
         Instant now) {
+
         Instant timestamp = IamFieldPolicy.instant(now, "now");
         return new Membership(
             MembershipId.generate(),

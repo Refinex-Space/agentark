@@ -18,16 +18,13 @@ package space.refinex.agentark.control.catalog.adapter.out.persistence;
 
 import space.refinex.agentark.control.catalog.application.port.CatalogRepository;
 import space.refinex.agentark.control.catalog.domain.*;
-import space.refinex.agentark.kernel.id.OrganizationId;
-import space.refinex.agentark.kernel.id.ProjectId;
-import space.refinex.agentark.kernel.id.McpServerVersionId;
-import space.refinex.agentark.kernel.id.McpToolDescriptorId;
-import space.refinex.agentark.kernel.id.StrongId;
+import space.refinex.agentark.kernel.id.*;
 import space.refinex.agentark.kernel.ref.Checksum;
 
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
@@ -46,7 +43,7 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @param mapper 显式 Scope Mapper
      */
     public MybatisCatalogRepository(CatalogMapper mapper) {
-        this.mapper = java.util.Objects.requireNonNull(mapper, "mapper must not be null");
+        this.mapper = Objects.requireNonNull(mapper, "mapper must not be null");
     }
 
     /**
@@ -55,11 +52,23 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      */
     @Override
     public void insertAsset(CatalogAsset asset, String actor) {
-        mapper.insertAsset(asset.kind(), new CatalogPersistenceRows.AssetRow(
-            asset.id().value(), asset.organizationId().value(), asset.projectId().value(),
-            asset.key(), asset.name(), asset.description(), asset.metadataJson(),
-            asset.status().name(), asset.version(), asset.createdAt(), actor, asset.updatedAt(),
-            actor));
+        mapper.insertAsset(
+            asset.kind(),
+            new CatalogPersistenceRows.AssetRow(
+                asset.id().value(),
+                asset.organizationId().value(),
+                asset.projectId().value(),
+                asset.key(),
+                asset.name(),
+                asset.description(),
+                asset.metadataJson(),
+                asset.status().name(),
+                asset.version(),
+                asset.createdAt(),
+                actor,
+                asset.updatedAt(),
+                actor)
+        );
     }
 
     /**
@@ -69,8 +78,7 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @return 同项目资产
      */
     @Override
-    public Optional<CatalogAsset> findAsset(
-        CatalogAssetKind kind, ProjectId projectId, StrongId id) {
+    public Optional<CatalogAsset> findAsset(CatalogAssetKind kind, ProjectId projectId, StrongId id) {
         return mapper.findAsset(kind, projectId.value(), id.value())
             .map(row -> asset(kind, row));
     }
@@ -83,8 +91,7 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @return 按 Key 排序的资产
      */
     @Override
-    public List<CatalogAsset> listAssets(
-        CatalogAssetKind kind, ProjectId projectId, String afterKey, int limit) {
+    public List<CatalogAsset> listAssets(CatalogAssetKind kind, ProjectId projectId, String afterKey, int limit) {
         return mapper.listAssets(kind, projectId.value(), afterKey, limit).stream()
             .map(row -> asset(kind, row)).toList();
     }
@@ -99,15 +106,8 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @return 更新行数
      */
     @Override
-    public int archiveAsset(
-        CatalogAssetKind kind,
-        ProjectId projectId,
-        StrongId id,
-        long expectedVersion,
-        String actor,
-        Instant now) {
-        return mapper.archiveAsset(
-            kind, projectId.value(), id.value(), expectedVersion, actor, now);
+    public int archiveAsset(CatalogAssetKind kind, ProjectId projectId, StrongId id, long expectedVersion, String actor, Instant now) {
+        return mapper.archiveAsset(kind, projectId.value(), id.value(), expectedVersion, actor, now);
     }
 
     /**
@@ -117,8 +117,7 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @return Owner 存在时下一版本号
      */
     @Override
-    public Optional<Long> nextVersionNumber(
-        CatalogAssetKind kind, ProjectId projectId, StrongId ownerId) {
+    public Optional<Long> nextVersionNumber(CatalogAssetKind kind, ProjectId projectId, StrongId ownerId) {
         return mapper.lockAsset(kind, projectId.value(), ownerId.value())
             .map(ignored -> mapper.nextVersionNumber(kind, projectId.value(), ownerId.value()));
     }
@@ -129,19 +128,37 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @param actor   创建主体稳定引用
      */
     @Override
-    public void insertVersion(
-        CatalogVersion version, List<McpToolDescriptorSnapshot> tools, String actor) {
+    public void insertVersion(CatalogVersion version, List<McpToolDescriptorSnapshot> tools, String actor) {
         byte[] hash = HexFormat.of().parseHex(version.contentHash().hex());
-        mapper.insertVersion(version.kind(), new CatalogPersistenceRows.VersionRow(
-            version.id().value(), version.organizationId().value(), version.projectId().value(),
-            version.ownerId().value(), version.versionNumber(), version.payloadJson(), hash,
-            version.status().name(), version.createdAt(), actor));
+        mapper.insertVersion(
+            version.kind(),
+            new CatalogPersistenceRows.VersionRow(
+                version.id().value(),
+                version.organizationId().value(),
+                version.projectId().value(),
+                version.ownerId().value(),
+                version.versionNumber(),
+                version.payloadJson(),
+                hash,
+                version.status().name(),
+                version.createdAt(),
+                actor)
+        );
+
         for (McpToolDescriptorSnapshot tool : List.copyOf(tools)) {
             mapper.insertTool(new CatalogPersistenceRows.ToolRow(
-                tool.id().value(), tool.organizationId().value(), tool.projectId().value(),
-                tool.serverVersionId().value(), tool.toolName(), tool.description(),
-                tool.argumentSchemaJson(), tool.accessMode(), tool.riskLevel(), tool.idempotency(),
-                tool.permissionMetadataJson(), HexFormat.of().parseHex(tool.contentHash().hex()),
+                tool.id().value(),
+                tool.organizationId().value(),
+                tool.projectId().value(),
+                tool.serverVersionId().value(),
+                tool.toolName(),
+                tool.description(),
+                tool.argumentSchemaJson(),
+                tool.accessMode(),
+                tool.riskLevel(),
+                tool.idempotency(),
+                tool.permissionMetadataJson(),
+                HexFormat.of().parseHex(tool.contentHash().hex()),
                 tool.createdAt(), actor));
         }
     }
@@ -154,13 +171,8 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @return 同项目版本
      */
     @Override
-    public Optional<CatalogVersion> findVersion(
-        CatalogAssetKind kind,
-        ProjectId projectId,
-        StrongId ownerId,
-        StrongId versionId) {
-        return mapper.findVersion(
-                kind, projectId.value(), ownerId.value(), versionId.value())
+    public Optional<CatalogVersion> findVersion(CatalogAssetKind kind, ProjectId projectId, StrongId ownerId, StrongId versionId) {
+        return mapper.findVersion(kind, projectId.value(), ownerId.value(), versionId.value())
             .map(row -> version(kind, row));
     }
 
@@ -173,15 +185,9 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @return 版本列表
      */
     @Override
-    public List<CatalogVersion> listVersions(
-        CatalogAssetKind kind,
-        ProjectId projectId,
-        StrongId ownerId,
-        long afterVersionNumber,
-        int limit) {
-        return mapper.listVersions(
-                kind, projectId.value(), ownerId.value(), afterVersionNumber, limit)
-            .stream().map(row -> version(kind, row)).toList();
+    public List<CatalogVersion> listVersions(CatalogAssetKind kind, ProjectId projectId, StrongId ownerId, long afterVersionNumber, int limit) {
+        return mapper.listVersions(kind, projectId.value(), ownerId.value(), afterVersionNumber, limit).stream()
+            .map(row -> version(kind, row)).toList();
     }
 
     /**
@@ -190,16 +196,20 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @return Tool Descriptor 不可变快照
      */
     @Override
-    public List<McpToolDescriptorSnapshot> listToolDescriptors(
-        ProjectId projectId, McpServerVersionId serverVersionId) {
+    public List<McpToolDescriptorSnapshot> listToolDescriptors(ProjectId projectId, McpServerVersionId serverVersionId) {
         return mapper.listTools(projectId.value(), serverVersionId.value()).stream()
             .map(row -> new McpToolDescriptorSnapshot(
                 new McpToolDescriptorId(row.id()),
                 new OrganizationId(row.organizationId()),
                 new ProjectId(row.projectId()),
                 new McpServerVersionId(row.serverVersionId()),
-                row.toolName(), row.description(), row.argumentSchemaJson(), row.accessMode(),
-                row.riskLevel(), row.idempotency(), row.permissionMetadataJson(),
+                row.toolName(),
+                row.description(),
+                row.argumentSchemaJson(),
+                row.accessMode(),
+                row.riskLevel(),
+                row.idempotency(),
+                row.permissionMetadataJson(),
                 new Checksum("sha256:" + HexFormat.of().formatHex(row.contentHash())),
                 row.createdAt()))
             .toList();
@@ -210,13 +220,20 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @param row  稳定身份行
      * @return 领域资产
      */
-    private CatalogAsset asset(
-        CatalogAssetKind kind, CatalogPersistenceRows.AssetRow row) {
+    private CatalogAsset asset(CatalogAssetKind kind, CatalogPersistenceRows.AssetRow row) {
         return new CatalogAsset(
-            kind.parseId(row.id().toString()), kind, new OrganizationId(row.organizationId()),
-            new ProjectId(row.projectId()), row.assetKey(), row.name(), row.description(),
-            row.metadataJson(), CatalogAssetStatus.valueOf(row.status()), row.version(),
-            row.createdAt(), row.updatedAt());
+            kind.parseId(row.id().toString()),
+            kind,
+            new OrganizationId(row.organizationId()),
+            new ProjectId(row.projectId()),
+            row.assetKey(),
+            row.name(),
+            row.description(),
+            row.metadataJson(),
+            CatalogAssetStatus.valueOf(row.status()),
+            row.version(),
+            row.createdAt(),
+            row.updatedAt());
     }
 
     /**
@@ -224,12 +241,15 @@ public final class MybatisCatalogRepository implements CatalogRepository {
      * @param row  版本行
      * @return 领域版本
      */
-    private CatalogVersion version(
-        CatalogAssetKind kind, CatalogPersistenceRows.VersionRow row) {
+    private CatalogVersion version(CatalogAssetKind kind, CatalogPersistenceRows.VersionRow row) {
         return new CatalogVersion(
-            kind.parseVersionId(row.id().toString()), kind,
-            new OrganizationId(row.organizationId()), new ProjectId(row.projectId()),
-            kind.parseId(row.ownerId().toString()), row.versionNumber(), row.payloadJson(),
+            kind.parseVersionId(row.id().toString()),
+            kind,
+            new OrganizationId(row.organizationId()),
+            new ProjectId(row.projectId()),
+            kind.parseId(row.ownerId().toString()),
+            row.versionNumber(),
+            row.payloadJson(),
             new Checksum("sha256:" + HexFormat.of().formatHex(row.contentHash())),
             CatalogVersionStatus.valueOf(row.status()), row.createdAt());
     }

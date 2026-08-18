@@ -25,6 +25,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -60,7 +61,7 @@ public final class ShortTtlAuthorizationCache implements AuthorizationCache {
      * @param ttl   正数且不超过一分钟的 TTL
      */
     public ShortTtlAuthorizationCache(Clock clock, Duration ttl) {
-        this.clock = java.util.Objects.requireNonNull(clock, "clock must not be null");
+        this.clock = Objects.requireNonNull(clock, "clock must not be null");
         if (ttl == null || ttl.isZero() || ttl.isNegative() || ttl.compareTo(Duration.ofMinutes(1)) > 0) {
             throw new IllegalArgumentException("authorization cache ttl must be within one minute");
         }
@@ -75,7 +76,7 @@ public final class ShortTtlAuthorizationCache implements AuthorizationCache {
      */
     @Override
     public Optional<Set<String>> get(AuthorizationCacheKey key) {
-        Entry entry = entries.get(java.util.Objects.requireNonNull(key, "key must not be null"));
+        Entry entry = entries.get(Objects.requireNonNull(key, "key must not be null"));
         if (entry == null) {
             return Optional.empty();
         }
@@ -95,12 +96,12 @@ public final class ShortTtlAuthorizationCache implements AuthorizationCache {
     @Override
     public void put(AuthorizationCacheKey key, Set<String> permissions) {
         entries.put(
-            java.util.Objects.requireNonNull(key, "key must not be null"),
+            Objects.requireNonNull(key, "key must not be null"),
             new Entry(
-                Set.copyOf(
-                    java.util.Objects.requireNonNull(
-                        permissions, "permissions must not be null")),
-                clock.instant().plus(ttl)));
+                Set.copyOf(Objects.requireNonNull(permissions, "permissions must not be null")),
+                clock.instant().plus(ttl)
+            )
+        );
     }
 
     /**
@@ -110,10 +111,8 @@ public final class ShortTtlAuthorizationCache implements AuthorizationCache {
      */
     @Override
     public void evictOrganization(OrganizationId organizationId) {
-        entries.keySet().removeIf(
-            key -> key.organizationId().equals(
-                java.util.Objects.requireNonNull(
-                    organizationId, "organizationId must not be null")));
+        entries.keySet().removeIf(key ->
+            key.organizationId().equals(Objects.requireNonNull(organizationId, "organizationId must not be null")));
     }
 
     /**
@@ -123,10 +122,9 @@ public final class ShortTtlAuthorizationCache implements AuthorizationCache {
      */
     @Override
     public void evictProject(ProjectId projectId) {
-        entries.keySet().removeIf(
-            key -> key.projectId().filter(
-                    value -> value.equals(
-                        java.util.Objects.requireNonNull(projectId, "projectId must not be null")))
+        entries.keySet().removeIf(key ->
+            key.projectId()
+                .filter(value -> value.equals(Objects.requireNonNull(projectId, "projectId must not be null")))
                 .isPresent());
     }
 
@@ -146,9 +144,8 @@ public final class ShortTtlAuthorizationCache implements AuthorizationCache {
          * @param expiresAt   过期时刻
          */
         private Entry {
-            permissions = Set.copyOf(
-                java.util.Objects.requireNonNull(permissions, "permissions must not be null"));
-            java.util.Objects.requireNonNull(expiresAt, "expiresAt must not be null");
+            permissions = Set.copyOf(Objects.requireNonNull(permissions, "permissions must not be null"));
+            Objects.requireNonNull(expiresAt, "expiresAt must not be null");
         }
     }
 }

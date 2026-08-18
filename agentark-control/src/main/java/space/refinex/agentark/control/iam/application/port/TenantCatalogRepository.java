@@ -66,8 +66,7 @@ public interface TenantCatalogRepository {
      * @param limit         正数结果上限
      * @return 按 Slug 排序的可见组织
      */
-    List<Organization> listOrganizationsForPrincipal(
-        PrincipalKind principalKind, UUID principalId, int limit);
+    List<Organization> listOrganizationsForPrincipal(PrincipalKind principalKind, UUID principalId, int limit);
 
     /**
      * 插入新项目。
@@ -134,6 +133,5 @@ public interface TenantCatalogRepository {
      * @param limit          正数结果上限
      * @return 按 Key 排序的环境
      */
-    List<Environment> listEnvironments(
-        OrganizationId organizationId, ProjectId projectId, int limit);
+    List<Environment> listEnvironments(OrganizationId organizationId, ProjectId projectId, int limit);
 }

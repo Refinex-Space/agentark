@@ -84,13 +84,19 @@ public class CatalogController {
         @PathVariable String projectId,
         @PathVariable String assetKind,
         @Valid @RequestBody CreateAssetRequest request) {
+
         CatalogAssetKind kind = CatalogAssetKind.parse(assetKind);
         CatalogAsset created = service.createAsset(
-            principal(authentication), ProjectId.parse(projectId), kind, request.key(),
-            request.name(), request.description(), request.metadata());
-        return ResponseEntity.created(URI.create(
-            "/api/v1/projects/" + projectId + "/catalog/" + kind.apiValue()
-                + "/" + created.id().asString())).body(CatalogAssetView.from(created, jsonMapper));
+            principal(authentication),
+            ProjectId.parse(projectId),
+            kind,
+            request.key(),
+            request.name(),
+            request.description(),
+            request.metadata());
+
+        return ResponseEntity.created(URI.create("/api/v1/projects/" + projectId + "/catalog/" + kind.apiValue()
+            + "/" + created.id().asString())).body(CatalogAssetView.from(created, jsonMapper));
     }
 
     /**
@@ -108,12 +114,20 @@ public class CatalogController {
         @PathVariable String assetKind,
         @RequestParam(required = false) String cursor,
         @RequestParam(defaultValue = "50") int limit) {
+
         CursorPage<CatalogAsset> page = service.listAssets(
-            principal(authentication), ProjectId.parse(projectId),
-            CatalogAssetKind.parse(assetKind), cursor, limit);
+            principal(authentication),
+            ProjectId.parse(projectId),
+            CatalogAssetKind.parse(assetKind),
+            cursor,
+            limit);
+
         return new CursorPage<>(
-            page.items().stream().map(asset -> CatalogAssetView.from(asset, jsonMapper)).toList(),
-            page.nextCursor(), page.hasMore());
+            page.items().stream()
+                .map(asset -> CatalogAssetView.from(asset, jsonMapper))
+                .toList(),
+            page.nextCursor(),
+            page.hasMore());
     }
 
     /**
@@ -131,13 +145,18 @@ public class CatalogController {
         @PathVariable String assetKind,
         @PathVariable String assetId,
         @Valid @RequestBody CreateVersionRequest request) {
+
         CatalogAssetKind kind = CatalogAssetKind.parse(assetKind);
         CatalogVersion created = service.createVersion(
-            principal(authentication), ProjectId.parse(projectId), kind, assetId,
-            request.payload(), CatalogVersionStatus.valueOf(request.status()));
-        return ResponseEntity.created(URI.create(
-                "/api/v1/projects/" + projectId + "/catalog/" + kind.apiValue() + "/" + assetId
-                    + "/versions/" + created.id().asString()))
+            principal(authentication),
+            ProjectId.parse(projectId),
+            kind,
+            assetId,
+            request.payload(),
+            CatalogVersionStatus.valueOf(request.status()));
+
+        return ResponseEntity
+            .created(URI.create("/api/v1/projects/" + projectId + "/catalog/" + kind.apiValue() + "/" + assetId + "/versions/" + created.id().asString()))
             .body(CatalogVersionView.from(created, jsonMapper));
     }
 
@@ -158,12 +177,21 @@ public class CatalogController {
         @PathVariable String assetId,
         @RequestParam(required = false) String cursor,
         @RequestParam(defaultValue = "50") int limit) {
+
         CursorPage<CatalogVersion> page = service.listVersions(
-            principal(authentication), ProjectId.parse(projectId),
-            CatalogAssetKind.parse(assetKind), assetId, cursor, limit);
+            principal(authentication),
+            ProjectId.parse(projectId),
+            CatalogAssetKind.parse(assetKind),
+            assetId,
+            cursor,
+            limit);
+
         return new CursorPage<>(
-            page.items().stream().map(version -> CatalogVersionView.from(version, jsonMapper)).toList(),
-            page.nextCursor(), page.hasMore());
+            page.items().stream()
+                .map(version -> CatalogVersionView.from(version, jsonMapper))
+                .toList(),
+            page.nextCursor(),
+            page.hasMore());
     }
 
     /**
@@ -183,9 +211,14 @@ public class CatalogController {
         @PathVariable String assetId,
         @RequestParam String baseVersionId,
         @RequestParam String targetVersionId) {
+
         return service.diff(
-            principal(authentication), ProjectId.parse(projectId),
-            CatalogAssetKind.parse(assetKind), assetId, baseVersionId, targetVersionId);
+            principal(authentication),
+            ProjectId.parse(projectId),
+            CatalogAssetKind.parse(assetKind),
+            assetId,
+            baseVersionId,
+            targetVersionId);
     }
 
     /**
@@ -203,9 +236,13 @@ public class CatalogController {
         @PathVariable String assetKind,
         @PathVariable String assetId,
         @Valid @RequestBody ArchiveAssetRequest request) {
+
         service.archiveAsset(
-            principal(authentication), ProjectId.parse(projectId),
-            CatalogAssetKind.parse(assetKind), assetId, request.expectedVersion());
+            principal(authentication),
+            ProjectId.parse(projectId),
+            CatalogAssetKind.parse(assetKind),
+            assetId,
+            request.expectedVersion());
         return ResponseEntity.noContent().build();
     }
 
@@ -222,12 +259,17 @@ public class CatalogController {
         @PathVariable String projectId,
         @RequestPart("file") MultipartFile file,
         @RequestParam(required = false) String checksum) {
+
         try {
             ObjectRef ref = service.uploadSkillArtifact(
-                principal(authentication), ProjectId.parse(projectId), file.getInputStream(),
-                file.getSize(), Optional.ofNullable(file.getContentType())
-                    .orElse("application/octet-stream"),
-                checksum == null ? Optional.empty() : Optional.of(new Checksum(checksum)));
+                principal(authentication),
+                ProjectId.parse(projectId),
+                file.getInputStream(),
+                file.getSize(),
+                Optional.ofNullable(file.getContentType()).orElse("application/octet-stream"),
+                checksum == null ? Optional.empty() : Optional.of(new Checksum(checksum))
+            );
+
             return ResponseEntity.created(ref.uri()).body(ObjectRefView.from(ref));
         } catch (IOException exception) {
             throw new IamConflictException("artifact request cannot be read");
@@ -239,8 +281,7 @@ public class CatalogController {
      * @return AgentArk 协议主体
      */
     private AgentArkPrincipal principal(Authentication authentication) {
-        if (authentication == null
-            || !(authentication.getPrincipal() instanceof AgentArkPrincipal principal)) {
+        if (authentication == null || !(authentication.getPrincipal() instanceof AgentArkPrincipal principal)) {
             throw new IamAccessDeniedException("authenticated AgentArk principal is required");
         }
         return principal;

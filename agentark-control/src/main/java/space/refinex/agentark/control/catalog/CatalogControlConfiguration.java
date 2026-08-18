@@ -38,13 +38,9 @@ import space.refinex.agentark.control.secret.SecretProperties;
 import space.refinex.agentark.control.secret.adapter.in.web.SecretController;
 import space.refinex.agentark.control.secret.adapter.in.web.SecretProblemDetailAdvice;
 import space.refinex.agentark.control.secret.adapter.out.local.LocalFileSecretResolver;
-import space.refinex.agentark.control.secret.adapter.out.vault.AuditedSecretResolver;
-import space.refinex.agentark.control.secret.adapter.out.vault.FileVaultTokenSource;
-import space.refinex.agentark.control.secret.adapter.out.vault.VaultKvV2SecretResolver;
-import space.refinex.agentark.control.secret.adapter.out.vault.VaultSecretProperties;
-import space.refinex.agentark.control.secret.adapter.out.vault.VaultTokenSource;
 import space.refinex.agentark.control.secret.adapter.out.persistence.MybatisSecretRepository;
 import space.refinex.agentark.control.secret.adapter.out.persistence.SecretMapper;
+import space.refinex.agentark.control.secret.adapter.out.vault.*;
 import space.refinex.agentark.control.secret.application.SecretApplicationService;
 import space.refinex.agentark.control.secret.application.port.SecretRepository;
 import space.refinex.agentark.control.secret.application.port.SecretResolver;
@@ -53,9 +49,9 @@ import space.refinex.agentark.foundation.web.RequestContextAccessor;
 import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
+import java.net.http.HttpClient;
 import java.time.Clock;
 import java.util.Optional;
-import java.net.http.HttpClient;
 
 /**
  * 装配 AI 资产目录、Secret Metadata、MyBatis 适配器、Public API 和开发 Local Provider。
@@ -68,8 +64,7 @@ import java.net.http.HttpClient;
     name = "enabled",
     havingValue = "true",
     matchIfMissing = true)
-@EnableConfigurationProperties({
-    CatalogProperties.class, SecretProperties.class, VaultSecretProperties.class})
+@EnableConfigurationProperties({CatalogProperties.class, SecretProperties.class, VaultSecretProperties.class})
 @MapperScan(basePackageClasses = {CatalogMapper.class, SecretMapper.class})
 public class CatalogControlConfiguration {
 
@@ -113,23 +108,22 @@ public class CatalogControlConfiguration {
      * @return Skill 供应链验证器
      */
     @Bean
-    public SkillSupplyChainVerifier skillSupplyChainVerifier(
-        CatalogProperties properties, JsonMapper jsonMapper) {
+    public SkillSupplyChainVerifier skillSupplyChainVerifier(CatalogProperties properties, JsonMapper jsonMapper) {
         return new SkillSupplyChainVerifier(properties, jsonMapper);
     }
 
     /**
-     * @param repository           Catalog Repository
-     * @param tenantRepository     IAM 租户目录
-     * @param authorizationService IAM 授权服务
-     * @param auditPublisher       审计发布器
-     * @param payloadValidator     载荷校验器
-     * @param secretRepository     SecretRef 检查端口
-     * @param objectStoreProvider  可选 ObjectStore
-     * @param properties           Catalog 配置
+     * @param repository               Catalog Repository
+     * @param tenantRepository         IAM 租户目录
+     * @param authorizationService     IAM 授权服务
+     * @param auditPublisher           审计发布器
+     * @param payloadValidator         载荷校验器
+     * @param secretRepository         SecretRef 检查端口
+     * @param objectStoreProvider      可选 ObjectStore
+     * @param properties               Catalog 配置
      * @param skillSupplyChainVerifier Skill 供应链验证器
-     * @param clock                UTC 时钟
-     * @param jsonMapper           JSON 映射器
+     * @param clock                    UTC 时钟
+     * @param jsonMapper               JSON 映射器
      * @return Catalog 应用服务
      */
     @Bean
@@ -145,10 +139,19 @@ public class CatalogControlConfiguration {
         SkillSupplyChainVerifier skillSupplyChainVerifier,
         Clock clock,
         JsonMapper jsonMapper) {
+
         return new CatalogApplicationService(
-            repository, tenantRepository, authorizationService, auditPublisher, payloadValidator,
-            secretRepository, Optional.ofNullable(objectStoreProvider.getIfAvailable()),
-            properties, skillSupplyChainVerifier, clock, jsonMapper);
+            repository,
+            tenantRepository,
+            authorizationService,
+            auditPublisher,
+            payloadValidator,
+            secretRepository,
+            Optional.ofNullable(objectStoreProvider.getIfAvailable()),
+            properties,
+            skillSupplyChainVerifier,
+            clock,
+            jsonMapper);
     }
 
     /**
@@ -160,14 +163,9 @@ public class CatalogControlConfiguration {
      * @return Secret 应用服务
      */
     @Bean
-    public SecretApplicationService secretApplicationService(
-        SecretRepository repository,
-        TenantCatalogRepository tenantRepository,
-        IamAuthorizationService authorizationService,
-        IamAuditPublisher auditPublisher,
-        Clock clock) {
-        return new SecretApplicationService(
-            repository, tenantRepository, authorizationService, auditPublisher, clock);
+    public SecretApplicationService secretApplicationService(SecretRepository repository, TenantCatalogRepository tenantRepository,
+                                                             IamAuthorizationService authorizationService, IamAuditPublisher auditPublisher, Clock clock) {
+        return new SecretApplicationService(repository, tenantRepository, authorizationService, auditPublisher, clock);
     }
 
     /**
@@ -176,8 +174,7 @@ public class CatalogControlConfiguration {
      * @return Catalog Public API
      */
     @Bean
-    public CatalogController catalogController(
-        CatalogApplicationService service, JsonMapper jsonMapper) {
+    public CatalogController catalogController(CatalogApplicationService service, JsonMapper jsonMapper) {
         return new CatalogController(service, jsonMapper);
     }
 
@@ -244,11 +241,11 @@ public class CatalogControlConfiguration {
     /**
      * 装配 HTTPS Vault KV v2 解析器与 Secret Access Audit 包装器。
      *
-     * @param properties Vault 配置
-     * @param tokenSource 短期令牌来源
-     * @param jsonMapper JSON 映射器
+     * @param properties     Vault 配置
+     * @param tokenSource    短期令牌来源
+     * @param jsonMapper     JSON 映射器
      * @param auditPublisher 审计发布器
-     * @param clock UTC 时钟
+     * @param clock          UTC 时钟
      * @return 生产 Secret 解析器
      */
     @Bean
@@ -257,19 +254,22 @@ public class CatalogControlConfiguration {
         prefix = "agentark.control.secret.vault",
         name = "enabled",
         havingValue = "true")
-    public SecretResolver vaultSecretResolver(
-        VaultSecretProperties properties,
-        VaultTokenSource tokenSource,
-        JsonMapper jsonMapper,
-        IamAuditPublisher auditPublisher,
-        Clock clock) {
+    public SecretResolver vaultSecretResolver(VaultSecretProperties properties, VaultTokenSource tokenSource,
+                                              JsonMapper jsonMapper, IamAuditPublisher auditPublisher, Clock clock) {
+
         HttpClient httpClient = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NEVER)
             .connectTimeout(properties.getConnectTimeout())
             .build();
+
         SecretResolver vault = new VaultKvV2SecretResolver(
-            httpClient, properties.getAddress(), properties.getMount(),
-            properties.getNamespace(), tokenSource, jsonMapper, properties.getReadTimeout());
+            httpClient,
+            properties.getAddress(),
+            properties.getMount(),
+            properties.getNamespace(),
+            tokenSource,
+            jsonMapper,
+            properties.getReadTimeout());
         return new AuditedSecretResolver(vault, auditPublisher, clock);
     }
 }
