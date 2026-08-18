@@ -3,6 +3,10 @@
 <h1>AgentArk</h1>
 
 <p>
+  <strong>English</strong> · <a href="./README.zh-CN.md">简体中文</a>
+</p>
+
+<p>
   <strong>A production-oriented Agent Application Platform for Java.</strong>
 </p>
 
