@@ -36,6 +36,7 @@ referenced_by: AGENTS.md#knowledge-map
 | Phase 20 执行证据 | [安全加固与威胁测试](implementation/phase-20-security-hardening.md) | 复核 Threat Model、Vault、MCP、Skill、Sandbox、RAG 与供应链门禁 |
 | Phase 21 执行证据 | [Aistio 绞杀与 Java Control 切换](implementation/phase-21-aistio-strangler.md) | 复核固定源码审计、Contract Freeze、迁移/Shadow 工具、Java-only 默认部署与真实验收边界 |
 | Phase 22 执行证据 | [Kubernetes、HA 与恢复](implementation/phase-22-production.md) | 复核生产镜像、Helm、三节点 HA、备份恢复、性能和故障演练证据 |
+| Phase 23 执行证据 | [Release Readiness](implementation/phase-23-release-readiness.md) | 复核最终漂移审计、G0–G9、全链路 E2E、发布物和验收边界 |
 | 总体架构 | [系统架构](architecture/overview.md) | 模块、平面、运行时、数据、安全或迁移决策 |
 | 平台边界 | [ADR-0001](architecture/decisions/0001-platform-boundaries.md) | 增减服务、跨平面调用或改变 Owner |
 | 发布与数据所有权 | [ADR-0002](architecture/decisions/0002-release-and-data-ownership.md) | Revision、Snapshot、Session 固定或 Outbox |
@@ -73,6 +74,14 @@ referenced_by: AGENTS.md#knowledge-map
 | 扩缩容 | [Scaling and Capacity Runbook](runbooks/scaling-and-capacity.md) | 调整 HPA/KEDA、资源、连接池、Provider 并发或容量结论 |
 | 故障演练 | [Fault Rehearsal Runbook](runbooks/fault-rehearsal.md) | 注入 Runtime/Redis/MySQL/Qdrant/Provider/OTel/NetworkPolicy 故障 |
 | 容量与 RPO/RTO | [Phase 22 容量报告](operations/phase-22-capacity-rpo-rto.md) | 复核本机性能、HA、恢复实测与生产批准边界 |
+| 架构漂移审计 | [0.1.0 Architecture Drift Audit](release/architecture-drift-audit.md) | 收官或评审模块、数据、Provider、安全与延后能力红线 |
+| 统一 Gate | [G0–G9 报告](release/gates-g0-g9.md) | 复核首个完整开发基线的门禁与证据映射 |
+| 发布物 | [Release Artifacts](release/release-artifacts.md) | 构建或校验 Source/Maven/Web/SBOM/Checksum/Signature/Provenance |
+| 0.1.0 版本说明 | [Release Notes](releases/v0-1-0.md) | 查看能力、兼容性、升级边界和已知限制 |
+| 发布流程 | [Release Runbook](runbooks/release.md) | 生成、签名、校验和交付版本化发布物 |
+| 生产部署 | [Deployment Runbook](runbooks/deployment.md) | 准备外部依赖、Values、Migration、工作负载和 Smoke Test |
+| 升级与回滚 | [Upgrade/Rollback Runbook](runbooks/upgrade-rollback.md) | 执行 N/N-1、Expand/Migrate/Contract、Drain 和应用回滚 |
+| 灾难恢复 | [Disaster Recovery Runbook](runbooks/disaster-recovery.md) | 执行跨 MySQL/Object/Qdrant/Secret/Redis 的恢复与 Reconcile |
 | 上游来源 | [上游基线](migration/upstream-baseline.md) | 读取参考源码或执行迁移审计 |
 | 上游迁移审计 | [源码清单](migration/source-inventory.md) | 定位 Service/Core/Harness/Extensions/Frontend 的具体来源 |
 | 迁移分类 | [迁移清单](migration/migration-manifest.md) | 决定候选路径的取用类型、目标模块和明确拒绝项 |
@@ -100,4 +109,85 @@ Harness 门禁使用以下仓库根路径建立直接引用：
 - `docs/database/scheduler-schema.md`
 - `docs/standards/coding.md`
 - `docs/standards/api.md`
+- `docs/standards/security.md`
+
+共享 Harness 审计只识别仓库根形式的 `docs/*.md` 引用，下面的机器清单与上方可点击路由一一对应。它不包含 `.agentark/upstreams/` 的只读上游文档：
+
+- `docs/architecture/overview.md`
+- `docs/architecture/decisions/0001-platform-boundaries.md`
+- `docs/architecture/decisions/0002-release-and-data-ownership.md`
+- `docs/architecture/decisions/0003-runtime-provider-isolation.md`
+- `docs/architecture/decisions/0004-storage-and-async-work.md`
+- `docs/architecture/decisions/0005-upstream-and-technology-baseline.md`
+- `docs/architecture/decisions/0006-aistio-cutover-scope.md`
+- `docs/config/reference.md`
+- `docs/database/control-schema.md`
+- `docs/database/mysql-conventions.md`
+- `docs/database/runtime-schema.md`
+- `docs/database/scheduler-schema.md`
+- `docs/domain/glossary.md`
+- `docs/frontend/design-system.md`
+- `docs/frontend/information-architecture.md`
+- `docs/frontend/phase-18-interactions.md`
+- `docs/frontend/source-reference.md`
+- `docs/guides/knowledge-operations.md`
+- `docs/guides/observability-operations.md`
+- `docs/guides/runbook.md`
+- `docs/guides/runtime-operations.md`
+- `docs/guides/scheduler-operations.md`
+- `docs/implementation/phase-00-execution-baseline.md`
+- `docs/implementation/phase-01-upstream-audit.md`
+- `docs/implementation/phase-02-build-foundation.md`
+- `docs/implementation/phase-03-kernel-contracts.md`
+- `docs/implementation/phase-04-foundation-starters.md`
+- `docs/implementation/phase-05-service-shells.md`
+- `docs/implementation/phase-06-persistence-baseline.md`
+- `docs/implementation/phase-07-iam-tenancy.md`
+- `docs/implementation/phase-08-asset-catalog.md`
+- `docs/implementation/phase-09-knowledge-metadata.md`
+- `docs/implementation/phase-10-revision-deployment.md`
+- `docs/implementation/phase-11-runtime-domain.md`
+- `docs/implementation/phase-12-agentscope-adapter.md`
+- `docs/implementation/phase-13-runtime-api.md`
+- `docs/implementation/phase-14-knowledge-rag.md`
+- `docs/implementation/phase-15-scheduler.md`
+- `docs/implementation/phase-16-gateway.md`
+- `docs/implementation/phase-17-web-foundation.md`
+- `docs/implementation/phase-18-web-features.md`
+- `docs/implementation/phase-19-observability-governance.md`
+- `docs/implementation/phase-20-security-hardening.md`
+- `docs/implementation/phase-21-aistio-strangler.md`
+- `docs/implementation/phase-22-production.md`
+- `docs/implementation/phase-23-release-readiness.md`
+- `docs/migration/agentscope-compatibility-matrix.md`
+- `docs/migration/aistio-strangler.md`
+- `docs/migration/behavior-baseline.md`
+- `docs/migration/jpa-to-mybatis-plus.md`
+- `docs/migration/license-and-notice.md`
+- `docs/migration/mechanical-import-report.md`
+- `docs/migration/migration-manifest.md`
+- `docs/migration/postgresql-to-mysql.md`
+- `docs/migration/source-inventory.md`
+- `docs/migration/upstream-baseline.md`
+- `docs/operations/phase-22-capacity-rpo-rto.md`
+- `docs/release/architecture-drift-audit.md`
+- `docs/release/gates-g0-g9.md`
+- `docs/release/release-artifacts.md`
+- `docs/releases/v0-1-0.md`
+- `docs/runbooks/aistio-cutover.md`
+- `docs/runbooks/aistio-rollback.md`
+- `docs/runbooks/backup-restore.md`
+- `docs/runbooks/deployment.md`
+- `docs/runbooks/disaster-recovery.md`
+- `docs/runbooks/fault-rehearsal.md`
+- `docs/runbooks/kubernetes-upgrade.md`
+- `docs/runbooks/release.md`
+- `docs/runbooks/scaling-and-capacity.md`
+- `docs/runbooks/secret-rotation.md`
+- `docs/runbooks/security-incident.md`
+- `docs/runbooks/upgrade-rollback.md`
+- `docs/security/security-architecture.md`
+- `docs/security/threat-model.md`
+- `docs/standards/api.md`
+- `docs/standards/coding.md`
 - `docs/standards/security.md`

@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringBootConfiguration;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -56,6 +57,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 import org.testcontainers.utility.DockerImageName;
 import space.refinex.agentark.control.iam.adapter.in.web.IamApiModels.ApiKeyView;
+import space.refinex.agentark.control.iam.adapter.in.security.IamApiKeyAuthenticationFilter;
 import space.refinex.agentark.control.catalog.CatalogControlConfiguration;
 import space.refinex.agentark.control.catalog.application.CatalogApplicationService;
 import space.refinex.agentark.control.catalog.domain.*;
@@ -83,6 +85,7 @@ import space.refinex.agentark.control.release.domain.AgentDraftSpec.PermissionBi
 import space.refinex.agentark.control.release.domain.AgentDraftSpec.ProfileBindings;
 import space.refinex.agentark.control.release.domain.ReleaseModels.TrafficPolicy;
 import space.refinex.agentark.control.secret.application.SecretApplicationService;
+import space.refinex.agentark.control.secret.application.port.SecretRepository;
 import space.refinex.agentark.control.secret.domain.*;
 import space.refinex.agentark.foundation.security.AgentArkPrincipal;
 import space.refinex.agentark.foundation.security.PrincipalType;
@@ -119,6 +122,10 @@ import tools.jackson.databind.json.JsonMapper;
     })
 class IamTenancySecurityIT {
 
+    /** API Key Filter 的 Servlet 容器注册描述。 */
+    @Autowired
+    private FilterRegistrationBean<IamApiKeyAuthenticationFilter> apiKeyFilterRegistration;
+
     /** 临时 MySQL 引导口令，仅存在于当前测试进程。 */
     private static final String DATABASE_PASSWORD = UUID.randomUUID().toString().replace("-", "");
 
@@ -154,6 +161,10 @@ class IamTenancySecurityIT {
     /** Secret Metadata 与 Binding 应用服务。 */
     @Autowired
     private SecretApplicationService secretService;
+
+    /** SecretRef 启用状态与 Environment Binding 持久化仓储。 */
+    @Autowired
+    private SecretRepository secretRepository;
 
     /** Agent Draft 与 Deployment 应用服务。 */
     @Autowired
@@ -362,6 +373,12 @@ class IamTenancySecurityIT {
         assertThat(expiredSecret).containsOnly('\0');
     }
 
+    /** 证明 API Key Filter 只由 Spring Security Chain 执行，避免容器重复注册清空认证。 */
+    @Test
+    void disablesServletContainerRegistrationForApiKeyFilter() {
+        assertThat(apiKeyFilterRegistration.isEnabled()).isFalse();
+    }
+
     /**
      * 验证资产版本只追加、SecretRef 存在性、MCP 安全元数据、Skill ObjectRef 和跨租户拒绝。
      *
@@ -445,6 +462,12 @@ class IamTenancySecurityIT {
             "SELECT COUNT(*) FROM mcp_tool_descriptor WHERE project_id = UUID_TO_BIN(?)",
             Integer.class, projectA.id().asString());
         assertThat(descriptorCount).isOne();
+        assertThat(secretRepository.existsReference(projectA.id(), binding.ref())).isTrue();
+        environmentSecret = secretService.changeMetadataStatus(
+            ownerA, projectA.id(), environmentSecret.id(), SecretMetadataStatus.REVOKED,
+            environmentSecret.version());
+        assertThat(environmentSecret.status()).isEqualTo(SecretMetadataStatus.REVOKED);
+        assertThat(secretRepository.existsReference(projectA.id(), binding.ref())).isFalse();
 
         byte[] artifact = "# Example Skill\n".getBytes(StandardCharsets.UTF_8);
         var objectRef = catalogService.uploadSkillArtifact(

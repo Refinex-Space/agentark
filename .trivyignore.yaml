@@ -1,0 +1,12 @@
+# 只保存已经人工验证且有明确到期日的精确扫描例外。
+misconfigurations:
+  # Trivy 仅根据变量名把 Vault Token 挂载路径误判为 Secret 值。
+  - id: KSV-0109
+    # 例外只作用于 Control 非敏感 ConfigMap 模板。
+    paths:
+      # 该模板的值固定为 `/var/run/secrets/agentark/vault-token`，真实 Token 来自 Secret Volume。
+      - "deploy/helm/agentark/templates/configmaps.yaml"
+    # 到期前必须随 Trivy 规则和 Vault 挂载方式重新复核。
+    expired_at: 2027-08-18
+    # 审计理由不会改变过滤逻辑，但必须进入发布评审。
+    statement: "AGENTARK_VAULT_TOKEN_FILE contains only a read-only Secret volume path, never the token value"

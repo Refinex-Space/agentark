@@ -119,13 +119,19 @@ function sanitizedLogTail(path) {
 /** 等待 Docker 内 MySQL 接受连接。 */
 async function waitForMysql() {
   const deadline = Date.now() + 90_000;
+  let consecutiveSuccesses = 0;
   while (Date.now() < deadline) {
     const result = spawnSync(
       "docker",
       ["exec", mysqlContainer, "mysql", "-uroot", "-e", "SELECT 1"],
       { stdio: "ignore" },
     );
-    if (result.status === 0) return;
+    if (result.status === 0) {
+      consecutiveSuccesses += 1;
+      if (consecutiveSuccesses >= 4) return;
+    } else {
+      consecutiveSuccesses = 0;
+    }
     await new Promise((resolvePromise) => globalThis.setTimeout(resolvePromise, 500));
   }
   throw new Error("E2E MySQL health timeout");
@@ -442,9 +448,10 @@ try {
       AGENTARK_RUNTIME_BASE_URL: "http://127.0.0.1:8082",
       AGENTARK_SCHEDULER_INTERNAL_TOKEN: serviceToken,
       AGENTARK_SCHEDULER_WORKER_ENABLED:
-        process.env.AGENTARK_E2E_SCHEDULER_WORKER_ENABLED ?? "false",
+        process.env.AGENTARK_E2E_SCHEDULER_WORKER_ENABLED ?? "true",
+      AGENTARK_SCHEDULER_WORKER_POLL_DELAY: "100ms",
       AGENTARK_SCHEDULER_CRON_SCAN_DELAY:
-        process.env.AGENTARK_E2E_SCHEDULER_CRON_SCAN_DELAY ?? "30s",
+        process.env.AGENTARK_E2E_SCHEDULER_CRON_SCAN_DELAY ?? "1s",
     },
   );
   await waitForHealth("http://127.0.0.1:8083/actuator/health", scheduler);
@@ -487,6 +494,7 @@ try {
       AGENTARK_RUNTIME_BASE_URL: "http://127.0.0.1:8082",
       AGENTARK_SCHEDULER_BASE_URL: "http://127.0.0.1:8083",
       AGENTARK_GATEWAY_RATE_LIMIT_ENABLED: "false",
+      AGENTARK_GATEWAY_API_KEY_CACHE_TTL: "100ms",
     },
   );
   await waitForHealth("http://127.0.0.1:8080/actuator/health", gateway);
@@ -501,6 +509,7 @@ try {
       projectId,
       environmentId,
       seededJobId: jobId,
+      serviceToken,
     }),
     { mode: 0o600 },
   );

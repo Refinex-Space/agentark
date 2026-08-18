@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-18
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -11,6 +11,8 @@ referenced_by: AGENTS.md#knowledge-map
 - Organization、Project、Environment Scope 由服务端授权上下文确定，不能信任客户端覆盖。
 - SQL、对象存储、向量查询、Job 和 Event 查询都显式携带最小 Scope；插件/Interceptor 只是纵深防御。
 - API Key 只保存摘要，可轮换、吊销和审计；Secret 明文不得进入数据库、快照、日志、Trace、Event、Fixture 或前端。
+- API Key Servlet Filter 只能由 Spring Security Chain 注册，必须禁用容器自动注册；否则 OncePerRequest 标记可能使安全链跳过认证并清空已建立上下文。
+- Environment SecretRef 只有在 Binding 为 ACTIVE 且关联 Secret Metadata 为 ENABLED 时有效；禁用或吊销 Metadata 必须立即使新验证、发布和解析失败关闭。
 - Tool/MCP/Skill/Sandbox 默认最小权限；写操作、外联、文件和高风险能力需要策略与按需 HITL。
 - Approval 固定 Tool/MCP 身份、参数摘要与 Hash、策略版本、过期时间和决策者，防止批准后替换参数。
 - Parser、Skill 和不可信代码在受限环境执行，限制网络、文件系统、CPU、内存、时间和产物大小。

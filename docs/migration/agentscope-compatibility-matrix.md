@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-18
 status: active
 referenced_by: docs/README.md
 ---
@@ -48,6 +48,14 @@ AgentArk Phase 12 的编译目标是 Maven Central 发布的 `io.agentscope:agen
 上游 Dataplane 可使用 AgentScope 自有 Session/State 持久化。AgentArk 生产环境不创建或访问 `agentscope_sessions`，也不允许 Provider 依赖 MyBatis、DataSource、Runtime Mapper 或 Persistence Starter。`AgentScopeStateStoreAdapter` 只调用 `agentark-runtime` 的 `AgentStateStore` 与 `CheckpointStore` Port，最终权威表固定为 `runtime_agent_state` 和 `runtime_checkpoint`。
 
 发布二进制缺少 CAS API 时，AgentArk Adapter 仍以追加版本、Commit 可见性和 Runtime Fencing Token 保证平台状态安全；这不等价于声称 AgentScope 内部已获得 CAS。升级到包含 Versioned State 的二进制后，必须增加真实 `@Override`、冲突重试和并发兼容测试。
+
+## 0.1.0 最终兼容结论
+
+- Provider POM、BOM、源码审计 Commit 和本矩阵共同固定 AgentScope `2.0.2`，禁止动态版本或只改其中一处。
+- `AgentScopeCompatibilityTest` 对发布 JAR 的 Builder、`streamEvents`、RuntimeContext、State Store、HITL 和取消入口执行反射/编译契约；Event Mapping Golden 验证 AgentScope 类型不会进入 AgentArk API/DB。
+- Snapshot Schema v1 是 0.1.0 的 N；这是首个版本，不存在更早 N-1。下一 Snapshot v2 必须在 Provider 同时验证 v2/v1 后才能移除 v1。
+- Runtime Event Schema v1 与 AsyncAPI v1 同步冻结；未知 AgentScope Event 只映射受控来源名称，不导致流崩溃，也不暴露隐藏推理链。
+- 滚动升级只允许使用相同 AgentScope 2.0.2 和 Snapshot/Event v1 的 N/N 节点混部；AgentScope 或 Schema 升级必须作为独立兼容变更处理。
 
 ## 升级协议
 

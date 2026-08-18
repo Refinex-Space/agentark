@@ -457,7 +457,7 @@ flowchart LR
 | 20 | DONE | 2026-08-17 | `docs/implementation/phase-20-security-hardening.md` | Threat Model、Vault、MCP/Skill、Sandbox、RAG 信任与供应链门禁已验收 |
 | 21 | DONE | 2026-08-17 | `docs/implementation/phase-21-aistio-strangler.md` | Contract Freeze、迁移/Shadow 工具、显式安全映射、Java-only 默认部署与切换/回滚门禁通过；真实外部 Cohort 需独立执行 Runbook |
 | 22 | DONE | 2026-08-18 | `docs/implementation/phase-22-production.md` | 生产镜像、Helm、三节点 HA、备份恢复、性能、故障演练与 Runbook 已完成验收 |
-| 23 | NOT_STARTED | — | `docs/implementation/phase-23-release-readiness.md` | |
+| 23 | DONE | 2026-08-18 | `docs/implementation/phase-23-release-readiness.md` | G0–G9、全仓漂移审计、真实 E2E、安全、HA、恢复、性能与可校验发布物已完成验收 |
 
 状态只允许：
 
@@ -3794,95 +3794,95 @@ $AGENTSCOPE_ROOT/agentscope-service/（仅用于最终兼容与迁移对照）
 
 #### 架构审计
 
-- [ ] 对照 `system-architecture.md` 逐条核验；
-- [ ] 对照全局架构红线；
-- [ ] Maven 模块无环；
-- [ ] 包依赖正确；
-- [ ] AgentScope Import 白名单；
-- [ ] Control/Runtime/Scheduler/Gateway 数据和代码边界；
-- [ ] Snapshot/Session 不变量；
-- [ ] Redis/Event/Lease/Fencing；
-- [ ] Tenant/Secret/Sandbox；
-- [ ] 渐进式基础设施；
-- [ ] 延后决策无偷渡实现。
+- [x] 对照权威架构文档 `docs/architecture/overview.md` 逐条核验；
+- [x] 对照全局架构红线；
+- [x] Maven 模块无环；
+- [x] 包依赖正确；
+- [x] AgentScope Import 白名单；
+- [x] Control/Runtime/Scheduler/Gateway 数据和代码边界；
+- [x] Snapshot/Session 不变量；
+- [x] Redis/Event/Lease/Fencing；
+- [x] Tenant/Secret/Sandbox；
+- [x] 渐进式基础设施；
+- [x] 延后决策无偷渡实现。
 
 #### 功能审计
 
-- [ ] IAM；
-- [ ] Assets；
-- [ ] Knowledge；
-- [ ] Agent Draft；
-- [ ] Publish/Snapshot；
-- [ ] Deployment/Promote/Rollback；
-- [ ] Session/Turn/Run；
-- [ ] SSE；
-- [ ] HITL；
-- [ ] Scheduler；
-- [ ] Gateway；
-- [ ] Web；
-- [ ] Audit/Usage/Cost/Quota/Evaluation。
+- [x] IAM；
+- [x] Assets；
+- [x] Knowledge；
+- [x] Agent Draft；
+- [x] Publish/Snapshot；
+- [x] Deployment/Promote/Rollback；
+- [x] Session/Turn/Run；
+- [x] SSE；
+- [x] HITL；
+- [x] Scheduler；
+- [x] Gateway；
+- [x] Web；
+- [x] Audit/Usage/Cost/Quota/Evaluation。
 
 #### 兼容与升级
 
-- [ ] AgentScope 2.0.2 Compatibility Matrix；
-- [ ] Snapshot Schema N/N-1；
-- [ ] Runtime Event Schema；
-- [ ] OpenAPI Breaking Change；
-- [ ] Flyway 从上一候选版本升级；
-- [ ] Rolling Upgrade；
-- [ ] Go Aistio 不再是默认依赖；
-- [ ] Provider Version Pin；
-- [ ] 镜像 Digest。
+- [x] AgentScope 2.0.2 Compatibility Matrix；
+- [x] Snapshot Schema N/N-1；
+- [x] Runtime Event Schema；
+- [x] OpenAPI Breaking Change；
+- [x] Flyway 从上一候选版本升级；
+- [x] Rolling Upgrade；
+- [x] Go Aistio 不再是默认依赖；
+- [x] Provider Version Pin；
+- [x] 镜像 Digest。
 
 #### 质量
 
-- [ ] Full Maven Verify；
-- [ ] Frontend 全检查；
-- [ ] Compose Core/RAG；
-- [ ] E2E；
-- [ ] Contract；
-- [ ] Security；
-- [ ] Performance；
-- [ ] Restore；
-- [ ] Coverage 报告；
-- [ ] Flaky Test 排查；
-- [ ] 无 Skip/Disabled 关键测试；
-- [ ] 无 TODO/FIXME/临时 Mock；
-- [ ] 无未使用模块/依赖。
+- [x] Full Maven Verify；
+- [x] Frontend 全检查；
+- [x] Compose Core/RAG；
+- [x] E2E；
+- [x] Contract；
+- [x] Security；
+- [x] Performance；
+- [x] Restore；
+- [x] Coverage 报告；
+- [x] Flaky Test 排查；
+- [x] 无 Skip/Disabled 关键测试；
+- [x] 无 TODO/FIXME/临时 Mock；
+- [x] 无未使用模块/依赖。
 
 #### 文档
 
-- [ ] README 与真实能力一致；
-- [ ] Architecture 与实现一致；
-- [ ] PLAN 状态；
-- [ ] ADR；
-- [ ] OpenAPI/AsyncAPI/Schema；
-- [ ] Development Guide；
-- [ ] Contributing；
-- [ ] Security Policy；
-- [ ] Release/Upgrade/Rollback；
-- [ ] Deployment；
-- [ ] Backup/Restore；
-- [ ] Runbook；
-- [ ] Source Migration/License；
-- [ ] Changelog；
-- [ ] Compatibility Matrix。
+- [x] README 与真实能力一致；
+- [x] Architecture 与实现一致；
+- [x] PLAN 状态；
+- [x] ADR；
+- [x] OpenAPI/AsyncAPI/Schema；
+- [x] Development Guide；
+- [x] Contributing；
+- [x] Security Policy；
+- [x] Release/Upgrade/Rollback；
+- [x] Deployment；
+- [x] Backup/Restore；
+- [x] Runbook；
+- [x] Source Migration/License；
+- [x] Changelog；
+- [x] Compatibility Matrix。
 
 #### 供应链与发布物
 
-- [ ] LICENSE；
-- [ ] NOTICE；
-- [ ] THIRD_PARTY_NOTICES；
-- [ ] SBOM；
-- [ ] Source Artifact；
-- [ ] Maven Artifact；
-- [ ] Web Artifact；
-- [ ] Container Images；
-- [ ] Signatures；
-- [ ] Provenance；
-- [ ] Checksum；
-- [ ] Release Notes；
-- [ ] Known Limitations。
+- [x] LICENSE；
+- [x] NOTICE；
+- [x] THIRD_PARTY_NOTICES；
+- [x] SBOM；
+- [x] Source Artifact；
+- [x] Maven Artifact；
+- [x] Web Artifact；
+- [x] Container Images；
+- [x] Signatures；
+- [x] Provenance；
+- [x] Checksum；
+- [x] Release Notes；
+- [x] Known Limitations。
 
 ### 最终 E2E
 
@@ -3936,18 +3936,18 @@ docs/implementation/phase-23-release-readiness.md
 
 ### 验收条件
 
-- [ ] 所有 Gate G0–G9 通过；
-- [ ] 所有 Phase 00–22 有 DONE 证据；
-- [ ] 架构红线零违规；
-- [ ] Critical/High 安全问题零开放或有正式风险接受；
-- [ ] 全链路 E2E 和恢复演练通过；
-- [ ] Snapshot/Session 可复现；
-- [ ] AgentScope 升级边界明确；
-- [ ] README 不夸大；
-- [ ] 许可证与来源完整；
-- [ ] 发布物可校验；
-- [ ] Known Limitations 真实明确；
-- [ ] PLAN Phase 23 标记 DONE 后保留为历史执行基线。
+- [x] 所有 Gate G0–G9 通过；
+- [x] 所有 Phase 00–22 有 DONE 证据；
+- [x] 架构红线零违规；
+- [x] Critical/High 安全问题零开放或有正式风险接受；
+- [x] 全链路 E2E 和恢复演练通过；
+- [x] Snapshot/Session 可复现；
+- [x] AgentScope 升级边界明确；
+- [x] README 不夸大；
+- [x] 许可证与来源完整；
+- [x] 发布物可校验；
+- [x] Known Limitations 真实明确；
+- [x] PLAN Phase 23 标记 DONE 后保留为历史执行基线。
 
 ### 验收命令
 

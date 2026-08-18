@@ -139,9 +139,20 @@ public final class RuntimeTurnJobHandler implements JobHandler {
      */
     private int integer(JsonNode root, String field) {
         JsonNode value = root.get(field);
-        if (value == null || !value.isIntegralNumber()) {
+        if (value == null) {
             throw new IllegalArgumentException("runtime turn priority is missing");
         }
-        return value.asInt();
+        int parsed;
+        if (value.isIntegralNumber()) {
+            parsed = value.asInt();
+        } else if (value.isTextual() && value.asText().matches("-?[0-9]{1,3}")) {
+            parsed = Integer.parseInt(value.asText());
+        } else {
+            throw new IllegalArgumentException("runtime turn priority is invalid");
+        }
+        if (parsed < -100 || parsed > 100) {
+            throw new IllegalArgumentException("runtime turn priority is outside allowed range");
+        }
+        return parsed;
     }
 }

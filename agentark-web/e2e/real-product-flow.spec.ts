@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
 import { mkdirSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -9,7 +10,9 @@ import {
   type Page,
 } from "@playwright/test";
 
-const realBackend = process.env.AGENTARK_REAL_E2E === "1";
+if (process.env.AGENTARK_REAL_E2E !== "1") {
+  throw new Error("真实四服务 E2E 必须通过 test:e2e:real 入口执行");
+}
 const require = createRequire(import.meta.url);
 const axePath = require.resolve("axe-core/axe.min.js");
 
@@ -21,6 +24,7 @@ interface E2eSession {
   projectId: string;
   environmentId: string;
   seededJobId: string;
+  serviceToken: string;
 }
 
 /** 读取权限为 0600 的临时 E2E 会话。 */
@@ -73,6 +77,45 @@ async function createAsset(
   return { ownerId: asset.id, versionId: version.id };
 }
 
+/** 创建一个可由 Knowledge Revision 固定引用的 PUBLISHED Profile。 */
+async function createKnowledgeProfile(
+  request: APIRequestContext,
+  auth: E2eSession,
+  kind: "parser" | "chunk" | "embedding" | "retrieval",
+  key: string,
+  config: Record<string, unknown>,
+  credentialSecretRef?: string,
+) {
+  return json<{ id: string }>(
+    await request.post(`/api/v1/projects/${auth.projectId}/knowledge-profiles/${kind}`, {
+      headers: headers(auth),
+      data: {
+        key,
+        config,
+        credentialSecretRef: credentialSecretRef ?? null,
+        status: "PUBLISHED",
+      },
+    }),
+    201,
+  );
+}
+
+/** 有界轮询最终一致状态；超时不会输出认证信息或响应正文。 */
+async function eventually<T>(
+  load: () => Promise<T>,
+  accepted: (value: T) => boolean,
+  timeoutMs = 30_000,
+): Promise<T> {
+  const deadline = Date.now() + timeoutMs;
+  let latest = await load();
+  while (!accepted(latest) && Date.now() < deadline) {
+    await new Promise((resolvePromise) => globalThis.setTimeout(resolvePromise, 250));
+    latest = await load();
+  }
+  expect(accepted(latest), JSON.stringify(latest)).toBe(true);
+  return latest;
+}
+
 /** 通过 E2E-only 登录表单建立只驻留页面内存的 Bearer 会话。 */
 async function signIn(page: Page, auth: E2eSession) {
   await page.goto("/sign-in");
@@ -87,7 +130,6 @@ async function signIn(page: Page, auth: E2eSession) {
 }
 
 test.describe("真实后端核心产品流程", () => {
-  test.skip(!realBackend, "仅在 AGENTARK_REAL_E2E=1 时启动真实四服务栈");
   test.describe.configure({ mode: "serial" });
 
   test("Build → Publish → Deploy → Run → Approve → Observe → Promote → Rollback", async ({
@@ -114,7 +156,7 @@ test.describe("真实后端核心产品流程", () => {
     );
 
     const secretKey = `model-${suffix}`;
-    await json(
+    const secretMetadata = await json<{ id: string; version: number }>(
       await request.post(`/api/v1/projects/${auth.projectId}/secrets`, {
         headers: headers(auth),
         data: {
@@ -122,12 +164,22 @@ test.describe("真实后端核心产品流程", () => {
           name: "E2E Model Credential",
           provider: "LOCAL_FILE",
           externalPath: `/e2e/${secretKey}`,
-          scope: "PROJECT",
+          scope: "ENVIRONMENT",
         },
       }),
       201,
     );
-    const secretRef = `secret://project/${auth.projectId}/${secretKey}`;
+    const secretRef = `secret://environment/${auth.environmentId}/primary-model`;
+    await json(
+      await request.post(
+        `/api/v1/projects/${auth.projectId}/environments/${auth.environmentId}/secret-bindings`,
+        {
+          headers: headers(auth),
+          data: { secretMetadataId: secretMetadata.id, bindingKey: "primary-model" },
+        },
+      ),
+      201,
+    );
     const prompt = await createAsset(
       request,
       auth,
@@ -239,12 +291,152 @@ test.describe("真实后端核心产品流程", () => {
         approvalPolicy: { mode: "required" },
       },
     );
-    await json(
+    const knowledgeBase = await json<{ id: string }>(
       await request.post(`/api/v1/projects/${auth.projectId}/knowledge-bases`, {
         headers: headers(auth),
         data: { key: `knowledge-${suffix}`, name: "E2E Knowledge", description: "真实元数据" },
       }),
       201,
+    );
+    const dataSource = await json<{ id: string }>(
+      await request.post(
+        `/api/v1/projects/${auth.projectId}/knowledge-bases/${knowledgeBase.id}/data-sources`,
+        {
+          headers: headers(auth),
+          data: { type: "UPLOAD", name: "E2E Upload", descriptor: { source: "playwright" } },
+        },
+      ),
+      201,
+    );
+    const documentRevision = await json<{ id: string }>(
+      await request.post(
+        `/api/v1/projects/${auth.projectId}/knowledge-bases/${knowledgeBase.id}/documents`,
+        {
+          headers: headers(auth),
+          multipart: {
+            dataSourceId: dataSource.id,
+            title: "AgentArk Release Readiness",
+            metadataJson: JSON.stringify({ source: "e2e" }),
+            file: {
+              name: "release-readiness.md",
+              mimeType: "text/markdown",
+              buffer: Buffer.from("# AgentArk\n\nRelease readiness knowledge."),
+            },
+          },
+        },
+      ),
+      201,
+    );
+    const parserProfile = await createKnowledgeProfile(
+      request,
+      auth,
+      "parser",
+      `parser-${suffix}`,
+      { format: "text" },
+    );
+    const chunkProfile = await createKnowledgeProfile(request, auth, "chunk", `chunk-${suffix}`, {
+      maxCharacters: 512,
+      overlapCharacters: 32,
+    });
+    const embeddingProfile = await createKnowledgeProfile(
+      request,
+      auth,
+      "embedding",
+      `embedding-${suffix}`,
+      { provider: "deterministic-e2e", dimensions: 3 },
+      secretRef,
+    );
+    const retrievalProfile = await createKnowledgeProfile(
+      request,
+      auth,
+      "retrieval",
+      `retrieval-${suffix}`,
+      { topK: 4, scoreThreshold: 0.1, reranker: "none" },
+    );
+    const knowledgeRevision = await json<{ id: string; status: string }>(
+      await request.post(
+        `/api/v1/projects/${auth.projectId}/knowledge-bases/${knowledgeBase.id}/revisions`,
+        {
+          headers: headers(auth),
+          data: {
+            documentRevisionIds: [documentRevision.id],
+            parserProfileId: parserProfile.id,
+            chunkProfileId: chunkProfile.id,
+            embeddingProfileId: embeddingProfile.id,
+            retrievalProfileId: retrievalProfile.id,
+          },
+        },
+      ),
+      201,
+    );
+    expect(knowledgeRevision.status).toBe("CREATED");
+    const ingestionRequest = await json<{ id: string }>(
+      await request.post(
+        `/api/v1/projects/${auth.projectId}/knowledge-revisions/${knowledgeRevision.id}/ingestion-requests`,
+        {
+          headers: headers(auth),
+          data: { idempotencyKey: `ingestion-${suffix}` },
+        },
+      ),
+      202,
+    );
+    const ingestionPayload = JSON.stringify({
+      requestId: ingestionRequest.id,
+      knowledgeRevisionId: knowledgeRevision.id,
+    });
+    const ingestionJob = await json<{ jobId: string; status: string }>(
+      await request.post("http://127.0.0.1:8083/internal/v1/scheduler/jobs", {
+        headers: { Authorization: `Bearer ${auth.serviceToken}` },
+        data: {
+          organizationId: auth.organizationId,
+          projectId: auth.projectId,
+          type: "KNOWLEDGE_INGESTION",
+          businessKey: `knowledge-ingestion-${ingestionRequest.id}`,
+          payload: ingestionPayload,
+          payloadHash: `sha256:${createHash("sha256").update(ingestionPayload).digest("hex")}`,
+          priority: 0,
+          availableAt: new Date().toISOString(),
+          retryPolicy: {
+            maxAttempts: 2,
+            initialBackoffMillis: 100,
+            maxBackoffMillis: 500,
+            multiplier: 2,
+            jitterRatio: 0,
+            timeoutMillis: 30_000,
+          },
+          idempotencyCapability: "PROVIDER_KEY",
+        },
+      }),
+      202,
+    );
+    const completedIngestionJob = await eventually(
+      async () =>
+        json<{ id: string; status: string; currentAttempt: number }>(
+          await request.get(
+            `/api/v1/scheduler/jobs/${ingestionJob.jobId}?organizationId=${auth.organizationId}&projectId=${auth.projectId}`,
+            { headers: headers(auth) },
+          ),
+          200,
+        ),
+      (job) => ["SUCCEEDED", "DEAD_LETTERED", "CANCELLED"].includes(job.status),
+    );
+    expect(completedIngestionJob.status).toBe("SUCCEEDED");
+    const readyKnowledge = await eventually(
+      async () =>
+        json<{ items: Array<{ id: string; status: string }> }>(
+          await request.get(
+            `/api/v1/projects/${auth.projectId}/knowledge-bases/${knowledgeBase.id}/revisions?limit=100`,
+            { headers: headers(auth) },
+          ),
+          200,
+        ),
+      (pageResult) =>
+        pageResult.items.some(
+          (item) => item.id === knowledgeRevision.id && item.status === "READY",
+        ),
+    );
+    expect(readyKnowledge.items.find((item) => item.id === knowledgeRevision.id)?.status).toBe(
+      "READY",
     );
 
     const validDraft = {
@@ -254,7 +446,7 @@ test.describe("真实后端核心产品流程", () => {
       prompts: [{ promptId: prompt.ownerId, versionId: prompt.versionId, role: "SYSTEM" }],
       mcpServers: [{ serverId: mcp.ownerId, versionId: mcp.versionId, allowedTools: ["e2e.echo"] }],
       skills: [{ skillId: skill.ownerId, versionId: skill.versionId }],
-      knowledge: [],
+      knowledge: [{ knowledgeBaseId: knowledgeBase.id, revisionId: knowledgeRevision.id }],
       profiles: {
         memoryId: memory.ownerId,
         memoryVersionId: memory.versionId,
@@ -381,6 +573,53 @@ test.describe("真实后端核心产品流程", () => {
     await page.getByRole("link", { name: /返回 Run/ }).click();
     await expect(page.getByText("SUCCEEDED", { exact: true })).toBeVisible({ timeout: 30_000 });
     await expect(page.getByText("审批通过，运行完成。")).toBeVisible();
+
+    await json(
+      await request.post("/api/v1/scheduler/triggers", {
+        headers: headers(auth),
+        data: {
+          organizationId: auth.organizationId,
+          projectId: auth.projectId,
+          key: `scheduled-run-${suffix}`,
+          type: "CRON",
+          cronExpression: "*/1 * * * * *",
+          zoneId: "UTC",
+          config: {
+            sessionId: sessionId!,
+            input: JSON.stringify({ message: "scheduled release-readiness turn" }),
+            priority: "0",
+          },
+          secretRef: null,
+          targetContract: "runtime-turn-v1",
+          targetJobType: "RUNTIME_TURN",
+        },
+      }),
+      201,
+    );
+    const scheduledJobs = await eventually(
+      async () =>
+        json<{
+          items: Array<{ type: string; businessKey: string; status: string }>;
+        }>(
+          await request.get(
+            `/api/v1/scheduler/jobs?organizationId=${auth.organizationId}&projectId=${auth.projectId}&limit=100`,
+            { headers: headers(auth) },
+          ),
+          200,
+        ),
+      (pageResult) =>
+        pageResult.items.some(
+          (item) =>
+            item.type === "RUNTIME_TURN" &&
+            item.businessKey.startsWith("cron:") &&
+            item.status === "SUCCEEDED",
+        ),
+    );
+    expect(
+      scheduledJobs.items.some(
+        (item) => item.type === "RUNTIME_TURN" && item.status === "SUCCEEDED",
+      ),
+    ).toBe(true);
     await page.addScriptTag({ path: axePath });
     const seriousViolations = await page.evaluate(async () => {
       const axe = (
@@ -455,6 +694,21 @@ test.describe("真实后端核心产品流程", () => {
       ),
       200,
     );
+    const secondSession = await json<{ revisionId: string; snapshotId: string }>(
+      await request.post("/api/v1/runtime/sessions", {
+        headers: { ...headers(auth), "Idempotency-Key": `e2e-session-v2-${suffix}` },
+        data: {
+          organizationId: auth.organizationId,
+          projectId: auth.projectId,
+          deploymentId: deployment.id,
+          participantMetadata: { source: "phase-23" },
+          channelMetadata: {},
+        },
+      }),
+      201,
+    );
+    expect(secondSession.revisionId).toBe(secondRevision.id);
+    expect(secondSession.snapshotId).toBeTruthy();
     const oldSession = await json<{ revisionId: string }>(
       await request.get(`/api/v1/runtime/sessions/${sessionId}`, { headers: headers(auth) }),
       200,
@@ -509,6 +763,23 @@ test.describe("真实后端核心产品流程", () => {
     if (!/^ark_[A-Za-z0-9_-]{12}_[A-Za-z0-9_-]{43}$/.test(apiKey.plaintext)) {
       throw new Error("created API key format is invalid");
     }
+    const directApiKeyRead = await request.get(
+      `http://127.0.0.1:8081/api/v1/projects/${auth.projectId}/agents?limit=1`,
+      {
+        headers: {
+          ...headers(auth),
+          Authorization: `ApiKey ${apiKey.plaintext}`,
+        },
+      },
+    );
+    expect(directApiKeyRead.status(), await directApiKeyRead.text()).toBe(200);
+    const apiKeyRead = await request.get(`/api/v1/projects/${auth.projectId}/agents?limit=1`, {
+      headers: {
+        ...headers(auth),
+        Authorization: `ApiKey ${apiKey.plaintext}`,
+      },
+    });
+    expect(apiKeyRead.status(), await apiKeyRead.text()).toBe(200);
     await json(
       await request.post(`/api/v1/projects/${auth.projectId}/api-keys/${apiKey.apiKey.id}/revoke`, {
         headers: headers(auth),
@@ -523,6 +794,43 @@ test.describe("真实后端核心产品流程", () => {
       200,
     );
     expect(apiKeys.find((item) => item.id === apiKey.apiKey.id)?.revokedAt).not.toBeNull();
+    const revokedApiKeyRead = await request.get(
+      `/api/v1/projects/${auth.projectId}/agents?limit=1`,
+      {
+        headers: {
+          ...headers(auth),
+          Authorization: `ApiKey ${apiKey.plaintext}`,
+        },
+      },
+    );
+    expect(revokedApiKeyRead.status()).toBe(401);
+
+    const revokedSecret = await json<{ status: string; version: number }>(
+      await request.post(`/api/v1/projects/${auth.projectId}/secrets/${secretMetadata.id}:revoke`, {
+        headers: headers(auth),
+        data: { expectedVersion: secretMetadata.version },
+      }),
+      200,
+    );
+    expect(revokedSecret.status).toBe("REVOKED");
+    const validationAfterSecretRevoke = await json<{ valid: boolean }>(
+      await request.post(`/api/v1/projects/${auth.projectId}/agents/${agent.id}/draft/validate`, {
+        headers: headers(auth),
+      }),
+      200,
+    );
+    expect(validationAfterSecretRevoke.valid).toBe(false);
+    const blockedPublish = await request.post(
+      `/api/v1/projects/${auth.projectId}/agents/${agent.id}/publish`,
+      {
+        headers: headers(auth),
+        data: {
+          idempotencyKey: `e2e-publish-after-secret-revoke-${suffix}`,
+          expectedDraftVersion: currentDraft.version + 1,
+        },
+      },
+    );
+    expect([404, 409]).toContain(blockedPublish.status());
 
     const crossTenantJob = await request.get(
       `/api/v1/scheduler/jobs/${auth.seededJobId}?organizationId=${auth.organizationId}&projectId=${childProject.id}`,
@@ -545,6 +853,8 @@ test.describe("真实后端核心产品流程", () => {
       }),
     ).toBeVisible();
     await expect(page.getByRole("table", { name: "安全审计事件" })).toContainText("agent.publish");
+    await page.getByRole("tab", { name: "Usage / Cost", exact: true }).click();
+    await expect(page.getByRole("table", { name: "Usage Cost 聚合" })).toBeVisible();
     await page.getByRole("tab", { name: "Quota", exact: true }).click();
     await page.getByLabel("Scope Ref").fill(auth.projectId);
     await page.getByLabel("Limit").fill("2");

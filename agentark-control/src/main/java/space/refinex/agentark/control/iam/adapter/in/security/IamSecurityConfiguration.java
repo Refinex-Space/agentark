@@ -17,6 +17,7 @@
 package space.refinex.agentark.control.iam.adapter.in.security;
 
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -95,5 +96,23 @@ public class IamSecurityConfiguration {
                     .jwtAuthenticationConverter(new IamJwtAuthenticationConverter(converter))));
         }
         return http.build();
+    }
+
+    /**
+     * 禁止 Servlet 容器在 Spring Security Chain 之外重复注册 API Key Filter。
+     *
+     * <p>同一 OncePerRequestFilter 若先由容器执行，会留下已过滤标记，导致安全链跳过认证并
+     * 清除先前线程上下文。关闭容器注册后，Filter 只在明确的 Bearer Filter 前执行一次。
+     *
+     * @param apiKeyFilter API Key 摘要认证过滤器
+     * @return 已禁用的容器 Filter 注册描述
+     */
+    @Bean
+    public FilterRegistrationBean<IamApiKeyAuthenticationFilter> apiKeyFilterRegistration(
+        IamApiKeyAuthenticationFilter apiKeyFilter) {
+        FilterRegistrationBean<IamApiKeyAuthenticationFilter> registration =
+            new FilterRegistrationBean<>(apiKeyFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 }

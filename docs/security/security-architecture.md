@@ -28,10 +28,11 @@ Internet
 - Organization → Project → Environment 由服务端资源关系和 Principal 权限共同解析。
 - Internal API 不经过公共 Gateway；服务身份必须面向目标服务 Audience。Phase 22 已验证 NetworkPolicy 运行边界；生产 mTLS 仍由目标平台验收，二者都不替代当前 JWT 验证。
 - API Key 只在创建时展示，数据库保存摘要，吊销后短 TTL 缓存受控失效。
+- Control 的 API Key Filter 禁止 Servlet 容器自动注册，只能在 Spring Security Chain 的 Bearer Filter 之前执行；Gateway 预验证后仍转发原始方案供 Control 独立复核。
 
 ## Secret 生命周期
 
-Control 只保存 `SecretMetadata`、外部路径/版本和 Environment Binding。Public API 不提供值读取；`rotate/disable/enable/revoke` 都使用乐观锁并写 Audit。`REVOKED` 是不可逆终态。
+Control 只保存 `SecretMetadata`、外部路径/版本和 Environment Binding。Public API 不提供值读取；`rotate/disable/enable/revoke` 都使用乐观锁并写 Audit。`REVOKED` 是不可逆终态。Environment Binding 不单独覆盖 Metadata 生命周期：只有 Binding=`ACTIVE` 且 Metadata=`ENABLED` 的联查结果可以解析为 SecretRef，禁用或吊销 Metadata 会立即阻断新 Draft 验证、发布和运行时解析。
 
 生产可验证集成为 Vault KV v2：
 
@@ -82,6 +83,7 @@ Snapshot Sandbox Contract 强制 `UNTRUSTED/KUBERNETES`、内容寻址镜像、�
 
 - Maven Verify 生成聚合 CycloneDX 与许可证报告；Trivy 生成仓库级 CycloneDX，补充 Web/IaC。
 - `security.yml` 执行 Dependency Review、Trivy SCA/Secret/IaC 和 Java/Web CodeQL。
+- `.trivyignore.yaml` 只允许带路径、理由和到期日的精确例外；当前唯一例外是 Vault Token 文件挂载路径被 `KSV-0109` 误判为 ConfigMap Secret，真实 Token 仍只来自 Secret Volume。
 - Trivy 使用官方镜像的固定多架构 Digest，不使用可变 Action 标签。
 - `supply-chain.yml` 通过 GitHub OIDC 签发 SBOM/Build Attestation；人工指定的镜像必须固定 Digest，先扫描，再 Cosign Keyless 签名。
 - GitHub Action 全部固定 Commit SHA。任何升级都重新核对上游发布、安全公告与 SHA。

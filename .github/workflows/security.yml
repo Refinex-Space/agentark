@@ -21,6 +21,7 @@ on:
       # 安全扫描脚本和策略。
       - "tools/security/**"
       - ".trivy.yaml"
+      - ".trivyignore.yaml"
       - "trivy-secret.yaml"
       # 当前安全工作流。
       - ".github/workflows/security.yml"

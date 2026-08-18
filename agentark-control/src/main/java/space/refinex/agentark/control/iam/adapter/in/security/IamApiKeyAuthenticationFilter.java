@@ -21,6 +21,8 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -36,6 +38,10 @@ import java.util.Arrays;
  * @author refinex
  */
 public final class IamApiKeyAuthenticationFilter extends OncePerRequestFilter {
+
+    /** 只记录 API Key 认证阶段结果而不记录凭据、前缀或主体的安全诊断日志。 */
+    private static final Logger LOGGER = LoggerFactory.getLogger(
+        IamApiKeyAuthenticationFilter.class);
 
     /**
      * API Key 的认证方案前缀。
@@ -85,8 +91,10 @@ public final class IamApiKeyAuthenticationFilter extends OncePerRequestFilter {
             filterChain.doFilter(request, response);
             return;
         }
+        LOGGER.debug("API key authentication requested");
         String credential = authorization.substring(SCHEME.length());
         if (!credential.matches("ark_[A-Za-z0-9_-]{12}_[A-Za-z0-9_-]{43}")) {
+            LOGGER.debug("API key authentication rejected: invalid credential shape");
             problemWriter.unauthorized(request, response);
             return;
         }
@@ -95,6 +103,7 @@ public final class IamApiKeyAuthenticationFilter extends OncePerRequestFilter {
         try {
             var principal = apiKeyService.authenticate(prefix, secret, "agentark-control");
             if (principal.isEmpty()) {
+                LOGGER.debug("API key authentication rejected: digest or lifecycle check failed");
                 problemWriter.unauthorized(request, response);
                 return;
             }
@@ -105,6 +114,7 @@ public final class IamApiKeyAuthenticationFilter extends OncePerRequestFilter {
             SecurityContextHolder.getContext().setAuthentication(
                 UsernamePasswordAuthenticationToken.authenticated(
                     authenticated, null, authorities));
+            LOGGER.debug("API key authentication succeeded");
             filterChain.doFilter(request, response);
         } finally {
             Arrays.fill(secret, '\0');

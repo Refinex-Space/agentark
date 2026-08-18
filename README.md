@@ -21,7 +21,7 @@
   <img alt="Java" src="https://img.shields.io/badge/Java-21%20LTS-ED8B00?logo=openjdk&logoColor=white">
   <img alt="Spring Boot" src="https://img.shields.io/badge/Spring%20Boot-4.1.0-6DB33F?logo=springboot&logoColor=white">
   <img alt="AgentScope Java" src="https://img.shields.io/badge/AgentScope%20Java-2.0.2-5A67D8">
-  <img alt="Project Status" src="https://img.shields.io/badge/status-early%20development-orange">
+  <img alt="Project Status" src="https://img.shields.io/badge/status-0.1.0%20development%20baseline-blue">
 </p>
 
 <p>
@@ -38,8 +38,8 @@
 ---
 
 > [!IMPORTANT]
-> **AgentArk is in early development.**
-> The target architecture and engineering boundaries are being established before the upstream service code is migrated and reshaped. Public APIs, module coordinates, deployment manifests, and operational behavior should be considered unstable until the first development milestone is announced.
+> **AgentArk 0.1.0 is the first complete development baseline, not a production approval.**
+> The four-plane implementation, contracts, Web console, security controls and deployment assets are available for integration validation. Public compatibility is frozen at the 0.1.0 contract baseline, but a real deployment must still validate its own OIDC, Vault/Secret Manager, managed MySQL/Redis/Object/Qdrant services, registry signatures, NetworkPolicy and disaster-recovery objectives before carrying production traffic.
 
 ## Overview
 
@@ -241,8 +241,10 @@ agentark
 │   └── schemas
 ├── deploy
 │   ├── compose
+│   ├── container
 │   ├── helm
-│   └── kubernetes
+│   ├── observability
+│   └── security
 ├── docs
 └── tools
 ```
@@ -403,6 +405,9 @@ Repository instructions route contributors to the normative source for each deci
 | [`docs/database/`](./docs/database/) | MySQL conventions and Control/Runtime/Scheduler logical models |
 | [`PLAN.md`](./PLAN.md) | Canonical Phase 00–23 execution sequence and evidence gates |
 | [`contracts/`](./contracts/) | Versioned OpenAPI 3.1 and AsyncAPI 3.0 skeletons plus Snapshot, Runtime Event, and Problem Detail JSON Schemas |
+| [`docs/releases/v0-1-0.md`](./docs/releases/v0-1-0.md) | First complete development baseline, compatibility, release notes, and known limitations |
+| [`CONTRIBUTING.md`](./CONTRIBUTING.md) | Contribution workflow and verification requirements |
+| [`SECURITY.md`](./SECURITY.md) | Supported baseline and private vulnerability reporting policy |
 
 > [!TIP]
 > Start with the **System Architecture** document before introducing a new module, cross-plane dependency, storage technology, public contract, or runtime provider.
@@ -411,11 +416,9 @@ Repository instructions route contributors to the normative source for each deci
 
 ## Development Status
 
-AgentArk currently follows an **architecture-first migration strategy**. Phases 02–06 provide the fixed upstream evidence baseline, Maven build foundation, framework-free Kernel, focused Foundation Starters, four Spring Boot deployment units, isolated MySQL ownership, and reproducible contract gates. Phases 07–10 provide Control IAM, versioned AI assets, Knowledge metadata, immutable Agent revisions/snapshots, and Deployment pointers. Phases 11–16 provide the provider-neutral Runtime domain, AgentScope Java 2 anti-corruption adapter, managed Runtime APIs, safe RAG ingestion, durable Scheduler, and stateless public Gateway. Phases 17–18 provide the independent Web build, design system, generated Public API/SSE clients, and the real Govern → Build → Release → Runtime → Approval → Operate product flow. Phases 19–22 provide governance, security hardening, the Aistio migration toolchain, Java-only production containers, Kubernetes/Helm topology, HA, backup/restore, performance and fault-rehearsal baselines. Release-readiness closure remains in Phase 23.
+AgentArk 0.1.0 closes the architecture-first implementation sequence. Phases 00–23 establish the fixed upstream evidence, complete four-plane implementation, Web product flow, governance/security controls, Java-only deployment target, HA, backup/restore, performance and fault-rehearsal baselines, plus the first release-readiness evidence, frozen contracts, compatibility matrix, reproducible release artifacts and operational handoff.
 
-The initial implementation will be derived from the useful service-plane capabilities in AgentScope Java's `agentscope-service`, while deliberately reshaping module boundaries and gradually replacing the Go control plane with Java.
-
-The migration sequence is designed to avoid changing package names, modules, JDK, Spring Boot, ORM, database, runtime contracts, and frontend architecture in one untraceable step.
+The implementation was derived from selected AgentScope Service behavior while deliberately reshaping module/data ownership and isolating AgentScope Java behind a Provider boundary. Go Aistio is no longer a default deployment dependency; external migrations remain controlled by the strangler Runbook.
 
 ### Planned migration sequence
 
@@ -574,7 +577,7 @@ When AgentScope source code is migrated or modified, the applicable Apache-2.0 c
 
 ## Contributing
 
-AgentArk is currently shaping its first implementation baseline. Large changes should start with an Issue or architecture discussion before code is introduced.
+Read [`CONTRIBUTING.md`](./CONTRIBUTING.md) before opening a change. Large changes should start with an Issue or architecture discussion before code is introduced.
 
 Changes that affect any of the following require explicit architectural review:
 
@@ -588,7 +591,7 @@ Changes that affect any of the following require explicit architectural review:
 - migration compatibility;
 - security-sensitive Tool/MCP/Sandbox behavior.
 
-Formal contribution, security, and release-process documents will be added alongside the implementation foundation.
+Security reports follow [`SECURITY.md`](./SECURITY.md); release and rollback procedures are routed from [`docs/README.md`](./docs/README.md).
 
 ---
 

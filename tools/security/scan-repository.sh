@@ -28,6 +28,7 @@ docker run --rm \
   "${TRIVY_IMAGE}" \
   --cache-dir /cache \
   --config /workspace/.trivy.yaml \
+  --ignorefile /workspace/.trivyignore.yaml \
   --scanners secret,misconfig \
   fs /workspace
 
@@ -37,6 +38,7 @@ docker run --rm \
   --mount "type=bind,src=${CACHE_DIRECTORY},dst=/cache" \
   "${TRIVY_IMAGE}" \
   --cache-dir /cache \
+  --ignorefile /workspace/.trivyignore.yaml \
   sbom \
   --severity HIGH,CRITICAL \
   --exit-code 1 \
@@ -49,6 +51,7 @@ docker run --rm \
   --mount "type=bind,src=${CACHE_DIRECTORY},dst=/cache" \
   "${TRIVY_IMAGE}" \
   --cache-dir /cache \
+  --ignorefile /workspace/.trivyignore.yaml \
   fs \
   --scanners vuln \
   --severity HIGH,CRITICAL \

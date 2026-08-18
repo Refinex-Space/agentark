@@ -112,7 +112,7 @@ Scheduler Worker 默认关闭；只启动管理/内部 API、Flyway 和脱敏指
 | `agentark.scheduler.runtime-base-url` / `AGENTARK_RUNTIME_BASE_URL` | `http://localhost:8082` | Runtime Turn Handler | 只调用 `/internal/v1/runtime/turns`；禁止依赖 Runtime 模块或数据库 |
 | `agentark.scheduler.internal-token` / `AGENTARK_SCHEDULER_INTERNAL_TOKEN` | 空 | 调用 Control/Runtime Internal API | 必须是短期 Audience 受限服务 Token；空值不会回退为共享 Secret |
 
-Trigger 通过 `/internal/v1/scheduler/triggers` 登记。Cron 必须提供 Spring 六段表达式和 IANA 时区且不能提供 SecretRef；Webhook 必须提供合法 `secret://<scope>/<name>`，不能提供 Cron 字段。`config` 最多 32 个字符串字段，单值最多 16 KiB，禁止使用疑似 Secret/Token/Password/Credential/API Key 的键名。
+Trigger 通过 `/internal/v1/scheduler/triggers` 登记。Cron 必须提供 Spring 六段表达式和 IANA 时区且不能提供 SecretRef；Webhook 必须提供合法 `secret://<scope>/<name>`，不能提供 Cron 字段。`config` 最多 32 个字符串字段，单值最多 16 KiB，禁止使用疑似 Secret/Token/Password/Credential/API Key 的键名。`RUNTIME_TURN` 的 `priority` 因 Trigger Contract 的值类型为字符串，必须使用十进制字符串表示 `-100`–`100` 的整数；Scheduler Handler 同时接受 Internal API 直接创建 Job 时使用的 JSON 整数，但拒绝小数、越界值和非数字字符串。
 
 ## Foundation Starter 配置
 

@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-16
+updated: 2026-08-18
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -17,6 +17,12 @@ referenced_by: AGENTS.md#knowledge-map
 - SSE 使用持久 Event ID 和 `Last-Event-ID` 恢复；连接生命周期不代表 Run 生命周期。
 - Breaking Change 需要新版本或兼容迁移，支持当前与前一契约版本的滚动窗口。
 - 跨平面只传不可变 Snapshot、Descriptor、Command 或 Event，不共享数据库模型。
+
+0.1.0 首次发布契约基线额外遵循：
+
+- `contracts/baselines/0.1.0.sha256` 冻结全部 OpenAPI、AsyncAPI、JSON Schema、示例和迁移 Contract；`tools/release/verify-contract-baseline.sh` 对任何增删改失败。
+- 首个 Snapshot/Event 版本只有 N=v1，不存在历史 N-1。引入 v2 时必须保留并同时验证 v1，建立真实 N/N-1 滚动窗口后才能废弃 v1。
+- 0.1.0 内需要兼容修正的契约必须保持向后兼容并显式更新摘要；破坏性变化只能进入新的 API/Schema 版本和新的发布基线，不能静默覆盖 v1。
 
 Phase 03 已建立以下契约基线：
 

@@ -18,8 +18,8 @@ scan:
     - misconfig
   # 排除不属于仓库事实的缓存、构建与第三方目录。
   skip-dirs:
-    # 固定上游只读 Worktree，由上游自己的安全流程负责。
-    - .agentark/upstreams
+    # `.agentark` 只含固定上游、下载缓存、临时工具和脱敏演练证据，不属于发布源码。
+    - .agentark
     # Maven 构建输出。
     - target
     # 所有模块 Maven 构建输出。
@@ -36,6 +36,8 @@ scan:
   skip-files:
     # pnpm 锁文件只包含完整性摘要和公开 Registry URL。
     - agentark-web/pnpm-lock.yaml
+    # kind 镜像导入器只重建现有镜像 Manifest；添加 USER 会错误覆盖来源镜像运行身份。
+    - tools/production/fixtures/Dockerfile.kind-import
 # 漏洞判断配置。
 vulnerability:
   # 已知高危问题即使尚无修复也必须显式解释，不静默忽略。

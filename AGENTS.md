@@ -2,7 +2,7 @@
 
 ## Project
 
-AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phases 07–10 established Control IAM, versioned AI and Knowledge assets, immutable Agent Revision/Snapshot, Deployment and Internal Contracts. Phases 11–13 established the provider-neutral Runtime domain, durable Event/Work/State persistence, AgentScope anti-corruption layer, Snapshot Compiler, managed Runtime API/SSE/HITL and recovery. Phase 14 established safe Knowledge ingestion and fixed-Revision RAG. Phase 15 established the independent Scheduler Plane with durable Trigger/Job/Attempt/Lease, Cron/Webhook/Channel, Retry/Dead Letter and versioned Runtime/Control clients. Phase 16 established the stateless public Gateway. Phases 17–18 established the independent AgentArk Web foundation and real product flow. Phase 19 established W3C OpenTelemetry, low-cardinality metrics, append-only Audit, versioned Usage/Cost, concurrency-safe Quota, deterministic Evaluation/Release Gates, the Web governance view, and a local observability stack. Phase 20 established the threat model, Vault lifecycle integration, MCP SSRF/DNS guard, signed Skill supply-chain gate, restricted Sandbox contract, untrusted-content labels, and pinned SCA/SBOM/signing/provenance workflows. Phase 21 froze the Aistio/Java contracts, added read-only export, resumable migration and semantic Shadow gates, classified non-core Go capabilities, and proved the default deployment is Java-only. Production deployment, HA and DR remain owned by Phase 22.
+AgentArk is an architecture-first Java Agent Application Platform built around a provider-neutral Runtime and AgentScope Java 2.0.2. Phases 00–23 established the four-plane backend, immutable release/runtime model, IAM and AI/Knowledge catalogs, managed Runtime/Scheduler/Gateway, complete Web product flow, governance/security controls, Java-only Aistio cutover target, production containers, Helm topology, HA, performance, restore rehearsals and the first complete 0.1.0 release-readiness baseline. Production approval still requires target-environment identity, secret, managed-service, registry and disaster-recovery validation.
 
 ## Authority
 
@@ -42,10 +42,12 @@ pnpm --dir agentark-web test:e2e:real
 python3 tools/harness/knowledge_gate.py
 python3 tools/harness/verify_upstreams.py --require-worktrees
 python3 -m unittest discover -s tools/migration/tests -v
+./tools/production/validate-chart.sh
+./tools/release/verify-release-readiness.sh
 git diff HEAD --check
 ```
 
-The Maven reactor validates module boundaries, Kernel behavior, contract Schema, Foundation auto-configuration, four service contexts, architecture rules, and build policy. The Web commands validate generated Public API clients, static quality, unit tests, production build, and Chromium interaction. The local Compose stack is development-only; Scheduler Worker and real Runtime Provider stay disabled until their production dependencies are explicitly supplied. Helm commands do not exist yet and must be introduced only by their owning PLAN phase.
+The Maven reactor validates module boundaries, Kernel behavior, contract Schema, Foundation auto-configuration, four service contexts, architecture rules, coverage, SBOM and build policy. The Web commands validate generated Public API clients, static quality, unit tests, production build and Chromium interaction. The local Compose stack is development-only; Scheduler Worker and real Runtime Provider stay disabled until their production dependencies are explicitly supplied. Production topology is owned by `deploy/helm/agentark/`; target-environment release, signing and restore approval must follow the release and operations runbooks.
 
 ## Workflow
 

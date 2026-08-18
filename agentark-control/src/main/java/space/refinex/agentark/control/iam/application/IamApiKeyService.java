@@ -17,6 +17,8 @@
 package space.refinex.agentark.control.iam.application;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 import space.refinex.agentark.control.iam.application.port.ApiKeyRepository;
 import space.refinex.agentark.control.iam.application.port.IdentityRepository;
@@ -44,6 +46,9 @@ import java.util.*;
  * @author refinex
  */
 public class IamApiKeyService implements ApiKeyAuthenticator {
+
+    /** 只记录认证阶段分类而不记录前缀、摘要或凭据的安全诊断日志。 */
+    private static final Logger LOGGER = LoggerFactory.getLogger(IamApiKeyService.class);
 
     /**
      * API Key 认证仅允许访问 Control Audience。
@@ -282,10 +287,22 @@ public class IamApiKeyService implements ApiKeyAuthenticator {
         }
         try {
             byte[] candidateDigest = digest(keyId, secret);
-            return apiKeyRepository.findByPrefix(keyId)
+            Optional<ApiKey> candidate = apiKeyRepository.findByPrefix(keyId);
+            boolean digestMatches = candidate
+                .map(apiKey -> MessageDigest.isEqual(apiKey.digest(), candidateDigest))
+                .orElse(false);
+            boolean usable = candidate
                 .filter(apiKey -> MessageDigest.isEqual(apiKey.digest(), candidateDigest))
-                .filter(apiKey -> apiKey.isUsableAt(clock.instant()))
-                .map(apiKey -> new AgentArkPrincipal(
+                .map(apiKey -> apiKey.isUsableAt(clock.instant()))
+                .orElse(false);
+            if (!digestMatches || !usable) {
+                LOGGER.debug(
+                    "API key authentication rejected: candidatePresent={}, digestMatches={}, usable={}",
+                    candidate.isPresent(), digestMatches, usable);
+                return Optional.empty();
+            }
+            LOGGER.debug("API key authentication passed digest and lifecycle checks");
+            return candidate.map(apiKey -> new AgentArkPrincipal(
                     "urn:agentark:api-key",
                     apiKey.serviceAccountId().asString(),
                     PrincipalType.API_KEY,

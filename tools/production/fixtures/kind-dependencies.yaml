@@ -31,6 +31,20 @@ spec:
         # 允许同 Release 应用访问。
         app.kubernetes.io/instance: agentark
     spec:
+      # Fixture Pod 固定以 MySQL 官方非 Root UID/GID 运行。
+      securityContext:
+        # 禁止任何容器回退 Root。
+        runAsNonRoot: true
+        # 固定 MySQL 镜像用户 UID。
+        runAsUser: 999
+        # 固定 MySQL 镜像用户 GID。
+        runAsGroup: 999
+        # 让临时数据卷对 MySQL 组可写。
+        fsGroup: 999
+        # 使用集群默认 Seccomp 限制系统调用。
+        seccompProfile:
+          # Kubernetes 标准受限配置。
+          type: RuntimeDefault
       automountServiceAccountToken: false
       nodeSelector:
         kubernetes.io/hostname: agentark-phase22-control-plane
@@ -40,6 +54,22 @@ spec:
           effect: NoSchedule
       containers:
         - name: mysql
+          # Fixture 容器禁止提权、Root 和可写根文件系统。
+          securityContext:
+            # 子进程不能获取额外权限。
+            allowPrivilegeEscalation: false
+            # 删除默认 Linux Capability。
+            capabilities:
+              # 明确删除全部 Capability。
+              drop: ["ALL"]
+            # 根文件系统保持只读，写入只允许显式 EmptyDir。
+            readOnlyRootFilesystem: true
+            # 再次在容器层禁止 Root。
+            runAsNonRoot: true
+            # 固定 MySQL UID。
+            runAsUser: 999
+            # 固定 MySQL GID。
+            runAsGroup: 999
           image: mysql:8.4.11
           imagePullPolicy: IfNotPresent
           env:
@@ -96,6 +126,14 @@ spec:
               mountPath: /run/secrets
               # 禁止容器修改凭据。
               readOnly: true
+            # MySQL Socket 和 PID 只写入临时运行目录。
+            - name: runtime
+              # 官方 MySQL 运行目录。
+              mountPath: /var/run/mysqld
+            # 临时文件不能写入只读根。
+            - name: tmp
+              # 标准临时目录。
+              mountPath: /tmp
       volumes:
         - name: data
           # 只用于一次性演练，退出时删除。
@@ -110,6 +148,16 @@ spec:
           secret:
             secretName: agentark-kind-secrets
             defaultMode: 0444
+        - name: runtime
+          # MySQL Socket/PID 的一次性目录。
+          emptyDir:
+            # 限制运行文件占用。
+            sizeLimit: 64Mi
+        - name: tmp
+          # MySQL 临时文件的一次性目录。
+          emptyDir:
+            # 限制临时文件占用。
+            sizeLimit: 128Mi
 ---
 # MySQL Service DNS 与生产 Chart 的外部地址形式一致。
 apiVersion: v1
@@ -170,6 +218,20 @@ spec:
         # 允许同 Release 应用访问。
         app.kubernetes.io/instance: agentark
     spec:
+      # Fixture Pod 固定以 Redis 官方非 Root UID/GID 运行。
+      securityContext:
+        # 禁止任何容器回退 Root。
+        runAsNonRoot: true
+        # 固定 Redis 镜像用户 UID。
+        runAsUser: 999
+        # 固定 Redis 镜像用户 GID。
+        runAsGroup: 999
+        # 让 AOF 临时卷对 Redis 组可写。
+        fsGroup: 999
+        # 使用集群默认 Seccomp 限制系统调用。
+        seccompProfile:
+          # Kubernetes 标准受限配置。
+          type: RuntimeDefault
       automountServiceAccountToken: false
       nodeSelector:
         kubernetes.io/hostname: agentark-phase22-control-plane
@@ -179,6 +241,22 @@ spec:
           effect: NoSchedule
       containers:
         - name: redis
+          # Fixture 容器禁止提权、Root 和可写根文件系统。
+          securityContext:
+            # 子进程不能获取额外权限。
+            allowPrivilegeEscalation: false
+            # 删除默认 Linux Capability。
+            capabilities:
+              # 明确删除全部 Capability。
+              drop: ["ALL"]
+            # 根文件系统保持只读，AOF 只写显式数据卷。
+            readOnlyRootFilesystem: true
+            # 再次在容器层禁止 Root。
+            runAsNonRoot: true
+            # 固定 Redis UID。
+            runAsUser: 999
+            # 固定 Redis GID。
+            runAsGroup: 999
           image: redis:8.10.0
           imagePullPolicy: IfNotPresent
           command: ["/bin/sh", "-c"]
@@ -218,6 +296,10 @@ spec:
               mountPath: /run/secrets
               # 禁止容器修改凭据。
               readOnly: true
+            # Shell 和 Redis 临时文件不能写入只读根。
+            - name: tmp
+              # 标准临时目录。
+              mountPath: /tmp
       volumes:
         - name: data
           # 只用于一次性演练，退出时删除。
@@ -228,6 +310,11 @@ spec:
           secret:
             secretName: agentark-kind-secrets
             defaultMode: 0444
+        - name: tmp
+          # Redis 临时文件的一次性目录。
+          emptyDir:
+            # 限制临时文件占用。
+            sizeLimit: 64Mi
 ---
 # Redis Service DNS。
 apiVersion: v1

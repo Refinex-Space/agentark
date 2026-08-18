@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-16
+updated: 2026-08-18
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -87,7 +87,7 @@ V5 使用四个 `BEFORE UPDATE/DELETE` 触发器保护 Published Revision 与 Sn
 | `secret_metadata` | id, organization_id, project_id, key, provider, external_path, external_version, scope, status, version | `(project_id, key)` 唯一；只保存外部 Provider 定位和版本，不保存 Secret 值 |
 | `secret_binding` | id, organization_id, project_id, environment_id, secret_metadata_id, binding_key, status, version | `(environment_id, binding_key)` 唯一；复合外键保证 Environment 与 Secret 属于同一 Project |
 
-Phase 08 建立 Secret 元数据、Environment Binding、Resolver Port 和开发 Local Provider；Phase 19 在同一 Owner 下追加轮换、过期和治理流程，不另建第二套 Secret 模型。Model/MCP 等资产版本只保存 `secret://<scope>/<name>` 形式的 `SecretRef`，Resolver 解析出的字符数组不得进入数据库、API、日志、审计或事件。
+Phase 08 建立 Secret 元数据、Environment Binding、Resolver Port 和开发 Local Provider；Phase 19 在同一 Owner 下追加轮换、过期和治理流程，不另建第二套 Secret 模型。Model/MCP 等资产版本只保存 `secret://<scope>/<name>` 形式的 `SecretRef`，Resolver 解析出的字符数组不得进入数据库、API、日志、审计或事件。Environment 引用查询必须同时约束 `secret_binding.status='ACTIVE'` 与关联 `secret_metadata.status='ENABLED'`；Binding 不能使已禁用或吊销的 Metadata 继续可见。
 
 ## Knowledge Metadata
 

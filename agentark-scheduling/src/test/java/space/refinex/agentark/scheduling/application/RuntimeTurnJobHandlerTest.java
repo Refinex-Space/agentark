@@ -79,6 +79,28 @@ class RuntimeTurnJobHandlerTest {
             .isEqualTo("scheduler-turn:" + claim.job().id().asString());
     }
 
+    /** 证明 Cron Trigger 的字符串配置可以形成合法 Runtime 优先级。 */
+    @Test
+    void acceptsCronStringPriority() {
+        RuntimeInternalClient client = mock(RuntimeInternalClient.class);
+        when(client.createTurn(any())).thenReturn(
+            CompletableFuture.completedFuture(RunId.generate().asString()));
+        JsonMapper mapper = JsonMapper.builder().build();
+        SessionId sessionId = SessionId.generate();
+        String payload = mapper.writeValueAsString(Map.of(
+            "sessionId", sessionId.asString(), "input", "{\"source\":\"cron\"}",
+            "priority", "7"));
+        RuntimeTurnJobHandler handler = new RuntimeTurnJobHandler(client, mapper);
+
+        HandlerResult result = handler.handle(claim(payload)).toCompletableFuture().join();
+
+        assertThat(result.successful()).isTrue();
+        ArgumentCaptor<RuntimeTurnCommand> command =
+            ArgumentCaptor.forClass(RuntimeTurnCommand.class);
+        verify(client).createTurn(command.capture());
+        assertThat(command.getValue().priority()).isEqualTo(7);
+    }
+
     /**
      * 创建 Runtime Turn Claim。
      *

@@ -159,15 +159,21 @@ public interface SecretMapper {
      * @param projectId     项目 UUIDv7
      * @param environmentId 环境 UUIDv7
      * @param bindingKey    绑定 Key
-     * @return 活动绑定
+     * @return Binding 与关联 Secret Metadata 都启用时的活动绑定
      */
     @Select("""
-        SELECT id, organization_id, project_id, environment_id, secret_metadata_id, binding_key,
-               status, version, created_at, updated_at
-        FROM secret_binding
-        WHERE project_id = #{projectId,jdbcType=BINARY}
-          AND environment_id = #{environmentId,jdbcType=BINARY}
-          AND binding_key = #{bindingKey} AND status = 'ACTIVE'
+        SELECT b.id, b.organization_id, b.project_id, b.environment_id, b.secret_metadata_id,
+               b.binding_key, b.status, b.version, b.created_at, b.updated_at
+        FROM secret_binding b
+        JOIN secret_metadata m
+          ON m.id = b.secret_metadata_id
+         AND m.organization_id = b.organization_id
+         AND m.project_id = b.project_id
+        WHERE b.project_id = #{projectId,jdbcType=BINARY}
+          AND b.environment_id = #{environmentId,jdbcType=BINARY}
+          AND b.binding_key = #{bindingKey}
+          AND b.status = 'ACTIVE'
+          AND m.status = 'ENABLED'
         """)
     Optional<BindingRow> findActiveBinding(
         @Param("projectId") UUID projectId,

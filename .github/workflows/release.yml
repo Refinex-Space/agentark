@@ -1,0 +1,90 @@
+# 生成可验证的 0.1.x 候选发布物，不自动创建 GitHub Release 或发布容器。
+name: Release Candidate Artifacts
+
+# 只有显式推送版本 Tag 才生成候选发布物。
+on:
+  # Tag 推送由发布人员在全部 Gate 通过后执行。
+  push:
+    # 只接受语义版本风格 Tag；脚本继续校验 Tag 与 Maven 版本完全一致。
+    tags:
+      - "v*"
+
+# OIDC 只用于 Artifact Provenance，不授予仓库内容或 Registry 写权限。
+permissions:
+  # Checkout 当前 Tag。
+  contents: read
+  # 获取 GitHub OIDC 身份签发 Provenance。
+  id-token: write
+  # 保存 GitHub Artifact Attestation。
+  attestations: write
+
+# 每个版本 Tag 只允许一个候选构建。
+concurrency:
+  # 按不可变 Tag 隔离发布任务。
+  group: release-candidate-${{ github.ref }}
+  # Tag 不应被后续任务静默取消。
+  cancel-in-progress: false
+
+# 候选发布物任务。
+jobs:
+  # 构建、校验、上传并证明离线发布物。
+  build-artifacts:
+    # 对外展示任务名称。
+    name: Build and attest release artifacts
+    # 使用带 Docker 的 GitHub Ubuntu 执行 Maven、Web 和仓库 SBOM。
+    runs-on: ubuntu-latest
+    # 构建、Trivy SBOM 与 Attestation 的总时间上限。
+    timeout-minutes: 45
+    # 严格顺序执行发布门禁。
+    steps:
+      # 获取 Tag 对应完整 Commit；Action 固定到 v4.4.0 Commit。
+      - name: Checkout exact tag
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # 保留 Tag，供构建脚本执行精确版本校验。
+          fetch-depth: 0
+      # 安装项目固定 JDK 21；Action 固定到 v4.9.1 Commit。
+      - name: Set up JDK 21
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4.9.1
+        with:
+          # 与生产构建一致的 Temurin。
+          distribution: temurin
+          # 固定 Java 21 LTS。
+          java-version: "21"
+          # 复用 Maven 依赖缓存。
+          cache: maven
+      # 安装 Web 锁定的 Node.js 24；Action 固定到 v6 Commit。
+      - name: Set up Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          # 从仓库版本文件读取 Node 24。
+          node-version-file: agentark-web/.node-version
+      # 激活 packageManager 精确声明的 pnpm 11。
+      - name: Activate pnpm 11
+        run: |
+          corepack enable
+          corepack prepare pnpm@11.22.0 --activate
+      # 再次执行静态架构、知识地图、上游和 Contract Baseline 门禁。
+      - name: Verify release readiness
+        run: ./tools/release/verify-release-readiness.sh
+      # 构建 Source/Maven/Web/SBOM/License/Checksum；脚本拒绝脏工作区或错 Tag。
+      - name: Build release artifacts
+        run: ./tools/release/build-release-artifacts.sh
+      # 保存候选发布物供人工发布评审；Action 固定到 v4.6.2 Commit。
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          # 稳定 Artifact 名称包含当前 Tag。
+          name: agentark-release-${{ github.ref_name }}
+          # 上传所有由脚本生成且纳入 SHA256SUMS 的文件。
+          path: target/release/*
+          # 缺失任一输出目录都使发布失败。
+          if-no-files-found: error
+          # 候选证据保留九十天。
+          retention-days: 90
+      # 为同一组离线文件签发 GitHub OIDC Build Provenance；Action 固定到 v4.2.2 Commit。
+      - name: Attest release provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          # 每个候选文件都绑定到当前仓库、Workflow、Commit 和 Tag。
+          subject-path: target/release/*
