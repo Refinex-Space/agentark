@@ -71,24 +71,54 @@ curl -i -N \
 ./tools/verify-core.sh
 ```
 
-`dev-up.sh` 先以 `0600` 生成已忽略的本地 Secret，再验证 Compose、打包四个 JAR、构建非 root 镜像并等待全部容器健康。若 `agentark_mysql-data` 已存在但任一 MySQL Secret 丢失，脚本将拒绝生成新凭据；必须恢复原 Secret，或由人工确认数据可丢弃后重置数据卷。`verify-core.sh` 额外验证七个容器、四组 Actuator 安全边界、三账号 Schema 隔离以及 Qdrant 未进入 Core。只准备 Secret 与校验配置而不启动时使用：
+`dev-up.sh` 先以 `0600` 生成已忽略的本地 Secret，再验证 Compose、幂等创建 `agentark_identity`、打包四个 JAR、构建非 root 镜像并等待全部容器健康。若已有 MySQL Secret 丢失，脚本将拒绝静默补生。`verify-core.sh` 额外验证七个长期容器、PASSWORD Session、RS256 JWK、四组 Actuator 安全边界、四账号 Schema 隔离以及 Qdrant 未进入 Core。只准备 Secret 与校验配置而不启动时使用：
 
 ```bash
 ./tools/dev-up.sh --prepare-only
 ```
 
-三个 Owner 均从 `V1__phase_06_schema_baseline.sql` 起独立迁移；当前 Control 到 V5、Runtime 到 V2、Scheduler 保持 V1。若任一 Flyway 校验失败，服务必须保持失败状态；禁止通过关闭 Flyway、修改历史表或启用 `clean` 绕过。确认本地三套独立历史可用：
+日常用户从账户菜单进入“修改密码”，必须提供当前密码；成功后全部浏览器会话失效并返回登录页。管理员在“用户与登录”执行“重置密码”时只能取得一次性临时密码，目标用户下次登录必须改密。两条路径都不得直接修改 `identity_password_credential`，只有本机凭据完全遗失且常规管理 API 不可用时才能执行受审 Break-glass 流程。
+
+三个业务 Owner 均从 `V1__phase_06_schema_baseline.sql` 起独立迁移，Gateway Identity 使用自己的 `V1__built_in_identity.sql`；当前 Control 到 V8、Runtime 到 V3、Scheduler 到 V3、Identity 到 V1。若任一 Flyway 校验失败，服务必须保持失败状态；禁止通过关闭 Flyway、修改历史表或启用 `clean` 绕过。确认本地四套独立历史可用：
 
 ```bash
 ./tools/verify-core.sh
 ```
 
-该脚本验证三个账号只能使用自身 Schema，并分别达到 Control V5/48 表、Runtime V2/13 表、Scheduler V1/0 表；Migration Checksum 和 N-1 升级由对应 Owner 的 Testcontainers 测试与 Flyway 启动校验共同负责。
+该脚本验证四个账号只能使用自身 Schema，并分别达到 Control V8/69 表、Runtime V3/13 表、Scheduler V3/9 表、Identity V1/13 表；Migration Checksum 和 N-1 升级由对应 Owner 的 Testcontainers 测试与 Flyway 启动校验共同负责。
 
 显式启动包含 Qdrant 1.18.3 的 RAG Profile：
 
 ```bash
 ./tools/dev-up.sh --profile rag
+```
+
+默认启动带 MySQL 内置账号身份的 Core：
+
+```bash
+./tools/dev-up.sh
+pnpm --dir agentark-web dev
+```
+
+浏览器访问 `http://localhost:5173/sign-in` 后直接显示 AgentArk 单列账号登录页。用户名为 `agentark-admin`，也可使用 Identity 表登记的电子邮箱；一次性临时密码只在首次登录时由人工读取：
+
+```bash
+cat deploy/compose/.secrets/identity-user-password
+```
+
+Gateway 必须在创建完整 Session 前要求立即修改临时密码。验收脚本会在改密成功后将新随机密码原子写回同一 `0600` 文件，值永不输出。账号、Argon2id 摘要、锁定和安全事件保存在 `agentark_identity` MySQL；Redis 丢失只要求重新登录。
+
+验证完整首次改密、Redis Session 和平台管理员账号 API：
+
+```bash
+node tools/verify-built-in-identity-login.mjs
+```
+
+纯 API、真实 E2E 或已配置外部 IdP 时显式关闭内置 Identity：
+
+```bash
+./tools/dev-up.sh --no-identity
+./tools/verify-core.sh --no-identity
 ```
 
 手工检查四个脱敏健康端点：

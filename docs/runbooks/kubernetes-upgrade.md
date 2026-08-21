@@ -16,12 +16,12 @@ helm template agentark deploy/helm/agentark \
   --values <approved-production-values.yaml> > /tmp/agentark-rendered.yaml
 ```
 
-生产 Values 必须开启 `global.productionValidation`，镜像使用真实 `@sha256` Digest，Secret 来自 ExistingSecret 或 ExternalSecret，Vault/OIDC 使用真实 HTTPS，Redis 开启 TLS，MySQL 使用 `VERIFY_IDENTITY`，Object Store 支持 RWX/快照/复制，Sandbox RuntimeClass 与 NetworkPolicy 已由集群平台验证。出口 CIDR 不能为全网或云元数据范围。默认不引入 Nacos、Consul、Service Mesh、Kafka、Elasticsearch 或 Neo4j。
+生产 Values 必须开启 `global.productionValidation`，镜像使用真实 `@sha256` Digest，Secret 来自 ExistingSecret 或 ExternalSecret，Vault 与所选 Built-in Identity/OIDC Issuer 使用真实 HTTPS，Redis 开启 TLS，MySQL 使用 `VERIFY_IDENTITY`，Object Store 支持 RWX/快照/复制，Sandbox RuntimeClass 与 NetworkPolicy 已由集群平台验证。出口 CIDR 不能为全网或云元数据范围。默认不引入 Nacos、Consul、Service Mesh、Kafka、Elasticsearch 或 Neo4j。
 
 ## Expand → Migrate → Contract
 
 1. **Expand**：先发布兼容 N/N-1 的契约、读取路径和可空字段；禁止先删除旧字段或收紧旧值。
-2. **Migrate**：以 Helm Hook Flyway Job 分别迁移 Control、Runtime、Scheduler Schema；Job 使用各自最小权限账号，任一失败则中止 Deployment 更新。
+2. **Migrate**：以 Helm Hook Flyway Job 分别迁移 Built-in Identity（若启用）、Control、Runtime、Scheduler Schema；Job 使用各自最小权限账号，任一失败则中止 Deployment 更新。
 3. **Application**：按 Control → Runtime → Scheduler → Gateway/Web 顺序滚动；`maxUnavailable=0`，观察 Readiness、错误率、Outbox/Event Lag 和 DB Pool。
 4. **Contract**：在观察窗口和旧版本回退窗口结束后，另一个发布批次移除旧读写路径。
 

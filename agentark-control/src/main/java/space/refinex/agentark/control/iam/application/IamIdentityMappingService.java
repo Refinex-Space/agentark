@@ -20,6 +20,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import space.refinex.agentark.control.iam.application.port.IdentityRepository;
 import space.refinex.agentark.control.iam.domain.UserIdentity;
+import space.refinex.agentark.control.iam.domain.IamStatus;
+import space.refinex.agentark.kernel.id.UserIdentityId;
 
 import java.time.Clock;
 import java.util.Objects;
@@ -69,5 +71,27 @@ public class IamIdentityMappingService {
                 Optional.empty(),
                 Optional.empty(),
                 clock.instant())));
+    }
+
+    /**
+     * 幂等接收 Gateway Identity Outbox 投影，不接收密码、锁定或 Session 信息。
+     *
+     * @param issuer      受信内置 Issuer
+     * @param subject     UUIDv7 Subject
+     * @param displayName 可选展示名称
+     * @param email       可选邮箱
+     * @param status      ACTIVE、SUSPENDED 或 DISABLED
+     * @return 写入后的唯一用户身份投影
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public UserIdentity provision(
+        String issuer,
+        String subject,
+        Optional<String> displayName,
+        Optional<String> email,
+        IamStatus status) {
+        UserIdentityId id = UserIdentityId.parse(subject);
+        return identityRepository.upsertUserIdentity(UserIdentity.provision(
+            id, issuer, subject, displayName, email, status, clock.instant()));
     }
 }

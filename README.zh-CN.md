@@ -43,7 +43,7 @@
 
 > [!IMPORTANT]
 > **AgentArk 0.1.0 是首个完整开发基线，并不代表已通过生产审批。**
-> 四平面实现、契约、Web 控制台、安全控制和部署资产已经可用于集成验证。公共兼容性已冻结在 0.1.0 契约基线，但实际部署在承载生产流量前，仍必须在目标环境中验证 OIDC、Vault/Secret Manager、托管 MySQL/Redis/对象存储/Qdrant 服务、镜像仓库签名、NetworkPolicy 和灾难恢复目标。
+> 四平面实现、契约、Web 控制台、安全控制和部署资产已经可用于集成验证。公共兼容性已冻结在 0.1.0 契约基线，但实际部署在承载生产流量前，仍必须在目标环境中验证 Built-in Identity 或外部 OIDC、Vault/Secret Manager、托管 MySQL/Redis/对象存储/Qdrant 服务、镜像仓库签名、NetworkPolicy 和灾难恢复目标。
 
 ## 概览
 
@@ -165,7 +165,7 @@ flowchart TB
 
 | 平面 | 负责 | **不负责** |
 |---|---|---|
-| **Gateway** | 公共入口、认证前门、路由、限流、CORS、请求身份、SSE 代理 | 业务状态、Agent 编译、持久化 |
+| **Gateway** | 公共入口、内置身份认证、Redis Session、路由、限流、CORS、请求身份、SSE 代理 | Agent/Project 等业务状态、Agent 编译、其他平面持久化 |
 | **Control** | IAM、Catalog、Draft、Revision、Snapshot、Deployment、Policy、Secret Metadata、Audit | Harness 推理循环、Runtime Event 所有权 |
 | **Runtime** | Snapshot、Session/Turn/Run、Event、SSE、HITL、Lease、Recovery、AgentScope 执行 | 可编辑产品 Catalog、用户目录、Cron 扫描 |
 | **Scheduler** | Cron、Webhook、Channel、Ingestion、持久化 Job、Retry/Dead-letter | 公共 API 所有权、Harness 推理循环 |
@@ -515,7 +515,7 @@ pnpm --dir agentark-web test:e2e:real
 
 生成的 Control、Runtime 和 Scheduler Client 提交在 `agentark-web/src/shared/api/generated/` 下，必须从仓库 Public OpenAPI 契约重新生成；它们不是手工维护的 UI 领域模型。开发与安全边界见 [`agentark-web/README.md`](./agentark-web/README.md)。
 
-启动本地 Core 基础设施和当前服务实现：
+启动本地 Core 基础设施、当前服务实现和默认内置账号身份：
 
 ```bash
 ./tools/dev-up.sh
@@ -523,6 +523,8 @@ pnpm --dir agentark-web test:e2e:real
 ./tools/verify-core.sh
 ./tools/dev-down.sh
 ```
+
+执行 `pnpm --dir agentark-web dev` 后访问 `http://localhost:5173/sign-in`，使用用户名 `agentark-admin` 或 Identity 表登记的电子邮箱登录。一次性随机密码只保存在被 Git 忽略的 `deploy/compose/.secrets/identity-user-password`，创建完整 Session 前必须强制修改。Gateway 将 Pepper 保护的 Argon2id 摘要保存到独立 `agentark_identity` MySQL，Redis 只保存 Session/限流；默认不再启动 Keycloak。只有纯 API 栈或已经显式配置外部 OIDC 时才使用 `./tools/dev-up.sh --no-identity`。
 
 创建包含高强度 Grafana 密码且被 Git 忽略的 `deploy/observability/.env` 后，验证可选的本地可观测性栈：
 

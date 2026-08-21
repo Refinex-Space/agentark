@@ -44,8 +44,11 @@ referenced_by: AGENTS.md#knowledge-map
 | 存储与异步任务 | [ADR-0004](architecture/decisions/0004-storage-and-async-work.md) | Agent State、Work Queue、Redis 或 Knowledge 摄取 |
 | 上游与技术基线 | [ADR-0005](architecture/decisions/0005-upstream-and-technology-baseline.md) | 读取/升级 AgentScope、DeepSeek Harness 或基础版本 |
 | Aistio 切换边界 | [ADR-0006](architecture/decisions/0006-aistio-cutover-scope.md) | 迁移 Go Control、活动 Session Owner、Fallback 或延后 Team/CRD/ASDP |
+| OIDC BFF 历史决策 | [ADR-0007](architecture/decisions/0007-oidc-bff-and-local-identity.md) | 外部 Provider 的 Authorization Code BFF 与被 ADR-0008 替代的 Keycloak 本地方案 |
+| Built-in Identity | [ADR-0008](architecture/decisions/0008-built-in-identity-mysql.md) | Gateway MySQL 账号、Argon2id、Redis Session、RS256/JWK 与用户治理 |
 | MySQL 公共规则 | [MySQL/Flyway](database/mysql-conventions.md) | 设计表、索引、Migration 或 TypeHandler |
 | Control 数据 | [Control Schema](database/control-schema.md) | IAM、资产、发布、Knowledge、治理表 |
+| Identity 数据 | [Identity Schema](database/identity-schema.md) | 账号、密码摘要、平台角色、锁定、安全事件、Outbox 和签名密钥元数据 |
 | Runtime 数据 | [Runtime Schema](database/runtime-schema.md) | Session、Run、Work Queue、Event、State、Checkpoint |
 | Scheduler 数据 | [Scheduler Schema](database/scheduler-schema.md) | Trigger、Job、Attempt、Delivery、Dead Letter |
 | 配置 | [配置参考](config/reference.md) | 新增环境变量、Profile、端口或外部依赖 |
@@ -103,6 +106,7 @@ Harness 门禁使用以下仓库根路径建立直接引用：
 - `docs/architecture/decisions/0004-storage-and-async-work.md`
 - `docs/architecture/decisions/0005-upstream-and-technology-baseline.md`
 - `docs/architecture/decisions/0006-aistio-cutover-scope.md`
+- `docs/architecture/decisions/0007-oidc-bff-and-local-identity.md`
 - `docs/database/mysql-conventions.md`
 - `docs/database/control-schema.md`
 - `docs/database/runtime-schema.md`
@@ -120,6 +124,7 @@ Harness 门禁使用以下仓库根路径建立直接引用：
 - `docs/architecture/decisions/0004-storage-and-async-work.md`
 - `docs/architecture/decisions/0005-upstream-and-technology-baseline.md`
 - `docs/architecture/decisions/0006-aistio-cutover-scope.md`
+- `docs/architecture/decisions/0007-oidc-bff-and-local-identity.md`
 - `docs/config/reference.md`
 - `docs/database/control-schema.md`
 - `docs/database/mysql-conventions.md`

@@ -43,7 +43,7 @@
 
 > [!IMPORTANT]
 > **AgentArk 0.1.0 is the first complete development baseline, not a production approval.**
-> The four-plane implementation, contracts, Web console, security controls and deployment assets are available for integration validation. Public compatibility is frozen at the 0.1.0 contract baseline, but a real deployment must still validate its own OIDC, Vault/Secret Manager, managed MySQL/Redis/Object/Qdrant services, registry signatures, NetworkPolicy and disaster-recovery objectives before carrying production traffic.
+> The four-plane implementation, contracts, Web console, security controls and deployment assets are available for integration validation. Public compatibility is frozen at the 0.1.0 contract baseline, but a real deployment must still validate its built-in identity or external OIDC, Vault/Secret Manager, managed MySQL/Redis/Object/Qdrant services, registry signatures, NetworkPolicy and disaster-recovery objectives before carrying production traffic.
 
 ## Overview
 
@@ -515,7 +515,7 @@ Run the pinned repository security and SBOM gates:
 
 The generated Control, Runtime, and Scheduler clients are committed under `agentark-web/src/shared/api/generated/` and must be regenerated from the repository Public OpenAPI contracts; they are not hand-maintained UI domain models. See [`agentark-web/README.md`](./agentark-web/README.md) for the development and security boundaries.
 
-Start the local Core infrastructure and current service implementations:
+Start the local Core infrastructure, current service implementations, and the built-in account identity:
 
 ```bash
 ./tools/dev-up.sh
@@ -523,6 +523,8 @@ Start the local Core infrastructure and current service implementations:
 ./tools/verify-core.sh
 ./tools/dev-down.sh
 ```
+
+Run `pnpm --dir agentark-web dev`, open `http://localhost:5173/sign-in`, and sign in with the username `agentark-admin` or its registered email. The one-time random password is stored only in the ignored `deploy/compose/.secrets/identity-user-password` file and must be changed before a full session is created. Gateway stores Pepper-protected Argon2id hashes in the isolated `agentark_identity` MySQL schema and WebSession state in Redis; no Keycloak container is required. Use `./tools/dev-up.sh --no-identity` only for a pure API stack or an explicitly configured external OIDC provider.
 
 Validate the optional local observability stack after creating an ignored `deploy/observability/.env` with a strong Grafana password:
 

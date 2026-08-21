@@ -60,6 +60,8 @@
         <archunit.version>1.5.0</archunit.version>
         <!-- json-sKema 仅用于执行 JSON Schema Draft 2020-12 契约测试。 -->
         <json-skema.version>0.31.0</json-skema.version>
+        <!-- Bouncy Castle 1.85.2 为 Argon2id 提供当前稳定 JCA 实现。 -->
+        <bouncycastle.version>1.85.2</bouncycastle.version>
         <spring-boot.version>4.1.0</spring-boot.version>
         <spring-cloud.version>2025.1.2</spring-cloud.version>
         <mybatis-plus.version>3.5.17</mybatis-plus.version>

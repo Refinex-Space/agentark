@@ -15,6 +15,8 @@ const ApprovalPage = lazy(() => import("@/features/approval/approval-page"));
 const OperatePage = lazy(() => import("@/features/operate/operate-page"));
 const ObservePage = lazy(() => import("@/features/observe/observe-page"));
 const SignInPage = lazy(() => import("@/app/views/sign-in-page"));
+const IdentityUsersPage = lazy(() => import("@/app/views/identity-users-page"));
+const AccountSecurityPage = lazy(() => import("@/app/views/account-security-page"));
 const NotFoundPage = lazy(() => import("@/app/views/not-found-page"));
 
 /** 为 Lazy 页面提供一致加载反馈。 */
@@ -25,6 +27,14 @@ function LazyBoundary({ children }: { children: React.ReactNode }) {
 /** AgentArk Web 路由定义；业务页面在 Feature Phase 中按域继续拆分。 */
 export const router = createBrowserRouter([
   {
+    path: "/sign-in",
+    element: (
+      <LazyBoundary>
+        <SignInPage />
+      </LazyBoundary>
+    ),
+  },
+  {
     element: <AppShell />,
     children: [
       {
@@ -32,14 +42,6 @@ export const router = createBrowserRouter([
         element: (
           <LazyBoundary>
             <DesignSystemPage />
-          </LazyBoundary>
-        ),
-      },
-      {
-        path: "/sign-in",
-        element: (
-          <LazyBoundary>
-            <SignInPage />
           </LazyBoundary>
         ),
       },
@@ -99,6 +101,22 @@ export const router = createBrowserRouter([
             element: (
               <LazyBoundary>
                 <GovernPage />
+              </LazyBoundary>
+            ),
+          },
+          {
+            path: "/govern/users",
+            element: (
+              <LazyBoundary>
+                <IdentityUsersPage />
+              </LazyBoundary>
+            ),
+          },
+          {
+            path: "/account/security",
+            element: (
+              <LazyBoundary>
+                <AccountSecurityPage />
               </LazyBoundary>
             ),
           },

@@ -1,0 +1,146 @@
+# 内置 Identity Overlay：只扩展四个 AgentArk 部署单元，不增加 Keycloak 或第五个服务。
+services:
+  # MySQL 同时承载独立 agentark_identity Schema；账号仍不能访问其他平面。
+  mysql:
+    # Identity 数据库账号密码只在初始化脚本内使用。
+    secrets:
+      # Gateway Identity 独立 MySQL 密码。
+      - mysql_identity_password
+
+  # Gateway 拥有内置账号、密码摘要、Redis Session 和内部 JWT 签发。
+  gateway:
+    environment:
+      # 保留 local Profile。
+      SPRING_PROFILES_ACTIVE: local
+      # 从只读 Docker Secret 注入数据库、Redis、Bootstrap、Pepper 和 RSA 私钥。
+      SPRING_CONFIG_IMPORT: configtree:/run/secrets/
+      # 开启 Gateway JWT Resource Server 与本地 Session 安全链。
+      AGENTARK_GATEWAY_SECURITY_ENABLED: "true"
+      # 开启 MySQL 内置 Identity。
+      AGENTARK_GATEWAY_IDENTITY_ENABLED: "true"
+      # 本地 HTTP 不能设置 Secure Cookie；生产必须覆盖为 true。
+      AGENTARK_GATEWAY_IDENTITY_SESSION_COOKIE_SECURE: "false"
+      # 内置身份使用与主机无关的 HTTPS 语义 Issuer。
+      AGENTARK_GATEWAY_IDENTITY_ISSUER: https://identity.agentark.local
+      # Gateway 只连接自己的 agentark_identity Schema。
+      AGENTARK_IDENTITY_DB_URL: jdbc:mysql://mysql:3306/agentark_identity?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true
+      # Gateway Identity 最小权限数据库账号。
+      AGENTARK_IDENTITY_DB_USERNAME: agentark_identity
+      # 本地 Gateway 验证 Bearer 时从自己的公开 JWK 端点读取。
+      AGENTARK_FOUNDATION_SECURITY_ISSUER_URI: https://identity.agentark.local
+      # 自调用 JWK 使用容器回环地址，私钥不离开 Gateway。
+      AGENTARK_FOUNDATION_SECURITY_JWK_SET_URI: http://127.0.0.1:8080/api/v1/auth/jwks
+      # 只在本地允许 HTTP JWK；Issuer 仍保持 HTTPS 语义。
+      AGENTARK_FOUNDATION_SECURITY_INSECURE_HTTP_ENABLED: "true"
+      # 内置 Session 和 Outbox 都依赖 Redis 可用。
+      AGENTARK_GATEWAY_REDIS_HEALTH_ENABLED: "true"
+      # Gateway 使用 Compose Redis DNS。
+      AGENTARK_REDIS_HOST: redis
+      # Redis 容器标准端口。
+      AGENTARK_REDIS_PORT: "6379"
+      # 关闭外部 OIDC BFF，避免两种浏览器会话同时启用。
+      AGENTARK_GATEWAY_BFF_ENABLED: "false"
+    secrets:
+      # Spring Session Redis 密码。
+      - source: redis_password
+        target: spring.data.redis.password
+      # Identity MySQL 密码。
+      - source: mysql_identity_password
+        target: spring.datasource.password
+      # 首次管理员随机临时密码。
+      - source: identity_user_password
+        target: agentark.gateway.identity.bootstrap-password
+      # 密码摘要 HMAC Pepper。
+      - source: identity_password_pepper
+        target: agentark.gateway.identity.password-pepper
+      # 内部 JWT RS256 PKCS#8 PEM 私钥。
+      - source: identity_signing_private_key
+        target: agentark.gateway.identity.signing-private-key
+    depends_on:
+      # Flyway 和账号认证依赖 Identity Schema 已存在。
+      mysql:
+        condition: service_healthy
+      # Redis 保存多副本 HttpOnly Session。
+      redis:
+        condition: service_healthy
+
+  # Control 独立验证 Gateway 签发的短期用户/服务 JWT。
+  control:
+    environment:
+      # 开启本地 Resource Server。
+      AGENTARK_LOCAL_SECURITY_ENABLED: "true"
+      # 受信内置 Issuer。
+      AGENTARK_LOCAL_OIDC_ISSUER_URI: https://identity.agentark.local
+      # Control 从 Gateway 内部 DNS 获取公开 JWK。
+      AGENTARK_LOCAL_OIDC_JWK_SET_URI: http://gateway:8080/api/v1/auth/jwks
+      # 只在本地 Compose 允许 HTTP JWK。
+      AGENTARK_LOCAL_SECURITY_INSECURE_HTTP_ENABLED: "true"
+      # 幂等创建本地 Organization/Project/Environment 与管理员 Membership。
+      AGENTARK_IAM_DEV_BOOTSTRAP_ENABLED: "true"
+      # 与 Gateway 内置 Issuer 一致。
+      AGENTARK_IAM_DEV_ISSUER: https://identity.agentark.local
+      # 与固定 Bootstrap Account UUID 一致。
+      AGENTARK_IAM_DEV_SUBJECT: 019d0000-0000-7000-8000-000000000001
+    depends_on:
+      # 保留 Base Compose MySQL 健康依赖。
+      mysql:
+        condition: service_healthy
+      # Control 启动前 Gateway JWK 必须可用。
+      gateway:
+        condition: service_healthy
+
+  # Runtime 独立验证同一短期 JWT。
+  runtime:
+    environment:
+      # 开启本地 Resource Server。
+      AGENTARK_LOCAL_SECURITY_ENABLED: "true"
+      # 受信内置 Issuer。
+      AGENTARK_LOCAL_OIDC_ISSUER_URI: https://identity.agentark.local
+      # Runtime 从 Gateway 获取公开 JWK。
+      AGENTARK_LOCAL_OIDC_JWK_SET_URI: http://gateway:8080/api/v1/auth/jwks
+      # 只在本地 Compose 允许 HTTP JWK。
+      AGENTARK_LOCAL_SECURITY_INSECURE_HTTP_ENABLED: "true"
+    depends_on:
+      # 保留 Base Compose MySQL 依赖。
+      mysql:
+        condition: service_healthy
+      # 保留 Base Compose Redis 依赖。
+      redis:
+        condition: service_healthy
+      # Runtime 启动前 Gateway JWK 必须可用。
+      gateway:
+        condition: service_healthy
+
+  # Scheduler 管理 API 独立验证同一短期 JWT。
+  scheduler:
+    environment:
+      # 开启本地 Resource Server。
+      AGENTARK_LOCAL_SECURITY_ENABLED: "true"
+      # 受信内置 Issuer。
+      AGENTARK_LOCAL_OIDC_ISSUER_URI: https://identity.agentark.local
+      # Scheduler 从 Gateway 获取公开 JWK。
+      AGENTARK_LOCAL_OIDC_JWK_SET_URI: http://gateway:8080/api/v1/auth/jwks
+      # 只在本地 Compose 允许 HTTP JWK。
+      AGENTARK_LOCAL_SECURITY_INSECURE_HTTP_ENABLED: "true"
+    depends_on:
+      # 保留 Base Compose MySQL 依赖。
+      mysql:
+        condition: service_healthy
+      # Scheduler 启动前 Gateway JWK 必须可用。
+      gateway:
+        condition: service_healthy
+
+# Overlay Secret 只引用已忽略的 0600 文件。
+secrets:
+  # Gateway Identity MySQL 密码。
+  mysql_identity_password:
+    file: ./.secrets/mysql-identity-password
+  # 初始管理员随机临时密码。
+  identity_user_password:
+    file: ./.secrets/identity-user-password
+  # 密码 Pepper。
+  identity_password_pepper:
+    file: ./.secrets/identity-password-pepper
+  # 内部 JWT PKCS#8 PEM RSA 私钥。
+  identity_signing_private_key:
+    file: ./.secrets/identity-signing-private-key.pem

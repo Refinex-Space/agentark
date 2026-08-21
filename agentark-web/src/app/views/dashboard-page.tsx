@@ -67,9 +67,9 @@ export default function DashboardPage() {
           <div className="metric-card__icon">
             <ShieldCheck aria-hidden="true" size={20} />
           </div>
-          <p>Credential Policy</p>
-          <strong>Memory only</strong>
-          <span>Token 与 API Key 不进入持久存储</span>
+          <p>Identity Session</p>
+          <strong>HttpOnly</strong>
+          <span>密码与身份 Token 均不进入浏览器持久存储</span>
         </article>
         <article className="metric-card">
           <div className="metric-card__icon">

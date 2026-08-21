@@ -13,6 +13,7 @@ import {
   ScanSearch,
   ShieldCheck,
   Sun,
+  UserRoundCog,
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
@@ -45,6 +46,7 @@ const navigation: NavigationItem[] = [
   { to: "/approvals", label: "审批中心", icon: CheckSquare2 },
   { to: "/operate", label: "运行治理", icon: Gauge },
   { to: "/govern", label: "IAM 与租户", icon: ShieldCheck },
+  { to: "/govern/users", label: "用户与登录", icon: UserRoundCog },
   { to: "/observe", label: "治理与观测", icon: ScanSearch },
   { to: "/design-system", label: "设计系统", icon: Palette },
 ];
@@ -213,12 +215,22 @@ export function AppShell() {
               items={
                 session.status === "authenticated"
                   ? [
+                      ...(session.source === "bff" && session.identityMode === "PASSWORD"
+                        ? [
+                            {
+                              key: "change-password",
+                              label: "修改密码",
+                              onSelect: () => void navigate("/account/security"),
+                            },
+                          ]
+                        : []),
                       {
                         key: "sign-out",
                         label: session.principal.kind === "preview" ? "退出预览" : "退出登录",
                         onSelect: () => {
-                          signOut();
-                          void navigate("/sign-in");
+                          if (signOut()) {
+                            void navigate("/sign-in");
+                          }
                         },
                       },
                     ]

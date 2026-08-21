@@ -56,6 +56,8 @@ AgentArk 默认 Compose 从创建时就是 Java-only，没有运行 Go `aistiod`
 
 ## 影响
 
+该拒绝项禁止迁移 Aistio 密码摘要、共享 HS256 Secret 和旧 Token，不禁止 ADR-0007 定义的标准 OIDC BFF、默认内置账号身份与可替换外部 Provider。
+
 - 不新增 Maven 业务模块、数据库 Schema、部署单元或跨库连接。
 - 迁移工具只读 PostgreSQL 导出，写入仅调用 Java Public/Internal API；Secret 只迁引用，大对象单独进入 Object Store 清单。
 - 默认 Compose 与 `deploy/helm/agentark/` 保持 Java-only；Helm 生产门禁通过相同规则拒绝 Aistio/Go 依赖回流。

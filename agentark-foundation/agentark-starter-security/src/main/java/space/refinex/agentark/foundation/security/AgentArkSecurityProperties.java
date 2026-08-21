@@ -46,6 +46,11 @@ public class AgentArkSecurityProperties {
     private URI jwkSetUri;
 
     /**
+     * 是否仅为受控本地开发允许明文 HTTP Issuer/JWK 端点；生产必须保持关闭。
+     */
+    private boolean insecureHttpEnabled;
+
+    /**
      * JWT 必须至少匹配一个值的 Audience 白名单。
      */
     private Set<String> audiences = new LinkedHashSet<>();
@@ -118,7 +123,7 @@ public class AgentArkSecurityProperties {
      * @param issuerUri HTTPS Issuer URI
      */
     public void setIssuerUri(URI issuerUri) {
-        this.issuerUri = requireHttps(issuerUri, "issuerUri");
+        this.issuerUri = requireEndpointUri(issuerUri, "issuerUri");
     }
 
     /**
@@ -136,7 +141,25 @@ public class AgentArkSecurityProperties {
      * @param jwkSetUri HTTPS JWK Set URI
      */
     public void setJwkSetUri(URI jwkSetUri) {
-        this.jwkSetUri = requireHttps(jwkSetUri, "jwkSetUri");
+        this.jwkSetUri = requireEndpointUri(jwkSetUri, "jwkSetUri");
+    }
+
+    /**
+     * 返回是否允许受控本地开发使用明文 HTTP 身份端点。
+     *
+     * @return 允许时为 {@code true}
+     */
+    public boolean isInsecureHttpEnabled() {
+        return insecureHttpEnabled;
+    }
+
+    /**
+     * 设置是否允许受控本地开发使用明文 HTTP 身份端点。
+     *
+     * @param insecureHttpEnabled 是否仅为本地身份 Profile 放宽传输
+     */
+    public void setInsecureHttpEnabled(boolean insecureHttpEnabled) {
+        this.insecureHttpEnabled = insecureHttpEnabled;
     }
 
     /**
@@ -293,18 +316,41 @@ public class AgentArkSecurityProperties {
     }
 
     /**
-     * 校验安全配置只允许 HTTPS URI。
+     * 校验身份端点 URI 结构；HTTP 是否允许由完整配置校验统一决定。
      *
      * @param uri  待校验 URI，可为空
      * @param name 配置字段名称
      * @return 原 URI 或 {@code null}
-     * @throws IllegalArgumentException 当 URI 不是绝对 HTTPS 地址时抛出
+     * @throws IllegalArgumentException 当 URI 不是无凭据的绝对 HTTP(S) 地址时抛出
      */
-    private URI requireHttps(URI uri, String name) {
-        if (uri != null && (!uri.isAbsolute() || !"https".equalsIgnoreCase(uri.getScheme()))) {
-            throw new IllegalArgumentException(name + " must be an absolute HTTPS URI");
+    private URI requireEndpointUri(URI uri, String name) {
+        if (uri != null
+            && (!uri.isAbsolute()
+            || uri.getHost() == null
+            || uri.getUserInfo() != null
+            || uri.getQuery() != null
+            || uri.getFragment() != null
+            || !(uri.getPath().isEmpty() || uri.getPath().startsWith("/"))
+            || !("https".equalsIgnoreCase(uri.getScheme())
+            || "http".equalsIgnoreCase(uri.getScheme())))) {
+            throw new IllegalArgumentException(name + " must be an absolute HTTP(S) URI without credentials");
         }
         return uri;
+    }
+
+    /**
+     * 校验生产默认只接受 HTTPS；HTTP 只允许显式本地开发 Profile。
+     *
+     * @throws IllegalStateException 当未显式放宽却配置 HTTP 身份端点时抛出
+     */
+    void validateTransportSecurity() {
+        if (!insecureHttpEnabled
+            && java.util.stream.Stream.of(issuerUri, jwkSetUri)
+            .filter(java.util.Objects::nonNull)
+            .anyMatch(uri -> !"https".equalsIgnoreCase(uri.getScheme()))) {
+            throw new IllegalStateException(
+                "HTTP identity endpoints require insecureHttpEnabled for local development");
+        }
     }
 
     /**

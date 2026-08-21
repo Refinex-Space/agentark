@@ -34,11 +34,15 @@ export function createMemoryCredentialProvider(): CredentialProvider & {
   setBearer(token?: string): void;
   /** 设置内存 API Key，空值表示清除。 */
   setApiKey(apiKey?: string): void;
+  /** 设置当前 BFF 会话的 CSRF Header；空值表示清除。 */
+  setCsrf(headerName?: string, token?: string): void;
   /** 清除所有内存凭据。 */
   clear(): void;
 } {
   let bearer: string | undefined;
   let apiKey: string | undefined;
+  let csrfHeaderName: string | undefined;
+  let csrfToken: string | undefined;
   return {
     getHeaders() {
       const headers = new Headers();
@@ -46,6 +50,9 @@ export function createMemoryCredentialProvider(): CredentialProvider & {
         headers.set("Authorization", `Bearer ${bearer}`);
       } else if (apiKey) {
         headers.set("X-AgentArk-Api-Key", apiKey);
+      }
+      if (csrfHeaderName && csrfToken) {
+        headers.set(csrfHeaderName, csrfToken);
       }
       return headers;
     },
@@ -57,9 +64,15 @@ export function createMemoryCredentialProvider(): CredentialProvider & {
       apiKey = value;
       bearer = undefined;
     },
+    setCsrf(headerName, token) {
+      csrfHeaderName = headerName;
+      csrfToken = token;
+    },
     clear() {
       bearer = undefined;
       apiKey = undefined;
+      csrfHeaderName = undefined;
+      csrfToken = undefined;
     },
   };
 }

@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-19
 status: active
 referenced_by: AGENTS.md#knowledge-map
 title: AgentArk 系统架构
@@ -482,7 +482,7 @@ Snapshot → HarnessAgent"]
 
 | 平面 | 拥有的能力 | 明确不拥有 | 扩缩容依据 |
 |---|---|---|---|
-| Gateway | 公共入口、认证前置、路由、CORS、限流、请求标识、SSE 代理 | 业务状态、Agent 编译、业务数据库、定时任务 | HTTP/SSE 连接数、入口吞吐 |
+| Gateway | 公共入口、Built-in Identity、Redis Session、路由、CORS、限流、请求标识、SSE 代理 | Agent/Project 等业务状态、Agent 编译、其他平面数据库、定时任务 | HTTP/SSE 连接数、认证吞吐、入口吞吐 |
 | Control | IAM、Catalog、Draft、Revision、Snapshot、Deployment、校验、审计、Secret Metadata | Harness 推理循环、Session Event Stream、Worker Lease | CRUD/发布吞吐、管理请求 |
 | Runtime | Snapshot 加载、HarnessAgent、Session、Turn、Run、Event、SSE、HITL、状态恢复、Lease | Agent Catalog 编辑、用户目录、Cron 扫描 | 并发 Session/Run、流式连接、Tool/Model 等待 |
 | Scheduler | Cron、Webhook、Channel、RAG Ingestion、异步任务、重试、死信 | Harness 推理循环、公共 API 入口、Catalog 所有权 | Job 吞吐、外部调用延迟、任务积压 |
@@ -719,97 +719,97 @@ RuntimeInstance.compilerVersion
 
 ```json
 {
-  "schemaVersion": 1,
-  "organizationId": "0198...",
-  "projectId": "0198...",
-  "snapshotId": "0198...",
-  "agentId": "0198...",
-  "revisionId": "0198...",
-  "revisionNumber": 12,
-  "createdAt": "2026-08-14T08:00:00Z",
-  "contentHash": "sha256:...",
-  "runtimeProvider": "agentscope-java-2",
-  "agent": {
-    "name": "code-review-agent",
-    "entrypoint": "harness",
-    "requiredCapabilities": ["tool-calling", "structured-output"]
-  },
-  "model": {
-    "provider": "dashscope",
-    "modelName": "qwen-plus",
-    "parameters": {
-      "temperature": 0.2,
-      "maxTokens": 8192
+    "schemaVersion": 1,
+    "organizationId": "0198...",
+    "projectId": "0198...",
+    "snapshotId": "0198...",
+    "agentId": "0198...",
+    "revisionId": "0198...",
+    "revisionNumber": 12,
+    "createdAt": "2026-08-14T08:00:00Z",
+    "contentHash": "sha256:...",
+    "runtimeProvider": "agentscope-java-2",
+    "agent": {
+        "name": "code-review-agent",
+        "entrypoint": "harness",
+        "requiredCapabilities": ["tool-calling", "structured-output"]
     },
-    "credential": {
-      "secretRef": "secret://project/model-dashscope-prod",
-      "resolutionPolicy": "LATEST_ENABLED"
+    "model": {
+        "provider": "dashscope",
+        "modelName": "qwen-plus",
+        "parameters": {
+            "temperature": 0.2,
+            "maxTokens": 8192
+        },
+        "credential": {
+            "secretRef": "secret://project/model-dashscope-prod",
+            "resolutionPolicy": "LATEST_ENABLED"
+        }
+    },
+    "prompts": [
+        {
+            "role": "system",
+            "promptVersionId": "0198...",
+            "contentHash": "sha256:...",
+            "content": "..."
+        }
+    ],
+    "mcpServers": [
+        {
+            "mcpServerVersionId": "0198...",
+            "transport": "streamable-http",
+            "endpoint": "https://mcp.example.com",
+            "credential": {
+                "secretRef": "secret://project/mcp-prod",
+                "resolutionPolicy": "PINNED_VERSION"
+            },
+            "allowedTools": ["repository.read", "pull_request.comment"]
+        }
+    ],
+    "skills": [
+        {
+            "skillVersionId": "0198...",
+            "artifact": {
+                "uri": "s3://agentark-skills/...",
+                "checksum": "sha256:...",
+                "size": 4096,
+                "mediaType": "application/gzip"
+            }
+        }
+    ],
+    "knowledge": [
+        {
+            "knowledgeRevisionId": "0198...",
+            "retrievalProfile": {
+                "topK": 8,
+                "scoreThreshold": 0.72,
+                "reranker": "default-reranker"
+            }
+        }
+    ],
+    "memory": {
+        "profileVersionId": "0198..."
+    },
+    "workspace": {
+        "profileVersionId": "0198..."
+    },
+    "sandbox": {
+        "profileVersionId": "0198..."
+    },
+    "permissions": {
+        "defaultDecision": "ASK",
+        "rules": [
+            {
+                "resource": "tool:filesystem.write",
+                "decision": "DENY"
+            }
+        ]
+    },
+    "limits": {
+        "turnTimeoutSeconds": 600,
+        "maxToolCalls": 64,
+        "maxSubAgents": 8
     }
-  },
-  "prompts": [
-    {
-      "role": "system",
-      "promptVersionId": "0198...",
-      "contentHash": "sha256:...",
-      "content": "..."
-    }
-  ],
-  "mcpServers": [
-    {
-      "mcpServerVersionId": "0198...",
-      "transport": "streamable-http",
-      "endpoint": "https://mcp.example.com",
-      "credential": {
-        "secretRef": "secret://project/mcp-prod",
-        "resolutionPolicy": "PINNED_VERSION"
-      },
-      "allowedTools": ["repository.read", "pull_request.comment"]
-    }
-  ],
-  "skills": [
-    {
-      "skillVersionId": "0198...",
-      "artifact": {
-        "uri": "s3://agentark-skills/...",
-        "checksum": "sha256:...",
-        "size": 4096,
-        "mediaType": "application/gzip"
-      }
-    }
-  ],
-  "knowledge": [
-    {
-      "knowledgeRevisionId": "0198...",
-      "retrievalProfile": {
-        "topK": 8,
-        "scoreThreshold": 0.72,
-        "reranker": "default-reranker"
-      }
-    }
-  ],
-  "memory": {
-    "profileVersionId": "0198..."
-  },
-  "workspace": {
-    "profileVersionId": "0198..."
-  },
-  "sandbox": {
-    "profileVersionId": "0198..."
-  },
-  "permissions": {
-    "defaultDecision": "ASK",
-    "rules": [
-      {
-        "resource": "tool:filesystem.write",
-        "decision": "DENY"
-      }
-    ]
-  },
-  "limits": {
-    "turnTimeoutSeconds": 600,
-    "maxToolCalls": 64,
-    "maxSubAgents": 8
-  }
 }
 ```
 
@@ -2312,11 +2312,13 @@ flowchart LR
 #### 用户
 
 - 外部 OIDC Provider；
-- Authorization Code + PKCE；
-- Gateway 与下游服务按 Resource Server 验证 JWT；
+- Gateway 作为 Confidential Client 使用 Authorization Code Flow；Provider/Client 强制 PKCE 时按 S256 执行；
+- Gateway 用 Redis 保存服务端 Authorized Client，浏览器只持有 HttpOnly/Secure/SameSite=Lax Session Cookie；
+- Gateway Token Relay 后，Gateway 与下游服务仍按 Resource Server 独立验证 JWT；
 - 校验 `iss`、`aud`、`exp`、`nbf`、算法白名单、`kid`；
 - JWK 可缓存，但支持轮换和未知 Key ID；
-- 浏览器不长期保存高权限 Token，部署允许时优先安全 Cookie/BFF。
+- 浏览器 JavaScript 不接触 ID/Access/Refresh Token；带 Session Cookie 的副作用请求必须校验 CSRF；
+- 默认内置 Identity 使用 Gateway 独占 MySQL、Argon2id、Redis Session 和 RS256/JWK；企业可切换受审 HTTPS OIDC Provider。两种模式都不迁移 Aistio 密码摘要或共享 HMAC JWT。
 
 #### API Key
 
@@ -2552,21 +2554,21 @@ Runtime Context / Approval
 
 ```json
 {
-  "type": "https://docs.agentark.dev/problems/agent-publish-validation-failed",
-  "title": "Agent publish validation failed",
-  "status": 422,
-  "detail": "The draft contains incompatible or unresolved assets.",
-  "instance": "/api/v1/agents/0198.../revisions",
-  "code": "ARK-CONTROL-AGENT-42201",
-  "requestId": "req_...",
-  "traceId": "...",
-  "violations": [
-    {
-      "path": "mcpServers[0].credential",
-      "code": "SECRET_NOT_ACCESSIBLE",
-      "message": "The selected secret is not available in the target environment."
-    }
-  ]
+    "type": "https://docs.agentark.dev/problems/agent-publish-validation-failed",
+    "title": "Agent publish validation failed",
+    "status": 422,
+    "detail": "The draft contains incompatible or unresolved assets.",
+    "instance": "/api/v1/agents/0198.../revisions",
+    "code": "ARK-CONTROL-AGENT-42201",
+    "requestId": "req_...",
+    "traceId": "...",
+    "violations": [
+        {
+            "path": "mcpServers[0].credential",
+            "code": "SECRET_NOT_ACCESSIBLE",
+            "message": "The selected secret is not available in the target environment."
+        }
+    ]
 }
 ```
 
@@ -2583,23 +2585,23 @@ Runtime Context / Approval
 
 ```json
 {
-  "schemaVersion": 1,
-  "eventId": "0198...",
-  "sequence": 42,
-  "eventType": "tool.call.completed",
-  "occurredAt": "2026-08-14T08:01:02.123Z",
-  "organizationId": "0198...",
-  "projectId": "0198...",
-  "sessionId": "0198...",
-  "turnId": "0198...",
-  "runId": "0198...",
-  "traceId": "...",
-  "payload": {
-    "toolCallId": "0198...",
-    "toolName": "repository.read",
-    "durationMs": 381,
-    "status": "SUCCEEDED"
-  }
+    "schemaVersion": 1,
+    "eventId": "0198...",
+    "sequence": 42,
+    "eventType": "tool.call.completed",
+    "occurredAt": "2026-08-14T08:01:02.123Z",
+    "organizationId": "0198...",
+    "projectId": "0198...",
+    "sessionId": "0198...",
+    "turnId": "0198...",
+    "runId": "0198...",
+    "traceId": "...",
+    "payload": {
+        "toolCallId": "0198...",
+        "toolName": "repository.read",
+        "durationMs": 381,
+        "status": "SUCCEEDED"
+    }
 }
 ```
 
@@ -2626,6 +2628,7 @@ Runtime 校验 Schema、Hash、Runtime Provider、Session 固定 ID，不在 Tur
 contracts/
 ├── openapi/
 │   ├── public-control-v1.yaml
+│   ├── public-gateway-v1.yaml
 │   ├── public-runtime-v1.yaml
 │   ├── internal-control-v1.yaml
 │   ├── internal-runtime-v1.yaml
@@ -3013,7 +3016,7 @@ flowchart TB
     SCH --> OTEL
 ```
 
-该拓扑由 `deploy/helm/agentark/` 实现：五个无状态工作负载使用独立 ServiceAccount、PDB、HPA/KEDA、Topology Spread、非 Root/只读根安全上下文和 Startup/Readiness/Liveness；三套 Flyway Hook Job 只连接各自 Schema。MySQL、Redis、Object Store、Qdrant 和 IdP 均为外部 HA 服务，Chart 不创建生产数据库。运行证据、恢复顺序和容量边界分别见 [Phase 22 报告](../implementation/phase-22-production.md)、[恢复 Runbook](../runbooks/backup-restore.md) 和 [容量报告](../operations/phase-22-capacity-rpo-rto.md)。
+该拓扑由 `deploy/helm/agentark/` 实现：五个无状态工作负载使用独立 ServiceAccount、PDB、HPA/KEDA、Topology Spread、非 Root/只读根安全上下文和 Startup/Readiness/Liveness。默认 Built-in Identity 模式运行 Identity、Control、Runtime、Scheduler 四套 Flyway Hook Job且只连接各自 Schema；外部 OIDC 模式不运行 Identity Job。MySQL、Redis、Object Store、Qdrant 和可选 IdP 均为外部 HA 服务，Chart 不创建生产数据库。运行证据、恢复顺序和容量边界分别见 [Phase 22 报告](../implementation/phase-22-production.md)、[恢复 Runbook](../runbooks/backup-restore.md) 和 [容量报告](../operations/phase-22-capacity-rpo-rto.md)。
 
 ### 16.4 服务发现与配置
 
@@ -3788,6 +3791,9 @@ flowchart LR
 | [ADR-0003](decisions/0003-runtime-provider-isolation.md) | 中立 Runtime 与 AgentScope Provider 使用 Maven 模块隔离 | Accepted |
 | [ADR-0004](decisions/0004-storage-and-async-work.md) | 三 Schema、持久工作队列、Agent State 权威存储和异步写入边界 | Accepted |
 | [ADR-0005](decisions/0005-upstream-and-technology-baseline.md) | 上游证据 SHA 与技术版本基线 | Accepted |
+| [ADR-0006](decisions/0006-aistio-cutover-scope.md) | Aistio 切换边界，拒绝共享 HMAC JWT 和本地密码库 | Accepted |
+| [ADR-0007](decisions/0007-oidc-bff-and-local-identity.md) | 外部 OIDC BFF 与历史 Keycloak 本地身份方案 | Superseded |
+| [ADR-0008](decisions/0008-built-in-identity-mysql.md) | Gateway Built-in Identity、独立 MySQL、Argon2id、Redis Session 与 RS256/JWK | Accepted |
 
 ADR 只有在本文、知识地图和相关数据库/契约文档同步后才生效。发现冲突时必须先停止实现、修正文档并提升相应版本，不允许选择性引用。
 

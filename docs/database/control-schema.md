@@ -22,6 +22,7 @@ Schema：`agentark_control`。唯一写入者是 Control Server。Knowledge 管�
 | 10 | `V5__phase_10_revision_deployment.sql`：Agent Draft、Validation、Revision、Snapshot、Publish Operation、Control Outbox、Deployment 与 Deployment Revision | 发布事务原子提交，Deployment 固定目标 Revision；独立 `agentark-control` 迁移测试按 V1/V2/V3/V5 运行，Control Server 组合迁移按 V1–V5 运行 |
 | 14 | `V6__phase_14_knowledge_ingestion_result.sql`：Knowledge Ingestion Result，并扩展 Control Outbox 的 Knowledge Revision 聚合类型 | Scheduler 只经幂等 Internal Command 提交结果，不写 Control 表；Parser/Embedding/Vector Adapter 不拥有表 |
 | 19 | `V7__phase_19_governance.sql`：Audit、Price/Usage/Cost、Quota Reservation、Evaluation 与 Release Gate | Runtime 保留原始用量，Control 只接收幂等治理投影；不保存 Secret、Prompt、文档或 Tool 参数正文 |
+| Identity Cutover | `V8__built_in_identity_cutover.sql`：固定 Bootstrap Subject 授权引用迁移 | 只把旧 Keycloak Issuer 的固定管理员 Membership/Role Binding 指向 Built-in Identity 同 UUID，并删除旧投影；不迁密码摘要 |
 
 任何表提前、延后或转移 Owner 都必须先修改本模型；影响平台边界或发布一致性时同步提交 ADR。
 

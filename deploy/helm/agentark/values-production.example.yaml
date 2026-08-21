@@ -20,10 +20,30 @@ global:
       host: redis.cache.example.com
       # 生产应配合客户端 TLS 能力启用。
       tls: true
-    # 企业 OIDC Issuer。
+    # 企业 OIDC Issuer，仅在 identity.mode=oidc 时启用。
     oidc:
       # 绝对 HTTPS Issuer。
       issuerUri: https://identity.example.com
+      # 当前示例默认使用 Built-in Identity，不启用外部 OIDC BFF。
+      bffEnabled: false
+      # 在企业 IdP 中登记的 Confidential Client。
+      clientId: agentark-console
+      # 面向最终用户的登录入口名称。
+      loginLabel: 使用组织身份登录
+      # IdP 中精确登记的回调。
+      redirectUri: https://agentark.example.com/login/oauth2/code/agentark
+      # 登录后进入控制台。
+      postLoginRedirectUri: https://agentark.example.com/
+      # 退出后回到登录页。
+      postLogoutRedirectUri: https://agentark.example.com/sign-in
+    # 默认以 MySQL + Redis 内置账号身份部署独立后台。
+    identity:
+      # 切换为 oidc 时必须同时启用上方 BFF 配置。
+      mode: builtin
+      # Issuer 与 Web HTTPS Host 保持一致。
+      issuerUri: https://agentark.example.com
+      # 下游从同源 Gateway 读取只含公钥的 JWK Set。
+      jwkSetUri: https://agentark.example.com/api/v1/auth/jwks
   # NetworkPolicy 只能使用 CIDR；示例需替换为真实 Managed Service 和 Provider 网段。
   externalEgressCidrs:
     - 10.0.0.0/8
@@ -32,6 +52,7 @@ global:
 secretManagement:
   # External Secrets 关闭时使用现有 Secret。
   existingSecret: agentark-production-secrets
+  # 该 Secret 还必须包含 values.yaml 定义的 OIDC Client Secret Key。
   # 启用当前可验证的 Vault KV v2 Secret Resolver。
   vault:
     # 生产运行必须显式开启。
@@ -51,6 +72,17 @@ objectStorage:
   accessModes:
     # 多副本共享对象存储访问模式。
     - ReadWriteMany
+
+# 生产 Web Host 同时承载静态控制台与同源 BFF 路径。
+ingress:
+  # 使用集群批准的 IngressClass。
+  className: nginx
+  # SDK 与机器调用 API Host。
+  apiHost: api.agentark.example.com
+  # 浏览器 Web、API 与 OIDC Callback 同源 Host。
+  webHost: agentark.example.com
+  # 引用预创建生产 TLS Secret。
+  tlsSecretName: agentark-production-tls
 
 # 所有发布镜像必须替换为 Registry 返回的真实 Digest。
 services:

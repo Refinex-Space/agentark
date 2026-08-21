@@ -108,6 +108,32 @@ public record UserIdentity(
     }
 
     /**
+     * 使用内置 Identity 已生成的同一 UUIDv7 创建预置身份投影，便于登录前授权。
+     *
+     * @param id          与 Gateway Identity Account 相同的 UUIDv7
+     * @param issuer      内置 Identity Issuer
+     * @param subject     内置账号 Subject
+     * @param displayName 可选展示名称
+     * @param email       可选邮箱
+     * @param status      Gateway 账号状态投影
+     * @param now         投影创建时刻；首次真实登录会再次刷新 lastSeenAt
+     * @return 预置身份投影
+     */
+    public static UserIdentity provision(
+        UserIdentityId id,
+        String issuer,
+        String subject,
+        Optional<String> displayName,
+        Optional<String> email,
+        IamStatus status,
+        Instant now) {
+        Instant timestamp = IamFieldPolicy.instant(now, "now");
+        return new UserIdentity(
+            id, issuer, subject, displayName, email, status,
+            timestamp, 0, timestamp, timestamp);
+    }
+
+    /**
      * 规范化可选展示文本；空白值按缺失处理。
      *
      * @param value     可选值容器

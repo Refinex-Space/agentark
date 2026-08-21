@@ -9,6 +9,21 @@ spring:
 
 # Runtime 只通过 Internal URL 访问 Control，不读取 Control Schema 或 Server 实现。
 agentark:
+  # Foundation 本地身份验证配置。
+  foundation:
+    # Runtime 仍独立验证 Gateway 转发的短期 Access Token。
+    security:
+      # 只有显式身份 Overlay 才开启。
+      enabled: ${AGENTARK_LOCAL_SECURITY_ENABLED:false}
+      # Token 中受信 Issuer。
+      issuer-uri: ${AGENTARK_LOCAL_OIDC_ISSUER_URI:}
+      # Compose 内部 JWK Set 地址。
+      jwk-set-uri: ${AGENTARK_LOCAL_OIDC_JWK_SET_URI:}
+      # 只允许受控本地 HTTP 身份端点。
+      insecure-http-enabled: ${AGENTARK_LOCAL_SECURITY_INSECURE_HTTP_ENABLED:false}
+      # Runtime 专属 Audience。
+      audiences:
+        - agentark-runtime
   # Runtime 本地接线覆盖。
   runtime:
     # Control Plane 基础地址；Compose 使用服务 DNS 覆盖。

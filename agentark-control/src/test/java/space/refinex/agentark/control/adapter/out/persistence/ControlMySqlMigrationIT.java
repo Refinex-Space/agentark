@@ -70,23 +70,23 @@ class ControlMySqlMigrationIT extends AbstractMySqlMigrationIT {
     }
 
     /**
-     * 声明 Control 当前最新迁移为 Phase 19 的 V7；V4/V6 由 Knowledge 制品提供。
+     * 声明 Control 当前最新迁移为内置 Identity Cutover V8；V4/V6 由 Knowledge 制品提供。
+     *
+     * @return Flyway 版本 8
+     */
+    @Override
+    protected String expectedVersion() {
+        return "8";
+    }
+
+    /**
+     * 声明 Governance V7 是 Control 独立制品 N-1 升级测试起点。
      *
      * @return Flyway 版本 7
      */
     @Override
-    protected String expectedVersion() {
-        return "7";
-    }
-
-    /**
-     * 声明 Phase 10 的 V5 是 Control 独立制品升级测试起点。
-     *
-     * @return Flyway 版本 5
-     */
-    @Override
     protected String previousVersion() {
-        return "5";
+        return "7";
     }
 
     /**

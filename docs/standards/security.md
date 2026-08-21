@@ -32,7 +32,14 @@ referenced_by: AGENTS.md#knowledge-map
 
 ## Gateway 边缘安全
 
-- 生产 Gateway 必须显式启用 OIDC/JWK Resource Server，并配置精确 Issuer、Audience 和非对称 JWS 算法白名单；缺少任一必需配置时失败启动，禁止回退共享 HMAC Secret、固定内部 Token 或匿名公共 API。
+- 生产 Gateway 必须显式选择 Built-in Identity 或外部 OIDC BFF，并为所有 Resource Server 配置精确 Issuer、Audience、JWK 和非对称 JWS 算法白名单；两种模式互斥，缺少任一必需配置时失败启动，禁止回退共享 HMAC Secret、固定内部 Token 或匿名公共 API。
+- Built-in Identity 的浏览器登录只向同源 Gateway 提交密码；外部组织身份使用 Gateway OIDC Authorization Code BFF 和 S256 PKCE。两者都只让浏览器持有 HttpOnly、Secure、SameSite=Lax 的不透明 Session Cookie，密码、OIDC Token 和 Client Secret 不得进入 Web Storage、URL、日志或前端错误。
+- Gateway Built-in Identity 使用独立 `agentark_identity` MySQL 保存账号、Argon2id 摘要、锁定、安全事件和 Outbox；Control、Runtime、Scheduler 禁止连接该 Schema。密码先使用部署 Pepper 预处理，Pepper 与 RSA 私钥只由 SecretRef 注入。
+- Gateway BFF Session 使用 Redis 支持多副本；Session 丢失只触发重新登录，不改变账号、IAM 或业务事实。带 Session Cookie 的非安全方法必须校验 CSRF，无状态 Bearer/API Key Client 不依赖浏览器 CSRF。
+- Built-in Session 只向下游签发 30–300 秒的 RS256 JWT；下游必须独立验证 Issuer、Audience、时间和 JWK。改密、重置、暂停或禁用递增 `auth_version` 并清除 Redis Session。
+- 默认内置账号没有固定密码；随机临时密码只写入 Git 忽略的 0600 文件并强制首次修改。Control 只保存非敏感用户投影、Membership 和 Role Binding，不保存密码或摘要。
+- 本人修改密码必须验证当前密码、执行独立 Redis 限流、拒绝当前值和最近历史值，并在成功后注销全部会话；管理员重置密码是独立高权限操作，只生成一次性临时密码并强制下次改密，界面和 API 禁止把两种操作合并。
+- Production Built-in Identity 必须使用 HTTPS Cookie、独立 MySQL 账号、Redis 认证、Secret Manager Pepper/RSA 私钥和数据库备份。外部 OIDC Callback 与 Post-login/Post-logout URI 仍必须是精确 HTTPS。
 - Gateway 删除客户端提交的 Principal、Service Identity、Authorities、认证后租户和 Client Certificate 派生 Header。原始 Bearer/API Key 凭据可转发给目标服务重新验证；客户端 Tenant Header 只作为选择意图。
 - API Key 明文只存在于当前请求链路，不写日志、Trace、Redis 或本地缓存。边缘正缓存只保存 SHA-256 键和非秘密 Principal，TTL 最大 30 秒；Control 不可用时未命中缓存的请求失败关闭。
 - CORS 只接受精确 HTTPS Origin；本地仅允许 loopback HTTP。禁止 `*`、公网明文 HTTP 和隐式 Credential 通配。

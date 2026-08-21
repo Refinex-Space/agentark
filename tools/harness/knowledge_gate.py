@@ -51,6 +51,7 @@ APPROVED_SERVICE_MODULES = (
 )
 REQUIRED_CONTRACTS = (
     "contracts/openapi/public-control-v1.yaml",
+    "contracts/openapi/public-gateway-v1.yaml",
     "contracts/openapi/public-runtime-v1.yaml",
     "contracts/openapi/public-scheduler-v1.yaml",
     "contracts/openapi/internal-control-v1.yaml",

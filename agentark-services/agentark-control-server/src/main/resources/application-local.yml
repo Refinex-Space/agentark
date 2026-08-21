@@ -17,6 +17,10 @@ agentark:
       enabled: ${AGENTARK_LOCAL_SECURITY_ENABLED:false}
       # 启用本地 JWT 验证时必须提供 HTTPS Issuer。
       issuer-uri: ${AGENTARK_LOCAL_OIDC_ISSUER_URI:}
+      # 本地身份容器使用内部 DNS 读取 JWK，Token Issuer 仍使用浏览器可达地址。
+      jwk-set-uri: ${AGENTARK_LOCAL_OIDC_JWK_SET_URI:}
+      # 只允许显式本地身份 Overlay 放宽 HTTP；生产配置没有该开关。
+      insecure-http-enabled: ${AGENTARK_LOCAL_SECURITY_INSECURE_HTTP_ENABLED:false}
       # 本地 Token 仍必须面向 Control Audience。
       audiences:
         # 固定 Control Audience。

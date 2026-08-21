@@ -87,6 +87,29 @@ class AgentArkSecurityAutoConfigurationTest {
         .run(context -> assertThat(context).hasFailed());
   }
 
+  /** 验证默认拒绝明文 HTTP 身份端点，避免本地放宽意外进入生产。 */
+  @Test
+  void rejectsHttpIdentityEndpointByDefault() {
+    contextRunner
+        .withPropertyValues(
+            "agentark.foundation.security.enabled=true",
+            "agentark.foundation.security.jwk-set-uri=http://identity:8080/realms/agentark/protocol/openid-connect/certs",
+            "agentark.foundation.security.audiences[0]=agentark-gateway")
+        .run(context -> assertThat(context).hasFailed());
+  }
+
+  /** 验证受控本地 Profile 可显式允许 Compose 内 HTTP JWK 端点。 */
+  @Test
+  void allowsHttpIdentityEndpointOnlyWhenExplicitlyEnabled() {
+    contextRunner
+        .withPropertyValues(
+            "agentark.foundation.security.enabled=true",
+            "agentark.foundation.security.insecure-http-enabled=true",
+            "agentark.foundation.security.jwk-set-uri=http://identity:8080/realms/agentark/protocol/openid-connect/certs",
+            "agentark.foundation.security.audiences[0]=agentark-gateway")
+        .run(context -> assertThat(context).hasSingleBean(JwtDecoder.class));
+  }
+
   /** 验证 Audience Validator 接受白名单交集并拒绝跨服务 Audience。 */
   @Test
   void validatesAudienceWhitelist() {

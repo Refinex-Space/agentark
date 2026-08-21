@@ -33,9 +33,19 @@ pnpm --dir agentark-web api:check
 
 `src/shared/api/generated/` 只由 `contracts/openapi/public-*-v1.yaml` 和其仓库内 JSON Schema 生成，不手工修改。Feature 层必须封装 Query/Mutation，不能把生成模型直接当作 UI Domain。
 
+`components.json` 为 shadcn CLI 提供 Tailwind v4 与 `@/*` 别名。引入 Block 时先检查 dry-run，避免覆盖 AgentArk 已有共享组件：
+
+```bash
+npx shadcn@latest add login-05 --dry-run
+```
+
+生成结果必须按现有 FSD 目录重定位并复核认证、安全与依赖边界，不能直接把示例品牌、占位链接或未接入的 Provider 带入产品。
+
 ## 安全边界
 
-- Bearer Token 与 API Key 只保存在当前页面内存，不进入 Local Storage、Session Storage、URL 或日志；
+- 生产 OIDC Token 只保存在 Gateway Redis Session，浏览器仅持有 HttpOnly/Secure/SameSite=Lax Cookie；Token 不进入前端 JavaScript、Local Storage、Session Storage、URL 或日志；
+- BFF Session API 只返回脱敏 Principal 和 CSRF 参数，副作用请求随统一 HTTP 层提交 CSRF Header；
+- Bearer Token 注入只保留在 E2E 构建，API Key 仍只用于机器调用并驻留当前页面内存；
 - Organization、Project、Environment 选择仅表达客户端意图，服务端仍独立完成授权；
 - SSE 使用 Fetch 流以携带认证和 `Last-Event-ID`，本地 Event Store 有界且不持久化；
 - Vite 仅将 `/api` 代理到配置的 Gateway，浏览器不直接访问 Control、Runtime 或 Scheduler 内部接口；

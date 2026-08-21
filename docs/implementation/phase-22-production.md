@@ -61,3 +61,6 @@ Runtime 和 Scheduler 不依赖 Sticky Session；Readiness 与 `preStop` 配合 
 ## 回滚
 
 应用与 Chart 可回滚到支持当前 Snapshot/Event/DB Schema 的旧镜像 Digest。已应用 Flyway 不降级，Scheduler V3 如需收紧只能新增前向迁移。节点/恢复演练只删除精确命名的临时资源；生产恢复失败时保留只读实例并从不可变备份重建，不覆盖原始证据。
+2026-08-19 Errata：生产 Ingress 在 Web Host 上将 `/api`、`/oauth2` 和 `/login/oauth2` 同源路由到 Gateway，以承载 HttpOnly Session、可选 Authorization Code Callback 和 Token Relay；API Host 继续服务 SDK/机器调用。
+
+2026-08-21 Built-in Identity Errata：Chart 新增 `global.external.identity.mode=builtin|oidc` 互斥门禁。默认 Built-in 模式使用第四个 Identity Flyway Hook Job、独立 MySQL Schema/账号、Redis Session，以及从 ExistingSecret/ExternalSecret 注入的数据库密码、初始随机密码、Pepper 和 PKCS#8 RSA 私钥；Issuer 与 JWK Set 必须使用 Web HTTPS Host。OIDC 模式不运行 Identity Job，并继续要求 Confidential Client Secret、HTTPS Callback 和 BFF。

@@ -96,6 +96,13 @@
                 <version>${json-skema.version}</version>
             </dependency>
 
+            <!-- 锁定 Gateway 内置身份 Argon2id 使用的密码学实现版本。 -->
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>${bouncycastle.version}</version>
+            </dependency>
+
             <!-- 锁定 OkHttp 公共坐标版本，避免 Spring Boot 与 AgentScope 依赖线产生重复类。 -->
             <dependency>
                 <groupId>com.squareup.okhttp3</groupId>

@@ -1,0 +1,696 @@
+# 声明本文档遵循 OpenAPI 3.1.0。
+openapi: 3.1.0
+# 描述 Gateway 浏览器身份与会话 API。
+info:
+  # 标识 Gateway Identity 契约。
+  title: AgentArk Gateway Identity API
+  # 声明独立 Gateway 契约版本。
+  version: 1.0.0
+  # 说明浏览器边界不返回任何 Bearer Token 或密码摘要。
+  description: 提供 Built-in Identity 密码登录、首次改密、Redis Session、账号治理、安全事件与可选 OIDC BFF；只在创建或重置的首次成功响应交付临时密码。
+# 固定内联 Schema 方言。
+jsonSchemaDialect: https://json-schema.org/draft/2020-12/schema
+# 声明公共身份路径。
+paths:
+  # 查询当前匿名或已认证浏览器会话。
+  /api/v1/auth/session:
+    # 定义 get 身份契约节点的用途与约束。
+    get:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: getGatewaySession
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewaySession]
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 200 身份契约节点的用途与约束。
+        "200":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 当前浏览器安全会话与 CSRF 参数
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema: { $ref: "#/components/schemas/GatewaySessionResponse" }
+        # 定义 500 身份契约节点的用途与约束。
+        "500": { $ref: "#/components/responses/ProblemResponse" }
+  # 使用用户名或电子邮箱和密码登录。
+  /api/v1/auth/login:
+    # 定义 post 身份契约节点的用途与约束。
+    post:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: loginWithPassword
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewayIdentity]
+      # 定义 security 身份契约节点的用途与约束。
+      security: [{ CsrfHeader: [] }]
+      # 定义 requestBody 身份契约节点的用途与约束。
+      requestBody:
+        # 定义 required 身份契约节点的用途与约束。
+        required: true
+        # 定义 content 身份契约节点的用途与约束。
+        content:
+          # 定义 application/json 身份契约节点的用途与约束。
+          application/json:
+            # 定义 schema 身份契约节点的用途与约束。
+            schema: { $ref: "#/components/schemas/LoginRequest" }
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 200 身份契约节点的用途与约束。
+        "200":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 已建立完整 Redis Session
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        # 定义 401 身份契约节点的用途与约束。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 定义 428 身份契约节点的用途与约束。
+        "428":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 临时密码正确，但必须先修改密码
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        # 定义 429 身份契约节点的用途与约束。
+        "429": { $ref: "#/components/responses/ProblemResponse" }
+  # 完成临时密码的首次强制修改。
+  /api/v1/auth/required-password-change:
+    # 定义 post 身份契约节点的用途与约束。
+    post:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: completeRequiredPasswordChange
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewayIdentity]
+      # 定义 security 身份契约节点的用途与约束。
+      security: [{ SessionCookie: [], CsrfHeader: [] }]
+      # 定义 requestBody 身份契约节点的用途与约束。
+      requestBody:
+        # 定义 required 身份契约节点的用途与约束。
+        required: true
+        # 定义 content 身份契约节点的用途与约束。
+        content:
+          # 定义 application/json 身份契约节点的用途与约束。
+          application/json:
+            # 定义 schema 身份契约节点的用途与约束。
+            schema: { $ref: "#/components/schemas/PasswordChangeRequest" }
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 200 身份契约节点的用途与约束。
+        "200":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 正式密码已持久化并建立完整 Session
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema: { $ref: "#/components/schemas/LoginResponse" }
+        # 定义 400 身份契约节点的用途与约束。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 定义 401 身份契约节点的用途与约束。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+  # 清除 Gateway Redis Session。
+  /api/v1/auth/logout:
+    # 定义 post 身份契约节点的用途与约束。
+    post:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: logoutGatewaySession
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewaySession]
+      # 定义 security 身份契约节点的用途与约束。
+      security: [{ SessionCookie: [], CsrfHeader: [] }]
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 204 身份契约节点的用途与约束。
+        "204": { description: Built-in Identity 会话已清除 }
+        # 定义 302 身份契约节点的用途与约束。
+        "302": { description: OIDC BFF 会话已清除并进入受控 Provider 退出流程 }
+        # 定义 403 身份契约节点的用途与约束。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+  # 公开下游校验短期内部 JWT 所需的 RSA 公钥。
+  /api/v1/auth/jwks:
+    # 定义 get 身份契约节点的用途与约束。
+    get:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: getGatewayIdentityJwkSet
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewayIdentity]
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 200 身份契约节点的用途与约束。
+        "200":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 不含私钥参数的 JWK Set
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema: { $ref: "#/components/schemas/JwkSet" }
+  # 已登录用户验证当前密码后修改自己的本地密码。
+  /api/v1/identity/me/password-changes:
+    # 声明本人修改密码副作用操作。
+    post:
+      # 固定生成客户端使用的操作标识。
+      operationId: changeOwnIdentityPassword
+      # 归入 Gateway 本地身份分组。
+      tags: [GatewayIdentity]
+      # 同时要求本地 Session Cookie 和 CSRF Header。
+      security: [{ SessionCookie: [], CsrfHeader: [] }]
+      # 声明当前密码与新密码请求正文。
+      requestBody:
+        # 本人改密必须提供请求正文。
+        required: true
+        # 声明 JSON 请求媒体类型。
+        content:
+          # 固定只接受 JSON。
+          application/json:
+            # 复用本人改密封闭结构。
+            schema: { $ref: "#/components/schemas/OwnPasswordChangeRequest" }
+      # 声明本人改密响应。
+      responses:
+        # 成功时密码已提交且全部旧 Session 已失效。
+        "204": { description: 密码修改成功且全部旧会话已注销 }
+        # 新密码不符合策略或复用历史密码。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 当前密码错误。
+        "401": { $ref: "#/components/responses/ProblemResponse" }
+        # 当前身份不是 Built-in Identity 本地会话。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+        # 本人改密尝试超过 Redis 固定窗口额度。
+        "429": { $ref: "#/components/responses/ProblemResponse" }
+  # 管理内置 Identity 账号。
+  /api/v1/identity/accounts:
+    # 定义 get 身份契约节点的用途与约束。
+    get:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: listIdentityAccounts
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewayIdentityManagement]
+      # 定义 security 身份契约节点的用途与约束。
+      security: [{ SessionCookie: [] }]
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 200 身份契约节点的用途与约束。
+        "200":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 最多一百个账号安全视图
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema:
+                # 定义 type 身份契约节点的用途与约束。
+                type: array
+                # 定义 maxItems 身份契约节点的用途与约束。
+                maxItems: 100
+                # 定义 items 身份契约节点的用途与约束。
+                items: { $ref: "#/components/schemas/IdentityAccount" }
+        # 定义 403 身份契约节点的用途与约束。
+        "403": { $ref: "#/components/responses/ProblemResponse" }
+    # 定义 post 身份契约节点的用途与约束。
+    post:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: createIdentityAccount
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewayIdentityManagement]
+      # 定义 security 身份契约节点的用途与约束。
+      security: [{ SessionCookie: [], CsrfHeader: [] }]
+      # 定义 parameters 身份契约节点的用途与约束。
+      parameters:
+        # 声明当前身份契约列表项及其约束。
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      # 定义 requestBody 身份契约节点的用途与约束。
+      requestBody:
+        # 定义 required 身份契约节点的用途与约束。
+        required: true
+        # 定义 content 身份契约节点的用途与约束。
+        content:
+          # 定义 application/json 身份契约节点的用途与约束。
+          application/json:
+            # 定义 schema 身份契约节点的用途与约束。
+            schema: { $ref: "#/components/schemas/CreateAccountRequest" }
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 201 身份契约节点的用途与约束。
+        "201":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 账号已创建；仅首次成功执行返回临时密码
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema: { $ref: "#/components/schemas/CreatedAccount" }
+        # 定义 400 身份契约节点的用途与约束。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 定义 409 身份契约节点的用途与约束。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 按乐观锁更新账号生命周期状态。
+  /api/v1/identity/accounts/{accountId}/status:
+    # 定义 patch 身份契约节点的用途与约束。
+    patch:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: updateIdentityAccountStatus
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewayIdentityManagement]
+      # 定义 security 身份契约节点的用途与约束。
+      security: [{ SessionCookie: [], CsrfHeader: [] }]
+      # 定义 parameters 身份契约节点的用途与约束。
+      parameters:
+        # 声明当前身份契约列表项及其约束。
+        - { $ref: "#/components/parameters/AccountId" }
+      # 定义 requestBody 身份契约节点的用途与约束。
+      requestBody:
+        # 定义 required 身份契约节点的用途与约束。
+        required: true
+        # 定义 content 身份契约节点的用途与约束。
+        content:
+          # 定义 application/json 身份契约节点的用途与约束。
+          application/json:
+            # 定义 schema 身份契约节点的用途与约束。
+            schema: { $ref: "#/components/schemas/UpdateStatusRequest" }
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 200 身份契约节点的用途与约束。
+        "200":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 更新后的账号安全视图
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema: { $ref: "#/components/schemas/IdentityAccount" }
+        # 定义 400 身份契约节点的用途与约束。
+        "400": { $ref: "#/components/responses/ProblemResponse" }
+        # 定义 409 身份契约节点的用途与约束。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 重置账号为必须首次改密的随机临时密码。
+  /api/v1/identity/accounts/{accountId}/password-resets:
+    # 定义 post 身份契约节点的用途与约束。
+    post:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: resetIdentityAccountPassword
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewayIdentityManagement]
+      # 定义 security 身份契约节点的用途与约束。
+      security: [{ SessionCookie: [], CsrfHeader: [] }]
+      # 定义 parameters 身份契约节点的用途与约束。
+      parameters:
+        # 声明当前身份契约列表项及其约束。
+        - { $ref: "#/components/parameters/AccountId" }
+        # 声明当前身份契约列表项及其约束。
+        - { $ref: "#/components/parameters/IdempotencyKey" }
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 200 身份契约节点的用途与约束。
+        "200":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 密码已重置；幂等重放不再次返回临时密码
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema: { $ref: "#/components/schemas/CreatedAccount" }
+        # 定义 409 身份契约节点的用途与约束。
+        "409": { $ref: "#/components/responses/ProblemResponse" }
+  # 人工解除账号登录失败锁定。
+  /api/v1/identity/accounts/{accountId}/unlock:
+    # 定义 post 身份契约节点的用途与约束。
+    post:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: unlockIdentityAccount
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewayIdentityManagement]
+      # 定义 security 身份契约节点的用途与约束。
+      security: [{ SessionCookie: [], CsrfHeader: [] }]
+      # 定义 parameters 身份契约节点的用途与约束。
+      parameters:
+        # 声明当前身份契约列表项及其约束。
+        - { $ref: "#/components/parameters/AccountId" }
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 200 身份契约节点的用途与约束。
+        "200":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 解锁后的账号安全视图
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema: { $ref: "#/components/schemas/IdentityAccount" }
+  # 查询最近身份安全事件。
+  /api/v1/identity/security-events:
+    # 定义 get 身份契约节点的用途与约束。
+    get:
+      # 定义 operationId 身份契约节点的用途与约束。
+      operationId: listIdentitySecurityEvents
+      # 定义 tags 身份契约节点的用途与约束。
+      tags: [GatewayIdentityManagement]
+      # 定义 security 身份契约节点的用途与约束。
+      security: [{ SessionCookie: [] }]
+      # 定义 responses 身份契约节点的用途与约束。
+      responses:
+        # 定义 200 身份契约节点的用途与约束。
+        "200":
+          # 定义 description 身份契约节点的用途与约束。
+          description: 最近一百条脱敏身份安全事件
+          # 定义 content 身份契约节点的用途与约束。
+          content:
+            # 定义 application/json 身份契约节点的用途与约束。
+            application/json:
+              # 定义 schema 身份契约节点的用途与约束。
+              schema:
+                # 定义 type 身份契约节点的用途与约束。
+                type: array
+                # 定义 maxItems 身份契约节点的用途与约束。
+                maxItems: 100
+                # 定义 items 身份契约节点的用途与约束。
+                items: { $ref: "#/components/schemas/SecurityEvent" }
+# 声明安全方案、参数、响应和 Schema。
+components:
+  # 定义 securitySchemes 身份契约节点的用途与约束。
+  securitySchemes:
+    # 定义 SessionCookie 身份契约节点的用途与约束。
+    SessionCookie:
+      # 定义 type 身份契约节点的用途与约束。
+      type: apiKey
+      # 定义 in 身份契约节点的用途与约束。
+      in: cookie
+      # 定义 name 身份契约节点的用途与约束。
+      name: AGENTARK_SESSION
+    # 定义 CsrfHeader 身份契约节点的用途与约束。
+    CsrfHeader:
+      # 定义 type 身份契约节点的用途与约束。
+      type: apiKey
+      # 定义 in 身份契约节点的用途与约束。
+      in: header
+      # 定义 name 身份契约节点的用途与约束。
+      name: X-CSRF-TOKEN
+  # 定义 parameters 身份契约节点的用途与约束。
+  parameters:
+    # 定义 AccountId 身份契约节点的用途与约束。
+    AccountId:
+      # 定义 name 身份契约节点的用途与约束。
+      name: accountId
+      # 定义 in 身份契约节点的用途与约束。
+      in: path
+      # 定义 required 身份契约节点的用途与约束。
+      required: true
+      # 定义 schema 身份契约节点的用途与约束。
+      schema: { type: string, format: uuid }
+    # 定义 IdempotencyKey 身份契约节点的用途与约束。
+    IdempotencyKey:
+      # 定义 name 身份契约节点的用途与约束。
+      name: Idempotency-Key
+      # 定义 in 身份契约节点的用途与约束。
+      in: header
+      # 定义 required 身份契约节点的用途与约束。
+      required: true
+      # 定义 schema 身份契约节点的用途与约束。
+      schema: { type: string, minLength: 1, maxLength: 128 }
+  # 定义 responses 身份契约节点的用途与约束。
+  responses:
+    # 定义 ProblemResponse 身份契约节点的用途与约束。
+    ProblemResponse:
+      # 定义 description 身份契约节点的用途与约束。
+      description: RFC 9457 Problem Detail
+      # 定义 content 身份契约节点的用途与约束。
+      content:
+        # 定义 application/problem+json 身份契约节点的用途与约束。
+        application/problem+json:
+          # 定义 schema 身份契约节点的用途与约束。
+          schema: { $ref: "#/components/schemas/ProblemDetail" }
+  # 定义 schemas 身份契约节点的用途与约束。
+  schemas:
+    # 定义 GatewaySessionResponse 身份契约节点的用途与约束。
+    GatewaySessionResponse:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [authenticated, loginEnabled, loginLabel, loginUri, logoutUri, loginMode, passwordChangeUri, csrfHeaderName, csrfParameterName, csrfToken, principal]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 authenticated 身份契约节点的用途与约束。
+        authenticated: { type: boolean }
+        # 定义 loginEnabled 身份契约节点的用途与约束。
+        loginEnabled: { type: boolean }
+        # 定义 loginLabel 身份契约节点的用途与约束。
+        loginLabel: { type: string, minLength: 1, maxLength: 64 }
+        # 定义 loginUri 身份契约节点的用途与约束。
+        loginUri: { type: string, pattern: "^/(api/v1/auth/login|oauth2/authorization/[a-z][a-z0-9-]{0,31})$" }
+        # 定义 logoutUri 身份契约节点的用途与约束。
+        logoutUri: { type: string, const: /api/v1/auth/logout }
+        # 定义 loginMode 身份契约节点的用途与约束。
+        loginMode: { type: string, enum: [PASSWORD, OIDC] }
+        # 定义 passwordChangeUri 身份契约节点的用途与约束。
+        passwordChangeUri: { oneOf: [{ type: string, const: /api/v1/auth/required-password-change }, { type: "null" }] }
+        # 定义 csrfHeaderName 身份契约节点的用途与约束。
+        csrfHeaderName: { type: string, minLength: 1, maxLength: 64 }
+        # 定义 csrfParameterName 身份契约节点的用途与约束。
+        csrfParameterName: { type: string, minLength: 1, maxLength: 64 }
+        # 定义 csrfToken 身份契约节点的用途与约束。
+        csrfToken: { type: string, minLength: 16, maxLength: 512 }
+        # 定义 principal 身份契约节点的用途与约束。
+        principal: { oneOf: [{ $ref: "#/components/schemas/GatewaySessionPrincipal" }, { type: "null" }] }
+    # 定义 GatewaySessionPrincipal 身份契约节点的用途与约束。
+    GatewaySessionPrincipal:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [subject, displayName, issuer]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 subject 身份契约节点的用途与约束。
+        subject: { type: string, minLength: 1, maxLength: 255 }
+        # 定义 displayName 身份契约节点的用途与约束。
+        displayName: { type: string, minLength: 1, maxLength: 255 }
+        # 定义 issuer 身份契约节点的用途与约束。
+        issuer: { type: string, format: uri }
+    # 定义 LoginRequest 身份契约节点的用途与约束。
+    LoginRequest:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [usernameOrEmail, password]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 usernameOrEmail 身份契约节点的用途与约束。
+        usernameOrEmail: { type: string, minLength: 1, maxLength: 320 }
+        # 定义 password 身份契约节点的用途与约束。
+        password: { type: string, minLength: 1, maxLength: 128, writeOnly: true }
+    # 定义 PasswordChangeRequest 身份契约节点的用途与约束。
+    PasswordChangeRequest:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [newPassword]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 newPassword 身份契约节点的用途与约束。
+        newPassword: { type: string, minLength: 15, maxLength: 128, writeOnly: true }
+    # 已登录用户本人修改密码请求。
+    OwnPasswordChangeRequest:
+      # 使用封闭对象，禁止附加字段进入认证调用栈。
+      type: object
+      # 禁止未声明字段。
+      additionalProperties: false
+      # 当前密码和新密码均为必填。
+      required: [currentPassword, newPassword]
+      # 声明本人改密字段。
+      properties:
+        # 当前密码只写入请求且不进入响应。
+        currentPassword: { type: string, minLength: 1, maxLength: 128, writeOnly: true }
+        # 新密码遵循 15–128 字符策略且只写入请求。
+        newPassword: { type: string, minLength: 15, maxLength: 128, writeOnly: true }
+    # 定义 LoginResponse 身份契约节点的用途与约束。
+    LoginResponse:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [status, passwordChangeRequired, principal]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 status 身份契约节点的用途与约束。
+        status: { type: string, enum: [AUTHENTICATED, PASSWORD_CHANGE_REQUIRED] }
+        # 定义 passwordChangeRequired 身份契约节点的用途与约束。
+        passwordChangeRequired: { type: boolean }
+        # 定义 principal 身份契约节点的用途与约束。
+        principal: { oneOf: [{ $ref: "#/components/schemas/LocalPrincipal" }, { type: "null" }] }
+    # 定义 LocalPrincipal 身份契约节点的用途与约束。
+    LocalPrincipal:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [subject, displayName, username, email]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 subject 身份契约节点的用途与约束。
+        subject: { type: string, format: uuid }
+        # 定义 displayName 身份契约节点的用途与约束。
+        displayName: { type: string, minLength: 1, maxLength: 128 }
+        # 定义 username 身份契约节点的用途与约束。
+        username: { type: string, minLength: 1, maxLength: 64 }
+        # 定义 email 身份契约节点的用途与约束。
+        email: { oneOf: [{ type: string, format: email, maxLength: 320 }, { type: "null" }] }
+    # 定义 CreateAccountRequest 身份契约节点的用途与约束。
+    CreateAccountRequest:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [username, displayName]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 username 身份契约节点的用途与约束。
+        username: { type: string, minLength: 1, maxLength: 64 }
+        # 定义 email 身份契约节点的用途与约束。
+        email: { oneOf: [{ type: string, format: email, maxLength: 320 }, { type: "null" }] }
+        # 定义 displayName 身份契约节点的用途与约束。
+        displayName: { type: string, minLength: 1, maxLength: 128 }
+    # 定义 UpdateStatusRequest 身份契约节点的用途与约束。
+    UpdateStatusRequest:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [status, expectedVersion]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 status 身份契约节点的用途与约束。
+        status: { type: string, enum: [ACTIVE, SUSPENDED, DISABLED] }
+        # 定义 expectedVersion 身份契约节点的用途与约束。
+        expectedVersion: { type: integer, minimum: 0 }
+    # 定义 IdentityAccount 身份契约节点的用途与约束。
+    IdentityAccount:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [id, username, email, displayName, status, passwordChangeRequired, lockedUntil, lastLoginAt, authorities, version]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 id 身份契约节点的用途与约束。
+        id: { type: string, format: uuid }
+        # 定义 username 身份契约节点的用途与约束。
+        username: { type: string, minLength: 1, maxLength: 64 }
+        # 定义 email 身份契约节点的用途与约束。
+        email: { oneOf: [{ type: string, format: email, maxLength: 320 }, { type: "null" }] }
+        # 定义 displayName 身份契约节点的用途与约束。
+        displayName: { type: string, minLength: 1, maxLength: 128 }
+        # 定义 status 身份契约节点的用途与约束。
+        status: { type: string, enum: [ACTIVE, SUSPENDED, DISABLED] }
+        # 定义 passwordChangeRequired 身份契约节点的用途与约束。
+        passwordChangeRequired: { type: boolean }
+        # 定义 lockedUntil 身份契约节点的用途与约束。
+        lockedUntil: { oneOf: [{ type: string, format: date-time }, { type: "null" }] }
+        # 定义 lastLoginAt 身份契约节点的用途与约束。
+        lastLoginAt: { oneOf: [{ type: string, format: date-time }, { type: "null" }] }
+        # 定义 authorities 身份契约节点的用途与约束。
+        authorities: { type: array, uniqueItems: true, items: { type: string } }
+        # 定义 version 身份契约节点的用途与约束。
+        version: { type: integer, minimum: 0 }
+    # 定义 CreatedAccount 身份契约节点的用途与约束。
+    CreatedAccount:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [account, temporaryPassword]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 account 身份契约节点的用途与约束。
+        account: { $ref: "#/components/schemas/IdentityAccount" }
+        # 定义 temporaryPassword 身份契约节点的用途与约束。
+        temporaryPassword: { oneOf: [{ type: string, minLength: 15, maxLength: 128, writeOnly: true }, { type: "null" }] }
+    # 定义 SecurityEvent 身份契约节点的用途与约束。
+    SecurityEvent:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [id, accountId, eventType, result, actorSubject, detailCode, occurredAt]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 id 身份契约节点的用途与约束。
+        id: { type: string, format: uuid }
+        # 定义 accountId 身份契约节点的用途与约束。
+        accountId: { oneOf: [{ type: string, format: uuid }, { type: "null" }] }
+        # 定义 eventType 身份契约节点的用途与约束。
+        eventType: { type: string, minLength: 1, maxLength: 64 }
+        # 定义 result 身份契约节点的用途与约束。
+        result: { type: string, enum: [SUCCESS, FAILURE, DENIED] }
+        # 定义 actorSubject 身份契约节点的用途与约束。
+        actorSubject: { oneOf: [{ type: string, maxLength: 255 }, { type: "null" }] }
+        # 定义 detailCode 身份契约节点的用途与约束。
+        detailCode: { oneOf: [{ type: string, maxLength: 128 }, { type: "null" }] }
+        # 定义 occurredAt 身份契约节点的用途与约束。
+        occurredAt: { type: string, format: date-time }
+    # 定义 JwkSet 身份契约节点的用途与约束。
+    JwkSet:
+      # 定义 type 身份契约节点的用途与约束。
+      type: object
+      # 定义 additionalProperties 身份契约节点的用途与约束。
+      additionalProperties: false
+      # 定义 required 身份契约节点的用途与约束。
+      required: [keys]
+      # 定义 properties 身份契约节点的用途与约束。
+      properties:
+        # 定义 keys 身份契约节点的用途与约束。
+        keys:
+          # 定义 type 身份契约节点的用途与约束。
+          type: array
+          # 定义 minItems 身份契约节点的用途与约束。
+          minItems: 1
+          # 定义 items 身份契约节点的用途与约束。
+          items:
+            # 定义 type 身份契约节点的用途与约束。
+            type: object
+            # 定义 required 身份契约节点的用途与约束。
+            required: [kty, use, alg, kid, n, e]
+            # 定义 properties 身份契约节点的用途与约束。
+            properties:
+              # 定义 kty 身份契约节点的用途与约束。
+              kty: { type: string, const: RSA }
+              # 定义 use 身份契约节点的用途与约束。
+              use: { type: string, const: sig }
+              # 定义 alg 身份契约节点的用途与约束。
+              alg: { type: string, const: RS256 }
+              # 定义 kid 身份契约节点的用途与约束。
+              kid: { type: string, minLength: 1, maxLength: 128 }
+              # 定义 n 身份契约节点的用途与约束。
+              n: { type: string, minLength: 1 }
+              # 定义 e 身份契约节点的用途与约束。
+              e: { type: string, minLength: 1 }
+    # 定义 ProblemDetail 身份契约节点的用途与约束。
+    ProblemDetail:
+      # 定义 $ref 身份契约节点的用途与约束。
+      $ref: ../schemas/problem-detail/v1.json

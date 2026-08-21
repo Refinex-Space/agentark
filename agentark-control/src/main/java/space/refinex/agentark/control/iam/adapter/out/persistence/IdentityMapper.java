@@ -51,7 +51,9 @@ public interface IdentityMapper {
             (#{id,jdbcType=BINARY}, #{issuer}, #{subject}, #{displayName}, #{email}, #{status},
              #{lastSeenAt}, #{version}, #{createdAt}, #{updatedAt})
         ON DUPLICATE KEY UPDATE
-            last_seen_at = VALUES(last_seen_at), updated_at = VALUES(updated_at)
+            display_name = VALUES(display_name), email = VALUES(email),
+            status = VALUES(status), last_seen_at = VALUES(last_seen_at),
+            version = version + 1, updated_at = VALUES(updated_at)
         """)
     void upsertUserIdentity(UserIdentityRow row);
 

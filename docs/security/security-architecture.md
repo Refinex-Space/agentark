@@ -91,6 +91,6 @@ Snapshot Sandbox Contract 强制 `UNTRUSTED/KUBERNETES`、内容寻址镜像、�
 
 ## 失败关闭与剩余边界
 
-生产缺少 OIDC、Vault/Runtime Secret Resolver、Model/Component Factory、恶意文件扫描器或 Sandbox Adapter 时，对应能力不可用，不使用 Dev/Fake 实现维持“看似可用”。OTel Backend 不可用可以降级，因为 Audit/Event/Usage 权威事实仍在 MySQL；安全认证、授权、Fencing、供应链和 Secret 校验不可降级。
+生产缺少已选 Built-in Identity/OIDC、Vault/Runtime Secret Resolver、Model/Component Factory、恶意文件扫描器或 Sandbox Adapter 时，对应能力不可用，不使用 Dev/Fake 实现维持“看似可用”。OTel Backend 不可用可以降级，因为 Audit/Event/Usage 权威事实仍在 MySQL；安全认证、授权、Fencing、供应链和 Secret 校验不可降级。
 
 本架构不声称已经完成真实云 Vault 工作负载身份、Kubernetes Admission、mTLS、镜像 Registry 权限、托管服务 HA/DR 或第三方渗透。Phase 22 已完成仓库级 HA/恢复基线；上述外部能力仍由目标环境和 Phase 23 验收，不是允许绕过当前安全边界的开放项。

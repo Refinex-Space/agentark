@@ -63,7 +63,12 @@ default
   {{- if and (not .Values.secretManagement.externalSecret.enabled) (not .Values.secretManagement.existingSecret) -}}
     {{- fail "production requires secretManagement.existingSecret or externalSecret.enabled" -}}
   {{- end -}}
-  {{- $issuer := urlParse .Values.global.external.oidc.issuerUri -}}
+  {{- $identityMode := .Values.global.external.identity.mode -}}
+  {{- if not (has $identityMode (list "builtin" "oidc")) -}}
+    {{- fail "production identity mode must be builtin or oidc" -}}
+  {{- end -}}
+  {{- $issuerUri := ternary .Values.global.external.identity.issuerUri .Values.global.external.oidc.issuerUri (eq $identityMode "builtin") -}}
+  {{- $issuer := urlParse $issuerUri -}}
   {{- $vault := urlParse .Values.secretManagement.vault.address -}}
   {{- if or (hasSuffix ".invalid" .Values.global.external.mysql.host) (has .Values.global.external.mysql.host (list "localhost" "127.0.0.1" "::1")) -}}
     {{- fail "production requires a real non-loopback MySQL endpoint" -}}
@@ -72,7 +77,37 @@ default
     {{- fail "production requires a real non-loopback Redis endpoint" -}}
   {{- end -}}
   {{- if or (ne $issuer.scheme "https") (hasSuffix ".invalid" $issuer.host) -}}
-    {{- fail "production requires a real HTTPS OIDC issuer" -}}
+    {{- fail "production requires a real HTTPS identity issuer" -}}
+  {{- end -}}
+  {{- if eq $identityMode "builtin" -}}
+    {{- $jwkSet := urlParse .Values.global.external.identity.jwkSetUri -}}
+    {{- if or (ne $issuer.host .Values.ingress.webHost) (ne $jwkSet.scheme "https") (ne $jwkSet.host .Values.ingress.webHost) -}}
+      {{- fail "production built-in identity issuer and JWK Set must use the HTTPS Web host" -}}
+    {{- end -}}
+    {{- if or (not .Values.global.external.mysql.identitySchema) (not .Values.global.external.mysql.usernames.identity) -}}
+      {{- fail "production built-in identity requires an isolated MySQL schema and account" -}}
+    {{- end -}}
+    {{- range $name, $value := dict "identityDatabasePassword" .Values.secretManagement.keys.identityDatabasePassword "identityBootstrapPassword" .Values.secretManagement.keys.identityBootstrapPassword "identityPasswordPepper" .Values.secretManagement.keys.identityPasswordPepper "identitySigningPrivateKey" .Values.secretManagement.keys.identitySigningPrivateKey -}}
+      {{- if not $value -}}
+        {{- fail (printf "production built-in identity requires the %s secret key reference" $name) -}}
+      {{- end -}}
+    {{- end -}}
+  {{- else -}}
+    {{- if not .Values.global.external.oidc.bffEnabled -}}
+      {{- fail "production OIDC mode requires Gateway OIDC BFF" -}}
+    {{- end -}}
+    {{- if not .Values.global.external.oidc.clientId -}}
+      {{- fail "production requires an OIDC confidential client id" -}}
+    {{- end -}}
+    {{- range $name, $value := dict "redirectUri" .Values.global.external.oidc.redirectUri "postLoginRedirectUri" .Values.global.external.oidc.postLoginRedirectUri "postLogoutRedirectUri" .Values.global.external.oidc.postLogoutRedirectUri -}}
+      {{- $uri := urlParse $value -}}
+      {{- if or (ne $uri.scheme "https") (ne $uri.host $.Values.ingress.webHost) -}}
+        {{- fail (printf "production OIDC %s must use the HTTPS Web host" $name) -}}
+      {{- end -}}
+    {{- end -}}
+    {{- if not .Values.secretManagement.keys.oidcClientSecret -}}
+      {{- fail "production requires the OIDC client secret key reference" -}}
+    {{- end -}}
   {{- end -}}
   {{- if not .Values.global.external.redis.tls -}}
     {{- fail "production Redis TLS must be enabled" -}}

@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-21
 status: active
 referenced_by: docs/README.md
 ---
@@ -17,27 +17,31 @@ AgentArk Web 面向 Agent 构建、发布、运行和治理工作流，采用紧
 
 Token 定义在 `agentark-web/src/app/styles/global.css`，组件只能通过语义 Token 表达颜色和层级：
 
-| 分类 | 语义 |
-|---|---|
-| Canvas/Surface/Raised | 页面背景、基础表面、浮起面板 |
-| Text/Muted/Subtle | 主文本、辅助文本、低优先信息 |
-| Border/Strong Border | 普通边界、交互或高层级边界 |
-| Accent | 主操作、焦点和选中状态 |
+| 分类                   | 语义                             |
+| ---------------------- | -------------------------------- |
+| Canvas/Surface/Raised  | 页面背景、基础表面、浮起面板     |
+| Text/Muted/Subtle      | 主文本、辅助文本、低优先信息     |
+| Border/Strong Border   | 普通边界、交互或高层级边界       |
+| Accent                 | 主操作、焦点和选中状态           |
 | Success/Warning/Danger | 成功、等待/风险、失败/破坏性状态 |
-| Focus Ring | 键盘焦点，不以颜色作为唯一信息 |
+| Focus Ring             | 键盘焦点，不以颜色作为唯一信息   |
 
 浅色、深色和系统主题由 `ThemeProvider` 管理。只有主题偏好可以写入浏览器存储；身份凭据、租户上下文和 Runtime Event 禁止持久化。
 
+身份入口使用独立的中性 Token：Canvas `#ffffff`、Secondary `#f7f7f7`、Foreground `#171717`、Muted `#737373`、Border `#e5e5e5`、Action `#171717`。React `/sign-in` 使用 shadcn `login-05` 的居中单列、`max-w-sm`、紧凑字段和全宽主操作；PASSWORD 模式只提交同源 Gateway，OIDC 模式仍执行受控跳转。该局部体系不随控制台深浅主题切换，也不得覆盖业务工作台语义 Token。
+
+密码字段禁止进入 React 状态、Web Storage、日志或生成 Client；表单提交后立即由浏览器和 Gateway 请求生命周期释放。Gateway 只保存 Argon2id 摘要与 Redis Session，不向浏览器返回 Access Token。OIDC 模式禁止代理 Direct Grant；显式开发预览仍使用 `/sign-in?preview=1`。
+
 ## 组件基线
 
-| 范围 | 组件 | 约束 |
-|---|---|---|
-| 输入与动作 | Button、Input | Disabled、Focus、Danger 均有独立语义 |
-| Overlay | Dialog、Popover、Menu | Radix 负责焦点圈定、Escape 和焦点恢复 |
-| 导航与数据 | Tabs、Table | 保留原生语义；窄屏表格允许局部滚动 |
-| 工作台 | Split Pane、Inspector、Timeline | 分栏支持键盘调整和 ARIA 数值 |
-| 技术内容 | Code Viewer、JSON Viewer | 只展示已脱敏、允许暴露的投影 |
-| 反馈 | Loading、Skeleton、Empty、Error、Toast | 不只依靠颜色表达状态；Toast 不主动夺取焦点 |
+| 范围       | 组件                                   | 约束                                       |
+| ---------- | -------------------------------------- | ------------------------------------------ |
+| 输入与动作 | Button、Input                          | Disabled、Focus、Danger 均有独立语义       |
+| Overlay    | Dialog、Popover、Menu                  | Radix 负责焦点圈定、Escape 和焦点恢复      |
+| 导航与数据 | Tabs、Table                            | 保留原生语义；窄屏表格允许局部滚动         |
+| 工作台     | Split Pane、Inspector、Timeline        | 分栏支持键盘调整和 ARIA 数值               |
+| 技术内容   | Code Viewer、JSON Viewer               | 只展示已脱敏、允许暴露的投影               |
+| 反馈       | Loading、Skeleton、Empty、Error、Toast | 不只依靠颜色表达状态；Toast 不主动夺取焦点 |
 
 页面级错误由 `AppErrorBoundary` 接管，API 错误统一解析 RFC 9457 Problem Detail；Feature 不自行拼装互不兼容的错误形态。
 
@@ -61,3 +65,5 @@ Token 定义在 `agentark-web/src/app/styles/global.css`，组件只能通过语
 3. 危险操作必须同时展示动作、对象和环境，真实确认流程由对应业务 Feature 完成；
 4. 不将 Prompt、Secret、完整 Event Payload 或隐藏推理链加入演示 Fixture；
 5. 修改共享组件后至少执行 Unit、Playwright 和生产 Build。
+
+`agentark-web/components.json` 只负责 shadcn CLI 的 Tailwind、别名和生成落点识别。Block 生成结果必须按 `app/widgets/features -> entities/shared` 依赖方向重定位和适配；不得直接覆盖已有共享组件，也不得因为示例包含表单或社交按钮就绕过 AgentArk 的 Gateway BFF 认证边界。

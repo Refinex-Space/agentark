@@ -63,6 +63,7 @@ Do not commit, push, publish, delete branches, or modify upstream repositories w
 ## Hard Boundaries
 
 - Exactly four backend deployment units: Gateway, Control, Runtime, Scheduler.
+- Gateway may persist only Built-in Identity authentication/security facts in its exclusive `agentark_identity` Schema; Agent、Project、Membership、Runtime、Job and other business facts remain forbidden there.
 - No cross-schema SQL, Mapper, foreign key, transaction, or shared database account.
 - Runtime executes immutable snapshots and never reads editable Control catalog tables.
 - `agentark-runtime` is provider-neutral; AgentScope Runtime imports exist only in `agentark-runtime-provider-agentscope`.

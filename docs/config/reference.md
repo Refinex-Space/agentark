@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-18
+updated: 2026-08-19
 status: active
 referenced_by: AGENTS.md#knowledge-map
 ---
@@ -38,10 +38,13 @@ Phase 06 已为 Control、Runtime、Scheduler 接入各自独立的 MySQL DataSo
 |---|---|---|---|
 | `core` | MySQL、Redis、MinIO、四个 Server | `mysql:8.4.11`、`redis:8.10.0`、`minio/minio:RELEASE.2025-09-07T16-13-09Z`、`eclipse-temurin:21.0.10_7-jre-alpine-3.23` | 默认本地基础设施与空业务应用壳 |
 | `rag` | Core 全部服务 + Qdrant | 额外 `qdrant/qdrant:v1.18.3` | Phase 14 Qdrant Adapter 的本地集成 Profile，默认不启动；不自动启用摄取 Handler |
+| 默认 Identity Overlay | 所选 Core/RAG + Gateway Built-in Identity | 无额外服务镜像 | 默认 MySQL 用户名/邮箱+密码登录；`--no-identity` 显式关闭；不新增部署单元 |
 
 `tools/dev-up.sh` 先在宿主机打包四个可执行 JAR，再由 `deploy/compose/Dockerfile.service` 复制到本地运行镜像。该 Dockerfile 使用专用的 `deploy/compose/Dockerfile.service.dockerignore`，构建上下文默认拒绝全部仓库内容，只放行镜像模板和四个 `agentark-*-server-*.jar`；不得放行源码、其他 `target` 产物或本地 Secret。根 `.dockerignore` 继续服务于生产多阶段镜像构建，并排除全部宿主 Maven 输出。
 
 Compose 对 MySQL `3306`、Redis `6379`、MinIO `9000/9001`、Qdrant `6333/6334` 和四个 Server 端口均只绑定 `127.0.0.1`。宿主基础设施端口可在本地 `.env` 中使用 `deploy/compose/.env.example` 列出的非敏感变量覆盖；四个 Server 端口为 Phase 05 固定值。
+
+`tools/dev-up.sh` 默认生成 `mysql-identity-password`、`identity-user-password`、`identity-password-pepper` 和 `identity-signing-private-key.pem`，并通过 `docker-compose.identity.yml` 开启 Gateway Built-in Identity。用户名固定为 `agentark-admin`，用户名或邮箱均可登录；临时密码只允许人工从 `deploy/compose/.secrets/identity-user-password` 读取，Gateway 首次登录强制替换，脚本不输出密码。已有 MySQL 卷由 `ensure-identity-schema.sh` 幂等创建第四个 Schema/账号；纯 API 或外部 OIDC 场景显式使用 `--no-identity`。
 
 MySQL Core 容器显式使用 `--log-bin-trust-function-creators=ON`，使最小权限 Flyway 账号可以创建 V5 的 Revision/Snapshot 不可变触发器。该参数不授予应用账号 `SUPER`，也不扩大三个 Schema 的权限。生产 MySQL 若启用 Binary Log，数据库管理员必须在执行 V5 前配置并核验同一变量；缺失时 Flyway 会以 `ERROR 1419` 失败，禁止通过扩大应用账号权限或关闭 Flyway 绕过。
 
@@ -54,16 +57,18 @@ MySQL Core 容器显式使用 `--log-bin-trust-function-creators=ON`，使最小
 | `agentark_control` | `agentark_control` | `agentark_control.*` | Runtime/Scheduler Schema |
 | `agentark_runtime` | `agentark_runtime` | `agentark_runtime.*` | Control/Scheduler Schema |
 | `agentark_scheduler` | `agentark_scheduler` | `agentark_scheduler.*` | Control/Runtime Schema |
+| `agentark_identity` | `agentark_identity` | `agentark_identity.*` | Control/Runtime/Scheduler Schema |
 
 账号只在 MySQL 空数据卷首次启动时初始化。不得在保留 `mysql-data` 卷的同时删除或替换 `.secrets/`；否则文件凭据会与库内账号失配。`dev-up.sh` 在生成凭据前检查 `agentark_mysql-data` 卷；旧卷存在且任一 MySQL Secret 丢失时会拒绝启动，不会静默生成无法登录的新凭据。
 
-## 三平面 DataSource 与 Flyway
+## 四个持久化 Owner 的 DataSource 与 Flyway
 
 | Server | 必填环境变量 | Schema/Location | 默认连接池 |
 |---|---|---|---|
 | Control | `AGENTARK_CONTROL_DB_URL`、`AGENTARK_CONTROL_DB_USERNAME`、`AGENTARK_CONTROL_DB_PASSWORD` | `agentark_control` / `classpath:db/migration/control` | max `10`、min idle `1` |
 | Runtime | `AGENTARK_RUNTIME_DB_URL`、`AGENTARK_RUNTIME_DB_USERNAME`、`AGENTARK_RUNTIME_DB_PASSWORD` | `agentark_runtime` / `classpath:db/migration/runtime` | max `20`、min idle `1` |
 | Scheduler | `AGENTARK_SCHEDULER_DB_URL`、`AGENTARK_SCHEDULER_DB_USERNAME`、`AGENTARK_SCHEDULER_DB_PASSWORD` | `agentark_scheduler` / `classpath:db/migration/scheduler` | max `10`、min idle `1` |
+| Gateway Identity | `AGENTARK_IDENTITY_DB_URL`、`AGENTARK_IDENTITY_DB_USERNAME`、`AGENTARK_IDENTITY_DB_PASSWORD` | `agentark_identity` / `classpath:db/migration/identity` | max `8`、min idle `0` |
 
 三个 URL、Username、Password 均没有生产默认值。Compose 只在本地 Profile 提供非秘密 URL/Username，并通过 `configtree:/run/secrets/` 把密码文件映射到同名属性；值不进入 Compose 环境或渲染输出。连接池上限可分别由 `AGENTARK_*_DB_POOL_MAX_SIZE` 覆盖，最小空闲可由 `AGENTARK_*_DB_POOL_MIN_IDLE` 覆盖。
 
@@ -71,7 +76,7 @@ MySQL Core 容器显式使用 `--log-bin-trust-function-creators=ON`，使最小
 
 ## Gateway 公共入口配置
 
-Gateway 不配置 DataSource、Mapper 或业务模块依赖。固定路由按 `Runtime SSE → Runtime Public → Scheduler Webhook/Public → Control Public` 匹配；`/internal/**` 在边缘返回 `404`。生产必须显式启用 Security 和 Redis Rate Limit；默认关闭只用于没有 IdP/Redis 的构建与本地探针，普通 Public API 不会匿名放行。
+Gateway 只为 Built-in Identity 配置 `agentark_identity` DataSource，禁止连接其他平面或保存业务状态。固定路由按 `Runtime SSE → Runtime Public → Scheduler Webhook/Public → Control Public` 匹配；`/internal/**` 在边缘返回 `404`。生产必须显式启用 Security 和 Redis Rate Limit；普通 Public API 不会匿名放行。
 
 | 属性/环境变量 | 默认值 | 启用/必填条件 | 安全与所有权说明 |
 |---|---|---|---|
@@ -89,12 +94,26 @@ Gateway 不配置 DataSource、Mapper 或业务模块依赖。固定路由按 `R
 | `agentark.gateway.default-rate-limit` / `AGENTARK_GATEWAY_DEFAULT_RATE_LIMIT` | `600` | 限流启用 | 已认证主体每固定窗口额度 |
 | `agentark.gateway.webhook-rate-limit` / `AGENTARK_GATEWAY_WEBHOOK_RATE_LIMIT` | `120` | 限流启用 | Webhook 按网络来源每固定窗口额度，签名验证仍由 Scheduler 负责 |
 | `agentark.gateway.rate-limit-window` / `AGENTARK_GATEWAY_RATE_LIMIT_WINDOW` | `1m` | 限流启用 | 最大一小时；健康和内部拒绝路径不消耗公共额度 |
+| `agentark.gateway.bff.enabled` / `AGENTARK_GATEWAY_BFF_ENABLED` | `false` | 浏览器 OIDC 登录 | 启用后必须同时启用 JWT Resource Server、Redis Session 和完整 OIDC Client；不提供密码认证回退 |
+| `agentark.gateway.bff.client-id` | 无 | BFF 启用 | OIDC Confidential Client ID，不是 Secret |
+| `agentark.gateway.bff.client-secret` | 无 | BFF 启用 | 只能来自 Secret/Config Tree，不进入 ConfigMap、日志或前端 |
+| `agentark.gateway.bff.issuer-uri` | 无 | 外部 OIDC BFF 启用 | 生产必须为精确 HTTPS Issuer；Built-in Identity 模式不配置该项 |
+| `agentark.gateway.bff.authorization-uri/token-uri/jwk-set-uri/user-info-uri/end-session-uri` | 空，默认 Discovery | 本地内外地址不同时五项同时配置 | 禁止部分显式配置；生产通常从 HTTPS Issuer Discovery |
+| `agentark.gateway.bff.redirect-uri` | 无 | BFF 启用 | Provider 中精确登记的 Callback，不接受请求参数覆盖 |
+| `agentark.gateway.bff.post-login-redirect-uri/post-logout-redirect-uri` | 无 | BFF 启用 | 受控 Web 地址；生产必须 HTTPS，防止开放重定向 |
+| `agentark.gateway.bff.session-cookie-name` | `AGENTARK_SESSION` | BFF 启用 | 只保存不透明 Session ID；HttpOnly、SameSite=Lax，生产强制 Secure |
+| `agentark.gateway.identity.enabled` / `AGENTARK_GATEWAY_IDENTITY_ENABLED` | `false` | 默认 Compose 为 `true` | 启用 MySQL 账号、Argon2id、Redis Session 和内部 RS256；与外部 OIDC BFF 互斥 |
+| `agentark.gateway.identity.issuer` | `https://identity.agentark.local` | Built-in Identity 启用 | 内部 JWT 稳定 Issuer；生产可覆盖为部署方 HTTPS 名称 |
+| `agentark.gateway.identity.bootstrap-password` | 无 | Identity 尚未初始化 | 只能来自 Secret；写入 Argon2id 后不再读取或返回 |
+| `agentark.gateway.identity.password-pepper` | 无 | Built-in Identity 启用 | 只能来自 Secret Manager；MySQL 只保存 Pepper 版本 |
+| `agentark.gateway.identity.signing-private-key` | 无 | Built-in Identity 启用 | PKCS#8 RSA 私钥只来自 Secret；JWK 端点只返回公钥 |
+| `agentark.foundation.security.insecure-http-enabled` | `false` | 仅本地 Identity Overlay | 生产禁止开启；只用于 Compose HTTP Issuer/JWK，不降低签名、Issuer 或 Audience 校验 |
 | `AGENTARK_GATEWAY_SECURITY_ENABLED` | `false` | 生产必须为 `true` | 关闭时 Health 可用、Webhook 可到达独立签名验证，其余 Public API 失败关闭 |
 | `AGENTARK_GATEWAY_JWT_AUDIENCE` | `agentark-gateway` | Security 启用 | 防止其他服务 Audience Token 在 Gateway 重放 |
 | `AGENTARK_GATEWAY_JWS_ALGORITHM` | `RS256` | Security 启用 | 只允许 Foundation 支持的 RSA/PSS/ECDSA 非对称算法，不接受 HMAC 或 `none` |
 | `agentark.foundation.security.issuer-uri` / `AGENTARK_FOUNDATION_SECURITY_ISSUER_URI` | 无 | Security 启用时与 JWK Set 至少一个必填 | 必须通过部署属性注入绝对 HTTPS Issuer |
 | `agentark.foundation.security.jwk-set-uri` / `AGENTARK_FOUNDATION_SECURITY_JWK_SET_URI` | 无 | Security 启用时与 Issuer 至少一个必填 | 支持 JWK 轮换；不能使用共享固定内部 Token 替代 |
-| `spring.data.redis.host` / `AGENTARK_REDIS_HOST` | `localhost` | 限流启用 | Redis 只保存可丢失固定窗口计数，不承载认证或业务事实 |
+| `spring.data.redis.host` / `AGENTARK_REDIS_HOST` | `localhost` | 限流、BFF 或 Built-in Identity 启用 | Redis 只保存可丢失限流、Pre-auth 和 WebSession，不承载账号、密码摘要或业务事实 |
 
 Gateway 转发原始受签名 `Authorization` 给目标服务，使下游继续独立验证；它会删除 Principal、Service ID、Authorities、认证后租户和 Client Certificate 等客户端派生 Header。`X-AgentArk-Organization-Id`、Project、Environment 只作为选择意图保留，下游资源授权不能信任这些值。SSE 保留 `Last-Event-ID`，禁用普通响应超时和代理缓冲，并通过优雅停机进入排空；客户端仍须按 Runtime 持久 Event ID 重连。
 
@@ -174,8 +193,9 @@ Control Governance 没有第二 DataSource，只访问 `agentark_control`。Audi
 |---|---|---|---|
 | `agentark.control.iam.enabled` | `true` | Control 正常运行 | 只允许无数据库的 `test` Profile 显式关闭；关闭后不提供 IAM API |
 | `agentark.control.iam.authorization-cache-ttl` | `15s` | IAM 启用 | 必须为正且不超过一分钟；MySQL 始终是事实源，授权变化提交后主动失效本实例缓存 |
-| `AGENTARK_SECURITY_ENABLED` | `true` | 非 `local` Control | 控制 Foundation OIDC Resource Server；生产不得以关闭认证方式运行 Public API |
-| `AGENTARK_OIDC_ISSUER_URI` | 无 | 生产 Security 启用时必填 | 必须为绝对 HTTPS Issuer，参与 `iss` 与 JWK 校验 |
+| `AGENTARK_SECURITY_ENABLED` | `true` | 非 `local` Control | 控制 Foundation JWT Resource Server；生产不得以关闭认证方式运行 Public API |
+| `AGENTARK_OIDC_ISSUER_URI` | 无 | 生产 Security 启用时必填 | Built-in Identity 或外部 OIDC 的绝对 HTTPS Issuer，参与 `iss` 校验 |
+| `AGENTARK_FOUNDATION_SECURITY_JWK_SET_URI` | 空，默认 Discovery | Built-in Identity 必填 | 指向同源 Gateway `/api/v1/auth/jwks` 的绝对 HTTPS 地址；外部 OIDC 通常使用 Discovery |
 | `AGENTARK_LOCAL_SECURITY_ENABLED` | `false` | `local` 可选 | 本地未连接 IdP 时仍不允许匿名访问 IAM API；可使用显式 Dev Bootstrap 创建资源但不提供认证凭据 |
 | `AGENTARK_LOCAL_OIDC_ISSUER_URI` | 无 | 本地 Security 启用时必填 | 只接受 HTTPS Issuer，不提供宽松默认值 |
 | `agentark.control.iam.dev-bootstrap.enabled` / `AGENTARK_IAM_DEV_BOOTSTRAP_ENABLED` | `false` | 仅 `local` Profile | 生产 Profile 即使误设为 `true` 也不装配；不生成口令、Token 或 API Key |

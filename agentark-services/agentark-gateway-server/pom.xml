@@ -44,10 +44,53 @@
             <artifactId>agentark-starter-redis</artifactId>
         </dependency>
 
+        <!-- 提供内置 Identity 独占 MySQL Schema、HikariCP 和本地事务；不引入 MyBatis。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-jdbc</artifactId>
+        </dependency>
+
+        <!-- 在 Gateway 启动前执行 Identity 独立 Flyway History。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+        </dependency>
+
+        <!-- 提供 Flyway 识别 MySQL 8.4 的数据库方言扩展。 -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+
+        <!-- Gateway 运行时连接 agentark_identity MySQL，禁止连接其他平面 Schema。 -->
+        <dependency>
+            <groupId>com.mysql</groupId>
+            <artifactId>mysql-connector-j</artifactId>
+            <scope>runtime</scope>
+        </dependency>
+
+        <!-- 为 Spring Security Argon2id 密码摘要提供受维护的密码学实现。 -->
+        <dependency>
+            <groupId>org.bouncycastle</groupId>
+            <artifactId>bcprov-jdk18on</artifactId>
+        </dependency>
+
         <!-- 提供 WebFlux Bearer JWT Resource Server 过滤链。 -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
+        <!-- 提供 OIDC Authorization Code 登录、Authorized Client 与服务端 BFF 能力。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-client</artifactId>
+        </dependency>
+
+        <!-- 将浏览器 BFF 会话保存在 Redis，避免多副本 Gateway 使用本机会话。 -->
+        <dependency>
+            <groupId>org.springframework.session</groupId>
+            <artifactId>spring-session-data-redis</artifactId>
         </dependency>
 
         <!-- 提供健康、Liveness、Readiness 和 Build Info 管理端点。 -->
@@ -67,6 +110,13 @@
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers-junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- 使用真实 MySQL 8.4 验证 Identity Flyway、注释、隔离和认证事务。 -->
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>testcontainers-mysql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

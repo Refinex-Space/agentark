@@ -49,16 +49,16 @@ class KnowledgeMySqlMigrationIT extends AbstractMySqlMigrationIT {
         return "classpath:db/migration/control";
     }
 
-    /** 返回 Knowledge 迁移测试使用的固定配置。 */
+    /** 返回包含 Identity Cutover 的 Control/Knowledge 组合迁移版本。 */
     @Override
     protected String expectedVersion() {
-        return "7";
+        return "8";
     }
 
-    /** 返回 Knowledge 迁移测试使用的固定配置。 */
+    /** 返回应用 Identity Cutover 前的 Governance 组合迁移版本。 */
     @Override
     protected String previousVersion() {
-        return "6";
+        return "7";
     }
 
     /**

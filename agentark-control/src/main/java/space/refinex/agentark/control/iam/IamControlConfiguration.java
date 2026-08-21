@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Import;
 import space.refinex.agentark.control.iam.adapter.in.security.*;
 import space.refinex.agentark.control.iam.adapter.in.web.IamController;
 import space.refinex.agentark.control.iam.adapter.in.web.IamInternalApiKeyController;
+import space.refinex.agentark.control.iam.adapter.in.web.IamInternalIdentityController;
 import space.refinex.agentark.control.iam.adapter.in.web.IamProblemDetailAdvice;
 import space.refinex.agentark.control.iam.adapter.out.audit.StructuredLogIamAuditAdapter;
 import space.refinex.agentark.control.iam.adapter.out.cache.ShortTtlAuthorizationCache;
@@ -343,6 +344,18 @@ public class IamControlConfiguration {
     @Bean
     public IamInternalApiKeyController iamInternalApiKeyController() {
         return new IamInternalApiKeyController();
+    }
+
+    /**
+     * 创建 Gateway 内置账号到 Control 用户身份的内部投影入口。
+     *
+     * @param mappingService 身份映射事务服务
+     * @return 内部身份投影 Controller
+     */
+    @Bean
+    public IamInternalIdentityController iamInternalIdentityController(
+        IamIdentityMappingService mappingService) {
+        return new IamInternalIdentityController(mappingService);
     }
 
     /**

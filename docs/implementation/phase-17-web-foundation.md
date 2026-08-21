@@ -9,7 +9,7 @@ referenced_by: docs/README.md
 
 ## 结论
 
-Phase 17 已建立可独立安装、测试和构建的 `agentark-web`，但没有伪造 Phase 18 的完整业务页面。当前产物包含应用路由/Provider/错误边界、内存身份和租户上下文、AgentArk 独立设计系统、三套 Public OpenAPI Fetch Client、可靠 Runtime SSE Client、前端 CI 以及真实 Chromium 可访问性基线。
+Phase 17 已建立可独立安装、测试和构建的 `agentark-web`，但没有伪造 Phase 18 的完整业务页面。当前产物包含应用路由/Provider/错误边界、身份和租户上下文、AgentArk 独立设计系统、三套业务 Public OpenAPI Fetch Client、可靠 Runtime SSE Client、前端 CI 以及真实 Chromium 可访问性基线。2026-08-19 Errata 已将仅内存生产 Bearer 外壳替换为 Gateway BFF 会话恢复、动态身份登录和 CSRF 注入；E2E Bearer 仍只在 E2E Mode 存在。
 
 上游只作固定版本参考：AgentScope Service Frontend 提供功能语义，DeepSeek Harness 提供工作台视觉和交互经验。没有复制上游源码、Logo、favicon、图片、品牌文案、Token 数值或 Plugin Runtime，也没有把上游 Package 加入依赖闭包。
 
@@ -31,8 +31,8 @@ Phase 17 已建立可独立安装、测试和构建的 `agentark-web`，但没�
 - Browser Router 使用 Lazy Route；Dashboard 与 Runtime Workspace 经过 Route Guard；
 - `AppProviders` 装配 Query、Auth、Tenant、Feature Flag、Theme 与 Toast；
 - `AppErrorBoundary` 和统一 Problem Detail 解析提供稳定错误投影；
-- Bearer/API Key、Organization/Project/Environment 只在内存，不持久化敏感状态；
-- Development Sign-in 只提供受控预览，不假装生产 OIDC 已接入；
+- OIDC Token 只在 Gateway Redis Session，浏览器 JavaScript 不可见；CSRF、E2E Bearer 和 Tenant Selection 只在内存；
+- Development Sign-in 在 Identity Overlay 下提供真实账号密码 OIDC 跳转，否则只提供受控预览；
 - `/design-system` 提供无业务数据的 Story/测试页，Phase 18 再建立真实产品流程。
 
 ## Design System 与浏览器验证
@@ -49,7 +49,7 @@ Unit 与 Chromium E2E 覆盖 Theme 持久化、Dialog 焦点恢复、Split Pane 
 
 `shared/api/generated` 不作为 UI Domain。统一 HTTP 层负责：
 
-- 仅内存认证 Header 与 Tenant Intent；
+- BFF CSRF、E2E 内存认证 Header 与 Tenant Intent；
 - `If-Match`、`Idempotency-Key` 和 Cursor 参数；
 - `same-origin` 凭据策略；
 - RFC 9457 Problem Detail 解析、错误正文上限和 Secret 字段过滤。
@@ -87,9 +87,17 @@ SSE 使用 Fetch Stream，以支持认证 Header 和 `Last-Event-ID`。Client �
 - `pnpm --dir agentark-web licenses list --prod --json`：仅 `0BSD`、`Apache-2.0`、`ISC`、`MIT`；
 - 固定上游校验、知识门禁、品牌/Plugin Runtime 扫描和 `git diff HEAD --check`：通过。
 
+2026-08-19 BFF Errata 追加验证：
+
+- `pnpm --dir agentark-web lint`、`typecheck`、`build` 和 `api:check` 全部通过；
+- Vitest 增至 9 个 Test File、15 项测试，新增 BFF Session 恢复、CSRF Header、匿名失败关闭和无生产 Token 文案覆盖；
+- 真实 Chromium 验证当时的本地 Keycloak 与组织身份 BFF；该本地实现已由 2026-08-21 Built-in Identity Errata 替代。
+
+2026-08-21 Built-in Identity Errata：默认登录改为 Gateway 同源“用户名或电子邮箱 + 密码”，支持随机初始管理员、首次强制改密和 `/govern/users` 账号治理；MySQL 保存 Argon2id 摘要和安全事实，Redis 只保存 Session/限流，浏览器不保存密码或 Token。外部 OIDC BFF 仅在部署方显式切换组织身份模式时启用。
+
 ## 已知边界
 
-- 没有连接真实 OIDC Provider，也没有对真实四服务栈执行浏览器业务 E2E；身份外壳与 Gateway Contract 已就位，但生产登录不能据此宣称完成；
+- 本地 Docker 验证只证明 Built-in Identity、Redis Session 和账号治理主链路，不代表目标企业 IdP、生产 TLS、邮件找回、MFA/Passkey 或目标环境 Secret Manager 已验收；
 - 当前 E2E 只执行 Chromium，Firefox/WebKit 和屏幕阅读器矩阵尚未覆盖；
 - 初始公共 UI 与应用入口 gzip 分别约 80 KiB 和 86 KiB，已按路由拆分，但 Phase 18 引入业务 Feature 时仍需建立预算；
 - API Client 只来自当前 Public Contract；业务页面必须尊重后端实际 Endpoint 和权限，不能由生成类型推断不存在的流程；

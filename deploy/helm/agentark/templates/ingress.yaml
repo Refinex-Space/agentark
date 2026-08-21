@@ -31,6 +31,48 @@ spec:
     - host: {{ .Values.ingress.webHost | quote }}
       http:
         paths:
+          # 浏览器业务 API 与静态站点保持同源。
+          - path: /api
+            # API 子路径全部进入 Gateway。
+            pathType: Prefix
+            # 选择 Gateway Service。
+            backend:
+              # Kubernetes Service 引用。
+              service:
+                # 固定当前 Release Gateway。
+                name: {{ include "agentark.fullname" . }}-gateway
+                # 使用 Gateway HTTP 端口。
+                port:
+                  # 引用命名端口。
+                  name: http
+          # OIDC 登录起点保持 Web 同源。
+          - path: /oauth2
+            # 所有 Client Registration 路径进入 Gateway。
+            pathType: Prefix
+            # 选择 Gateway Service。
+            backend:
+              # Kubernetes Service 引用。
+              service:
+                # 固定当前 Release Gateway。
+                name: {{ include "agentark.fullname" . }}-gateway
+                # 使用 Gateway HTTP 端口。
+                port:
+                  # 引用命名端口。
+                  name: http
+          # OIDC Authorization Code Callback 保持 Web 同源。
+          - path: /login/oauth2
+            # 所有受控 Callback 路径进入 Gateway。
+            pathType: Prefix
+            # 选择 Gateway Service。
+            backend:
+              # Kubernetes Service 引用。
+              service:
+                # 固定当前 Release Gateway。
+                name: {{ include "agentark.fullname" . }}-gateway
+                # 使用 Gateway HTTP 端口。
+                port:
+                  # 引用命名端口。
+                  name: http
           - path: /
             pathType: Prefix
             backend:
@@ -39,4 +81,3 @@ spec:
                 port:
                   name: http
 {{- end }}
-

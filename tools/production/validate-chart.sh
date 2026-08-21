@@ -57,9 +57,12 @@ expect_production_rejection() {
 # Redis 明文连接必须失败。
 expect_production_rejection "Redis without TLS" \
   --set global.external.redis.tls=false
-# HTTP OIDC Issuer 必须失败。
-expect_production_rejection "HTTP OIDC issuer" \
-  --set-string global.external.oidc.issuerUri=http://identity.example.com
+# HTTP Built-in Identity Issuer 必须失败。
+expect_production_rejection "HTTP built-in identity issuer" \
+  --set-string global.external.identity.issuerUri=http://agentark.example.com
+# 未知身份模式必须失败，避免隐式回退到弱认证。
+expect_production_rejection "unknown identity mode" \
+  --set-string global.external.identity.mode=unknown
 # 全网出口必须失败。
 expect_production_rejection "world-open egress" \
   --set-string 'global.externalEgressCidrs[0]=0.0.0.0/0'

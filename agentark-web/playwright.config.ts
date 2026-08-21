@@ -35,14 +35,14 @@ export default defineConfig({
           timeout: 240_000,
         },
         {
-          command: "vite --mode e2e --host 127.0.0.1 --port 5173",
+          command: "node_modules/.bin/vite --mode e2e --host 127.0.0.1 --port 5173",
           url: "http://localhost:5173",
           reuseExistingServer: false,
           timeout: 60_000,
         },
       ]
     : {
-        command: "pnpm preview --host 127.0.0.1 --port 4173",
+        command: "node_modules/.bin/vite preview --host 127.0.0.1 --port 4173",
         url: "http://127.0.0.1:4173",
         reuseExistingServer: !process.env.CI,
       },

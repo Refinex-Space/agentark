@@ -19,6 +19,46 @@ spring:
   main:
     # 不输出 Spring Boot Banner。
     banner-mode: "off"
+  # Gateway 只在内置 Identity 启用时使用该 DataSource，且只能连接 agentark_identity。
+  datasource:
+    # Identity MySQL JDBC URL；禁用内置身份时不会执行连接或迁移。
+    url: ${AGENTARK_IDENTITY_DB_URL:jdbc:mysql://localhost:3306/agentark_identity?useUnicode=true&characterEncoding=utf8&connectionTimeZone=UTC&forceConnectionTimeZoneToSession=true}
+    # Identity 独立最小权限账号。
+    username: ${AGENTARK_IDENTITY_DB_USERNAME:agentark_identity}
+    # Identity 数据库密码只由 Secret 注入。
+    password: ${AGENTARK_IDENTITY_DB_PASSWORD:}
+    # 固定 MySQL Connector/J 驱动。
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    # Identity 阻塞 JDBC 只在 boundedElastic 使用，连接池保持严格有界。
+    hikari:
+      # 指标中的稳定连接池名称。
+      pool-name: agentark-identity-pool
+      # 密码认证与管理 API 的最大并发数据库连接数。
+      maximum-pool-size: ${AGENTARK_IDENTITY_DB_POOL_MAX_SIZE:8}
+      # 空闲连接最小值，禁用身份时不会主动连接。
+      minimum-idle: ${AGENTARK_IDENTITY_DB_POOL_MIN_IDLE:0}
+      # 获取连接最长等待五秒。
+      connection-timeout: 5000
+      # 会话固定 UTC 与严格 SQL Mode。
+      connection-init-sql: "SET SESSION time_zone = '+00:00', SESSION sql_mode = 'STRICT_TRANS_TABLES,ONLY_FULL_GROUP_BY,ERROR_FOR_DIVISION_BY_ZERO,NO_ZERO_DATE,NO_ZERO_IN_DATE,NO_ENGINE_SUBSTITUTION'"
+  # Identity 使用独立 Flyway History，禁用身份时不连接数据库。
+  flyway:
+    # 与内置身份开关一致。
+    enabled: ${AGENTARK_GATEWAY_IDENTITY_ENABLED:false}
+    # Schema 必须由部署系统预先创建。
+    create-schemas: false
+    # 禁止 clean 删除账号与安全事件。
+    clean-disabled: true
+    # 拒绝错误迁移命名。
+    validate-migration-naming: true
+    # Identity 独占 Schema。
+    default-schema: agentark_identity
+    # 禁止 Flyway 接触其他平面 Schema。
+    schemas: agentark_identity
+    # Identity 独立迁移位置。
+    locations: classpath:db/migration/identity
+    # Identity 独立历史表。
+    table: flyway_schema_history
   # Gateway 转发与代理 Header 配置。
   cloud:
     # Spring Cloud Gateway WebFlux Server 配置。
@@ -45,7 +85,7 @@ spring:
             prefix-append: false
             # 覆盖客户端 X-Forwarded-Proto。
             proto-append: false
-  # Redis 只作为可丢失限流状态，不承载 Gateway 业务事实。
+  # Redis 保存可丢失的限流窗口和 BFF WebSession，不承载 IAM 或业务事实。
   data:
     # Spring Data Redis 连接配置。
     redis:
@@ -57,6 +97,8 @@ spring:
       connect-timeout: ${AGENTARK_REDIS_CONNECT_TIMEOUT:2s}
       # 单次 Redis 命令的最长时间。
       timeout: ${AGENTARK_REDIS_TIMEOUT:2s}
+      # Redis 密码只从 Secret/Config Tree 注入，不进入仓库或普通环境模板。
+      password: ${AGENTARK_REDIS_PASSWORD:}
       # Gateway 不声明 Redis Repository，关闭无意义的仓储扫描。
       repositories:
         # 限流直接使用 Foundation 原子端口，不需要 Spring Data Repository。
@@ -92,33 +134,87 @@ agentark:
     webhook-rate-limit: ${AGENTARK_GATEWAY_WEBHOOK_RATE_LIMIT:120}
     # Redis 固定限流窗口。
     rate-limit-window: ${AGENTARK_GATEWAY_RATE_LIMIT_WINDOW:1m}
+    # 浏览器 OIDC BFF 默认关闭，生产或本地身份 Overlay 必须显式完整配置。
+    bff:
+      # 启用后 Token 只保存在 Redis Session，浏览器仅持有 HttpOnly Cookie。
+      enabled: ${AGENTARK_GATEWAY_BFF_ENABLED:false}
+      # 登录入口展示名称，不包含协议术语。
+      login-label: ${AGENTARK_GATEWAY_BFF_LOGIN_LABEL:使用组织身份登录}
+      # 生产应使用 __Host- 前缀；本地 HTTP Profile 使用普通受限名称。
+      session-cookie-name: ${AGENTARK_GATEWAY_BFF_SESSION_COOKIE_NAME:AGENTARK_SESSION}
+      # 生产必须为 true；本地 HTTP 身份 Profile 可显式关闭。
+      session-cookie-secure: ${AGENTARK_GATEWAY_BFF_SESSION_COOKIE_SECURE:true}
+      # 生产固定关闭；只允许受控本地身份 Overlay 显式开启。
+      insecure-http-enabled: ${AGENTARK_GATEWAY_BFF_INSECURE_HTTP_ENABLED:false}
+    # MySQL + Redis 内置账号身份；与外部 OIDC BFF 互斥。
+    identity:
+      # 默认关闭，由本地/独立部署 Overlay 显式开启。
+      enabled: ${AGENTARK_GATEWAY_IDENTITY_ENABLED:false}
+      # 内置身份稳定 Issuer，不随主机地址变化。
+      issuer: ${AGENTARK_GATEWAY_IDENTITY_ISSUER:https://identity.agentark.local}
+      # HttpOnly Redis Session Cookie 名称。
+      session-cookie-name: ${AGENTARK_GATEWAY_IDENTITY_SESSION_COOKIE_NAME:AGENTARK_SESSION}
+      # 生产必须为 true；本地 HTTP 可显式关闭。
+      session-cookie-secure: ${AGENTARK_GATEWAY_IDENTITY_SESSION_COOKIE_SECURE:true}
+      # 初始管理员用户名。
+      bootstrap-username: ${AGENTARK_GATEWAY_IDENTITY_BOOTSTRAP_USERNAME:agentark-admin}
+      # 初始管理员邮箱。
+      bootstrap-email: ${AGENTARK_GATEWAY_IDENTITY_BOOTSTRAP_EMAIL:agentark-admin@localhost.invalid}
+      # 初始管理员展示名称。
+      bootstrap-display-name: ${AGENTARK_GATEWAY_IDENTITY_BOOTSTRAP_DISPLAY_NAME:AgentArk Administrator}
+      # 初始随机密码、Pepper 与 RSA 私钥必须由 Config Tree Secret 注入。
+      bootstrap-password: ${AGENTARK_GATEWAY_IDENTITY_BOOTSTRAP_PASSWORD:}
+      password-pepper: ${AGENTARK_GATEWAY_IDENTITY_PASSWORD_PEPPER:}
+      signing-private-key: ${AGENTARK_GATEWAY_IDENTITY_SIGNING_PRIVATE_KEY:}
+      # JWT Key ID 用于轮换期间选择公钥。
+      signing-key-id: ${AGENTARK_GATEWAY_IDENTITY_SIGNING_KEY_ID:agentark-local-rs256-v1}
+      # 下游内部 JWT 最长九十秒。
+      access-token-ttl: ${AGENTARK_GATEWAY_IDENTITY_ACCESS_TOKEN_TTL:90s}
+      # 单因素密码最少十五个 Unicode Code Point。
+      password-min-length: ${AGENTARK_GATEWAY_IDENTITY_PASSWORD_MIN_LENGTH:15}
+      # 支持密码管理器长口令但限制请求内存。
+      password-max-length: ${AGENTARK_GATEWAY_IDENTITY_PASSWORD_MAX_LENGTH:128}
+      # 连续五次失败进入自动锁定。
+      failure-threshold: ${AGENTARK_GATEWAY_IDENTITY_FAILURE_THRESHOLD:5}
+      # 默认锁定十五分钟。
+      lock-duration: ${AGENTARK_GATEWAY_IDENTITY_LOCK_DURATION:15m}
   # Foundation 安全基线；启用时还必须注入 Issuer/JWK 配置。
   foundation:
     # JWT Resource Server 配置。
     security:
       # 默认失败关闭；生产必须设置为 true 并提供可信 Issuer 或 JWK Set URI。
       enabled: ${AGENTARK_GATEWAY_SECURITY_ENABLED:false}
+      # 受信 Issuer；生产只允许 HTTPS。
+      issuer-uri: ${AGENTARK_FOUNDATION_SECURITY_ISSUER_URI:}
+      # 可选显式 JWK Set；本地容器使用内部 DNS，生产通常使用 Discovery。
+      jwk-set-uri: ${AGENTARK_FOUNDATION_SECURITY_JWK_SET_URI:}
+      # 生产固定关闭；只供受控本地身份 Profile 使用。
+      insecure-http-enabled: ${AGENTARK_FOUNDATION_SECURITY_INSECURE_HTTP_ENABLED:false}
       # Gateway 只接受面向自身 Audience 的 JWT。
       audiences:
         - ${AGENTARK_GATEWAY_JWT_AUDIENCE:agentark-gateway}
       # 明确限制非对称 JWS 算法，拒绝 none 与 HMAC 降级。
       allowed-jws-algorithms:
         - ${AGENTARK_GATEWAY_JWS_ALGORITHM:RS256}
-    # Redis Foundation 仅随限流开关启用。
+    # Redis Foundation 在限流或 BFF Session 启用时开启。
     redis:
-      # 与 Gateway 限流开关保持一致，启用后缺少 Redis 将失败关闭请求。
-      enabled: ${AGENTARK_GATEWAY_RATE_LIMIT_ENABLED:false}
+      # 限流或 BFF 任一启用后缺少 Redis 将失败关闭请求。
+      enabled: ${AGENTARK_GATEWAY_REDIS_HEALTH_ENABLED:${AGENTARK_GATEWAY_RATE_LIMIT_ENABLED:false}}
       # Redis Key 应用级命名空间。
       application-name: gateway
 
 # Actuator 对外暴露与健康信息脱敏策略。
 management:
-  # 只有限流启用时才把 Redis 纳入整体健康状态，避免可选能力导致失败启动探针。
+  # 限流或 BFF Session 启用时把 Redis 纳入整体健康状态，避免会话基础设施缺失时仍报告就绪。
   health:
     # Redis 健康贡献者配置。
     redis:
-      # 与限流开关一致；启用限流后 Redis 故障必须使 Readiness 失败。
-      enabled: ${AGENTARK_GATEWAY_RATE_LIMIT_ENABLED:false}
+      # 与 Redis 会话/限流开关一致；启用后 Redis 故障必须使 Readiness 失败。
+      enabled: ${AGENTARK_GATEWAY_REDIS_HEALTH_ENABLED:${AGENTARK_GATEWAY_RATE_LIMIT_ENABLED:false}}
+    # 仅内置 Identity 启用时把 MySQL 纳入 Readiness。
+    db:
+      # 禁用 Identity 的纯代理模式不连接数据库。
+      enabled: ${AGENTARK_GATEWAY_IDENTITY_ENABLED:false}
   # 管理 HTTP 端点的暴露范围。
   endpoints:
     # 只管理 Web 端点暴露行为。

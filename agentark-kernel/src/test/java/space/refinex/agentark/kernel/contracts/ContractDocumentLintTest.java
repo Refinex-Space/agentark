@@ -47,6 +47,7 @@ class ContractDocumentLintTest {
   private static final List<String> OPEN_API_DOCUMENTS =
       List.of(
           "public-control-v1.yaml",
+          "public-gateway-v1.yaml",
           "public-runtime-v1.yaml",
           "public-scheduler-v1.yaml",
           "internal-control-v1.yaml",
@@ -56,7 +57,7 @@ class ContractDocumentLintTest {
   /** 匹配 YAML 注释中至少一个汉字。 */
   private static final Pattern CHINESE_TEXT = Pattern.compile("\\p{IsHan}");
 
-  /** 验证 OpenAPI 已版本化，且 Public/Internal Control 只声明已经实现的端点。 */
+  /** 验证 OpenAPI 已版本化，且 Gateway、Public/Internal Control 只声明已经实现的端点。 */
   @Test
   void openApiContractsAreVersionedAndOnlyExposeImplementedEndpoints() throws IOException {
     for (String fileName : OPEN_API_DOCUMENTS) {
@@ -64,7 +65,23 @@ class ContractDocumentLintTest {
       Map<String, Object> document = load(documentPath);
 
       assertThat(document.get("openapi")).isEqualTo("3.1.0");
-      if (fileName.equals("public-control-v1.yaml")) {
+      if (fileName.equals("public-gateway-v1.yaml")) {
+        Set<String> paths =
+            ((Map<?, ?>) document.get("paths"))
+                .keySet().stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());
+        assertThat(paths).containsExactlyInAnyOrder(
+            "/api/v1/auth/session",
+            "/api/v1/auth/login",
+            "/api/v1/auth/required-password-change",
+            "/api/v1/auth/logout",
+            "/api/v1/auth/jwks",
+            "/api/v1/identity/me/password-changes",
+            "/api/v1/identity/accounts",
+            "/api/v1/identity/accounts/{accountId}/status",
+            "/api/v1/identity/accounts/{accountId}/password-resets",
+            "/api/v1/identity/accounts/{accountId}/unlock",
+            "/api/v1/identity/security-events");
+      } else if (fileName.equals("public-control-v1.yaml")) {
         Set<String> paths =
             ((Map<?, ?>) document.get("paths"))
                 .keySet().stream().map(String::valueOf).collect(java.util.stream.Collectors.toSet());

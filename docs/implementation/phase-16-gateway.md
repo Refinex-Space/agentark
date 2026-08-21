@@ -13,6 +13,8 @@ Phase 16 将 Gateway 从空服务壳升级为无业务状态的统一公共入�
 
 默认配置保持失败关闭：没有生产 IdP 时只有 Health 与 Scheduler HMAC Webhook 路由可达，普通 Public API 不匿名放行。Redis 限流默认关闭以支持无 Redis 的构建和探针；生产显式开启后缺少 `RateLimiter` 会启动失败，运行期 Redis 判定异常返回 `503`，不会静默放行。
 
+2026-08-19 Errata：Gateway 已在不改变下游 Resource Server 的前提下补充 OIDC Authorization Code BFF、Redis WebSession、CSRF、RP-Initiated Logout、脱敏 Session API 和服务端 Token Relay。浏览器不再需要持有生产 Bearer；可选本地 Identity Overlay 由 ADR-0007 管理。
+
 ## 固定上游审计与取用
 
 审计基于 `.agentark/upstreams/agentscope-java-2.0.2/agentscope-service/service-gateway` 固定 Worktree：
@@ -110,6 +112,15 @@ Gateway 使用 Spring Boot Graceful Shutdown 和 20 秒关闭阶段。连接关�
 - `docker compose -f deploy/compose/docker-compose.yml --profile core config`：配置解析通过；
 - Gateway 禁止业务依赖、ORM/Mapper 扫描和 `git diff HEAD --check` 均通过。
 
+2026-08-19 OIDC BFF Errata 验收：
+
+- `./mvnw verify`：20 个 Reactor 模块全部成功，Gateway 26 项测试通过，并覆盖 BFF 配置、HTTP 本地边界、CSRF、脱敏 Session 和服务端 Token Relay；
+- `./tools/dev-up.sh`：默认启动四个 Server、MySQL、Redis、MinIO 和 Gateway Built-in Identity；`verify-core.sh` 同时验证 PASSWORD Session、RS256 JWK、Identity V1/13 表、Control V8/69 表、Runtime V3/13 表、Scheduler V3/9 表和四账号跨 Schema 拒绝；
+- 真实 Chromium 完成中文用户名/密码登录、首次强制改密、Authorization Code + S256 PKCE、Redis Session 恢复、Control Organization API `200`、无 Token Session 响应和 RP-Initiated Logout；
+- 浏览器 Local Storage 只有非敏感 Theme，Session Storage 为空；Gateway Cookie 为 HttpOnly/SameSite=Lax，本地 HTTP 不声明生产 Secure 验收；
+- Helm 生产校验渲染 114 个资源，Web Host 同源 BFF 路由、OIDC Client Secret 引用和 HTTPS Callback 门禁通过；
+- Trivy Repository/Java/pnpm 扫描为零 Secret/Misconfiguration/Vulnerability，CycloneDX SBOM 重新生成。
+
 构建日志仍存在 macOS Netty Native DNS 缺失、Mockito 动态 Agent 和 Spring Cloud Gateway 内部 `@Valid` 弃用提示，均不是本阶段失败。未接入真实生产 IdP、Ingress/NetworkPolicy，也未执行 Redis 多副本和长时间 SSE 压力测试；这些边界必须在 Phase 20/22 环境验收中完成，不能由本阶段配置测试替代。
 
 ## 已知边界
@@ -122,4 +133,4 @@ Gateway 使用 Spring Boot Graceful Shutdown 和 20 秒关闭阶段。连接关�
 
 ## 回滚
 
-Gateway 无 Flyway、业务数据或不可逆状态。回滚时先停止新入口流量并等待优雅排空，再回退 Gateway JAR、配置和路由；客户端使用持久 `Last-Event-ID` 恢复 SSE。Control API Key 自省是新增兼容端点，回退 Gateway 后可暂时保留；若一并回退，必须确认没有旧 Gateway 副本调用后再移除实现和契约。Redis 限流键可自然 TTL 过期，不需要删除；禁止为回滚清理业务数据库或 API Key 表。
+Gateway 只为 Built-in Identity 拥有独立 Flyway 和 `agentark_identity`，仍无 Agent/Project 等业务数据。回滚时先停止新入口流量并等待优雅排空，再关闭 Built-in Identity 或切换外部 OIDC；Identity Schema 保留为只读证据，禁止 Flyway Clean。客户端使用持久 `Last-Event-ID` 恢复 SSE，Redis 限流/Session 键可自然 TTL 过期。

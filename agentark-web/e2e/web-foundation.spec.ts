@@ -50,3 +50,51 @@ test("设计系统在桌面和窄屏没有严重可访问性或横向溢出", as
   );
   expect(hasHorizontalOverflow).toBe(false);
 });
+
+test("登录入口使用 login-05 单列结构且不在 React 收集账号密码", async ({ page }) => {
+  await page.route("**/api/v1/auth/session", async (route) => {
+    await route.fulfill({
+      contentType: "application/json",
+      body: JSON.stringify({
+        authenticated: false,
+        loginEnabled: false,
+        loginLabel: "使用组织身份登录",
+        loginUri: "/oauth2/authorization/agentark",
+        logoutUri: "/api/v1/auth/logout",
+        loginMode: "OIDC",
+        passwordChangeUri: null,
+        csrfHeaderName: "X-CSRF-TOKEN",
+        csrfParameterName: "_csrf",
+        csrfToken: "browser-test-csrf-token",
+        principal: null,
+      }),
+    });
+  });
+
+  await page.goto("/sign-in");
+  await expect(page.getByRole("heading", { name: "登录 AgentArk" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "使用组织身份登录" })).toBeDisabled();
+  await expect(page.getByRole("textbox")).toHaveCount(0);
+
+  await page.addScriptTag({ path: axePath });
+  const seriousViolations = await page.evaluate(async () => {
+    const axe = (
+      window as unknown as Window & {
+        axe: {
+          run(): Promise<{ violations: Array<{ id: string; impact: string | null }> }>;
+        };
+      }
+    ).axe;
+    const result = await axe.run();
+    return result.violations.filter(
+      (violation) => violation.impact === "serious" || violation.impact === "critical",
+    );
+  });
+  expect(seriousViolations).toEqual([]);
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const hasHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth > document.documentElement.clientWidth,
+  );
+  expect(hasHorizontalOverflow).toBe(false);
+});

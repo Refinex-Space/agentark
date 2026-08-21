@@ -34,7 +34,7 @@ Organization、Project、Environment 是全局上下文，但它们只是前端�
 | `/govern` | Route Guard | 租户上下文、Membership、Role、Service Account、API Key 和 Secret 元数据 |
 | `/observe` | Route Guard | Trace Link、Audit、Usage/Cost、Price、Quota、Evaluation 和 Release Gate |
 | `/design-system` | 公开、无业务数据 | 组件、主题和可访问性基线 |
-| `/sign-in` | 公开 | 身份外壳；临时 E2E 身份入口只在 E2E 构建模式暴露 |
+| `/sign-in` | 公开 | Gateway BFF 本地/组织身份入口；临时 Bearer 只在 E2E 构建模式暴露 |
 | `*` | 公开 | 稳定 Not Found 页面 |
 
 Phase 18 页面基于真实 Public OpenAPI、权限和状态机实现；Phase 19 的 `/observe` 继续只使用真实 Control Governance Public API。Audit、Usage/Cost、Quota 与 Evaluation 不得用浏览器本地状态或 Mock 伪造，Trace Link 只保存受控 URL/ID，不把 Telemetry 正文复制到浏览器缓存。
@@ -57,7 +57,9 @@ src/
 | 状态 | Owner | 生命周期 |
 |---|---|---|
 | Server State | TanStack Query | 按 Query Key 和失效策略管理 |
-| Bearer/API Key | Auth Session | 仅当前页面内存 |
+| OIDC Token | Gateway Redis Session | 不进入前端；浏览器只持有 HttpOnly Session Cookie |
+| CSRF Token | Auth Session | 从脱敏 Session API 读取，仅当前页面内存 |
+| E2E Bearer/API Key | Auth Session | 只限测试或机器调用，当前页面内存 |
 | Organization/Project/Environment | Tenant Context | 仅当前页面内存 |
 | Theme | Theme Provider | 可持久化非敏感偏好 |
 | Runtime Event | SSE Client 有界 Store | 当前 Run/页面会话，不持久化 |
@@ -67,7 +69,7 @@ src/
 
 Control、Runtime、Scheduler 的 Public OpenAPI 分别生成隔离 Fetch Client。统一 HTTP 层负责：
 
-- 内存凭据、Tenant Intent、ETag/If-Match、Idempotency-Key；
+- BFF CSRF、E2E 内存凭据、Tenant Intent、ETag/If-Match、Idempotency-Key；
 - 同源 Cookie 策略和 Problem Detail 解析；
 - 错误正文大小上限与敏感字段过滤；
 - Cursor 参数传递，Feature 负责翻页状态。
@@ -77,7 +79,9 @@ Runtime SSE Client 使用 Fetch Stream，而不是浏览器 `EventSource`，从�
 ## 实现约束
 
 - 页面必须沿 Govern → Build → Release → Runtime → Approval → Operate 主链路落位；
+- 登录页不得展示 OIDC/JWT、Phase 编号或让用户粘贴生产 Token；Built-in Identity 使用同源账号密码与首次改密表单，组织身份才通过 Gateway OIDC BFF 跳转；
 - 路由可见性不是权限控制，按钮隐藏也不能替代服务端授权；
+- `/account/security` 为所有 Built-in Identity 登录用户提供本人修改密码，账户菜单必须可达；`/govern/users` 中“重置密码”仍只面向具有凭据重置权限的管理员，当前账号卡片可跳转到本人修改密码。
 - 发布、部署、审批和重试不做危险乐观更新；
 - Timeline/Inspector 展示稳定 AgentArk Event 投影，禁止暴露隐藏推理链或序列化 Provider Event；
 - 对 Session、Approval 和 Job 的实时更新优先从持久事件恢复，不把浏览器内存当事实源。

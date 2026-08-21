@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-17
+updated: 2026-08-21
 status: active
 referenced_by: docs/README.md#上游迁移审计
 ---
@@ -9,10 +9,11 @@ referenced_by: docs/README.md#上游迁移审计
 
 ## 1. 结论
 
-| 来源 | 固定证据 | 当前结论 |
-|---|---|---|
-| AgentScope Java | POM/README 声明 Apache-2.0；Java/Go/SQL 源文件保留 Apache-2.0 Header；Phase 02 已补齐同版本发布物与官方许可证文本证据 | 可作为依赖与行为参考；内部机械证据基线的许可 Gate 已解除，最终分发仍必须补齐自身 SBOM/License Report |
-| DeepSeek Harness | 根 `LICENSE` 为 MIT；`THIRD_PARTY_NOTICES.md` 为生成清单；Vendored Cordis 等各自保留 LICENSE | 只作视觉/交互参考；不复制品牌、Logo、社区资产、插件内核或受特殊条款约束的官方负载 |
+| 来源             | 固定证据                                                                                                              | 当前结论                                                                                                                |
+| ---------------- | --------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| AgentScope Java  | POM/README 声明 Apache-2.0；Java/Go/SQL 源文件保留 Apache-2.0 Header；Phase 02 已补齐同版本发布物与官方许可证文本证据 | 可作为依赖与行为参考；内部机械证据基线的许可 Gate 已解除，最终分发仍必须补齐自身 SBOM/License Report                    |
+| DeepSeek Harness | 根 `LICENSE` 为 MIT；`THIRD_PARTY_NOTICES.md` 为生成清单；Vendored Cordis 等各自保留 LICENSE                          | 只作视觉/交互参考；不复制品牌、Logo、社区资产、插件内核或受特殊条款约束的官方负载                                       |
+| shadcn/ui        | `shadcn@4.18.0` 解析的 `login-05` registry item；上游 `LICENSE.md` 为 MIT，Copyright (c) 2023 shadcn                  | React 登录与首次改密入口可按 MIT 改编；版权与许可文本记录在根 `THIRD_PARTY_NOTICES.md`，不迁入示例品牌和外部 Provider |
 
 本文件不是法律意见。它定义 AgentArk 工程门禁：许可不明确时降级为 `REFERENCE/DEFER/REJECT`，不先复制再补材料。
 
@@ -31,14 +32,14 @@ referenced_by: docs/README.md#上游迁移审计
 
 ## 3. AgentScope 文件级处理规则
 
-| 操作 | 必须执行 |
-|---|---|
-| Maven 依赖 | 锁定 2.0.2 与仓库；生成依赖清单/SBOM；检查实际 JAR 的 `META-INF/LICENSE*`/`NOTICE*`；记录传递依赖许可 |
-| `REUSE` 单文件 | 保留完整版权与 Apache Header；在 `docs/migration/` 记录源 Commit、源路径、目标路径、改动；把完整 LICENSE/NOTICE 纳入发布物 |
-| `ADAPT` 重写 | 保留行为来源记录；若表达性实现来自原文件，按衍生作品处理并保留必要 Header，不用“重命名”规避义务 |
-| `REFERENCE` | 不复制表达性源码、注释、测试 Fixture 或文档大段文本；只实现由事实/API/行为得到的独立代码 |
-| 生成代码/CRD/OpenAPI | 检查生成器和源文件 Header；生成物不能自动视为无许可要求 |
-| 图片/文档 | 单独核对来源和授权；README 截图不进入 AgentArk 资产 |
+| 操作                 | 必须执行                                                                                                                   |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Maven 依赖           | 锁定 2.0.2 与仓库；生成依赖清单/SBOM；检查实际 JAR 的 `META-INF/LICENSE*`/`NOTICE*`；记录传递依赖许可                      |
+| `REUSE` 单文件       | 保留完整版权与 Apache Header；在 `docs/migration/` 记录源 Commit、源路径、目标路径、改动；把完整 LICENSE/NOTICE 纳入发布物 |
+| `ADAPT` 重写         | 保留行为来源记录；若表达性实现来自原文件，按衍生作品处理并保留必要 Header，不用“重命名”规避义务                            |
+| `REFERENCE`          | 不复制表达性源码、注释、测试 Fixture 或文档大段文本；只实现由事实/API/行为得到的独立代码                                   |
+| 生成代码/CRD/OpenAPI | 检查生成器和源文件 Header；生成物不能自动视为无许可要求                                                                    |
+| 图片/文档            | 单独核对来源和授权；README 截图不进入 AgentArk 资产                                                                        |
 
 候选 `REUSE` 目前只有纯映射/纯键类，仍然是“待许可 Gate 的候选”，不是复制授权。
 
@@ -70,16 +71,16 @@ AgentArk 只借鉴视觉/交互，不复制 DeepSeek 源码，因此不继承其
 
 ## 6. DeepSeek 品牌与资产边界
 
-| 资产/实现 | 结论 | 原因 |
-|---|---|---|
-| `FishLogo.tsx`、`BrandWordmark.tsx`、DeepSeek 名称 | REJECT | 品牌/标识不因代码 MIT 就自动成为 AgentArk 视觉资产 |
-| `assets/community-*.png` 三张社区图片 | REJECT | 与 AgentArk 产品无关，包含社区/品牌传播内容 |
-| `apps/web/public/favicon.svg` | REJECT | 上游产品标识 |
-| `ui-primitives` Glyph/Icon | REJECT 直接复制 | 上游 README 明示部分图标是从不可导出字体字形手工近似重绘，来源链不适合作为 AgentArk 图标授权依据 |
-| `--dsw-*` Token 名与整套数值 | REFERENCE | 可研究层级/密度；AgentArk 使用自有 Token 命名和视觉规范 |
-| CSS/React 组件代码 | REFERENCE | 只复建交互意图；避免形成 DeepSeek UI Fork |
-| Browser Snapshot/Fixture | REJECT 复制 | 可能固化上游品牌、文案、像素资产和内部协议 |
-| 官方 Claude Platform Payload | REJECT | 特殊条款和身份范围授权不转移；AgentArk 当前也不需要分发 |
+| 资产/实现                                          | 结论            | 原因                                                                                             |
+| -------------------------------------------------- | --------------- | ------------------------------------------------------------------------------------------------ |
+| `FishLogo.tsx`、`BrandWordmark.tsx`、DeepSeek 名称 | REJECT          | 品牌/标识不因代码 MIT 就自动成为 AgentArk 视觉资产                                               |
+| `assets/community-*.png` 三张社区图片              | REJECT          | 与 AgentArk 产品无关，包含社区/品牌传播内容                                                      |
+| `apps/web/public/favicon.svg`                      | REJECT          | 上游产品标识                                                                                     |
+| `ui-primitives` Glyph/Icon                         | REJECT 直接复制 | 上游 README 明示部分图标是从不可导出字体字形手工近似重绘，来源链不适合作为 AgentArk 图标授权依据 |
+| `--dsw-*` Token 名与整套数值                       | REFERENCE       | 可研究层级/密度；AgentArk 使用自有 Token 命名和视觉规范                                          |
+| CSS/React 组件代码                                 | REFERENCE       | 只复建交互意图；避免形成 DeepSeek UI Fork                                                        |
+| Browser Snapshot/Fixture                           | REJECT 复制     | 可能固化上游品牌、文案、像素资产和内部协议                                                       |
+| 官方 Claude Platform Payload                       | REJECT          | 特殊条款和身份范围授权不转移；AgentArk 当前也不需要分发                                          |
 
 ## 7. AgentArk 发布物门禁
 
@@ -132,6 +133,15 @@ Phase 20 新增根 `THIRD_PARTY_NOTICES.md`，它不手抄会漂移的依赖闭�
 安全工具本身只在构建/扫描流程使用，不进入 AgentArk Runtime 分发物。Trivy 容器固定官方多架构 Digest，GitHub Action 固定 Commit SHA；升级任一引用时必须重新核对上游发布和安全公告。若下游把扫描器或签名工具嵌入产品，必须另行携带其许可证与 Notice。
 
 本阶段再次核对固定 DeepSeek `THIRD_PARTY_NOTICES.md` 和品牌边界：没有复制其 Logo、商标、插件 Runtime、第三方源码、截图或特殊许可 Payload。AgentScope Permission/Sandbox/MCP/Skill 只作行为与限制参考，新增防腐和安全实现均为 AgentArk 独立代码，没有新增文件级 `REUSE`。
+
+## 10.1 shadcn login-05 改编
+
+2026-08-21 执行 `npx shadcn@latest add login-05` 时解析为 `shadcn@4.18.0`；官方 `new-york-v4/login-05.json` 的 SHA-256 为 `2679ef5ce4e3967084fb18981ce39659c79b495ac873d2307905b8645d3d9a23`。AgentArk 在 React 登录与首次改密页面适配居中单列、品牌区、Field Group/Separator、账号字段和全宽主操作：
+
+- Acme 名称、示例 email、Apple/Google 图形、条款与隐私占位链接不进入发布物；
+- React PASSWORD 模式只通过原生表单瞬时读取密码并提交同源 Gateway，不将密码写入状态、日志或存储；OIDC 模式仍只跳转外部 Provider；
+- CLI 建议覆盖现有 `Button`/`Input` 并新增聚合 `radix-ui`，本次拒绝覆盖和冗余依赖，继续使用仓库已锁定的 Radix 单包与本地样式；
+- 上游 MIT Copyright 与许可文本进入根 `THIRD_PARTY_NOTICES.md`；示例品牌、商标及外部 Provider 授权不由 MIT 代码许可推导。
 
 ## 11. Phase 21 Aistio 迁移来源
 

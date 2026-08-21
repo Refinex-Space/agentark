@@ -32,6 +32,8 @@ scan:
     - agentark-web/playwright-report
     # Playwright 临时结果。
     - agentark-web/test-results
+    # Compose 本机运行 Secret 由 0600 忽略目录保存，不属于仓库或发布扫描输入。
+    - deploy/compose/.secrets
   # 排除机器生成的锁文件 Secret 误报，依赖漏洞仍由包解析器读取锁文件。
   skip-files:
     # pnpm 锁文件只包含完整性摘要和公开 Registry URL。

@@ -1,6 +1,10 @@
 {{- if .Values.migrations.enabled }}
 {{- $fullname := include "agentark.fullname" . -}}
-{{- range $index, $plane := list "control" "runtime" "scheduler" }}
+{{- $migrationOwners := list "control" "runtime" "scheduler" -}}
+{{- if eq .Values.global.external.identity.mode "builtin" -}}
+{{- $migrationOwners = prepend $migrationOwners "identity" -}}
+{{- end -}}
+{{- range $index, $plane := $migrationOwners }}
 {{- $schemaKey := printf "%sSchema" $plane -}}
 # {{ $plane }} 独占 Flyway Hook Job；应用副本在迁移成功后才滚动。
 apiVersion: batch/v1

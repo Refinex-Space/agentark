@@ -117,8 +117,10 @@ Phase 15 增加以下 Scheduler 契约约束：
 
 Phase 16 增加以下 Gateway 契约约束：
 
+- `public-gateway-v1.yaml` 只声明 `GET /api/v1/auth/session` 和 CSRF 保护的 `POST /api/v1/auth/logout`；Session 响应只含登录入口、CSRF 参数和非敏感主体，严禁出现 ID/Access/Refresh Token；
 - Gateway 固定按优先级路由 Runtime SSE、Runtime Public、Scheduler Webhook/Public 和 Control Public；`/internal/**` 必须在边缘返回 `404`，不能代理到任何下游；
 - Bearer JWT 必须由 Foundation Decoder 校验时间、Issuer、Audience、JWK 签名和非对称 JWS 算法白名单。Gateway 只做认证前置，原始签名凭据继续传给目标服务独立验证，禁止把派生身份 Header 当作信任边界；
+- BFF OIDC Session 的 Access Token 由 Gateway 服务端 Token Relay 注入下游请求；Control、Runtime、Scheduler 仍按各自 Audience 重新验证。浏览器 Session Cookie 不属于下游认证凭据；
 - `POST /internal/v1/auth/api-keys:verify` 只接受当前 API Key 自身，由 Control 本地摘要事实源验证并返回最小非秘密主体。Gateway 只缓存成功结果，缓存键为 SHA-256，TTL 不超过 30 秒；无效结果和依赖错误不得缓存；
 - API Key 当前只用于 Control Public 路由；Runtime 和 Scheduler Public 继续要求 Bearer JWT。客户端租户 Header 只表达选择意图，不能替代下游资源归属与权限检查；
 - SSE 路由单独禁用普通响应超时和代理缓冲，保留 `Last-Event-ID`，设置 `Cache-Control: no-store` 与 `X-Accel-Buffering: no`。连接中断不取消 Run，恢复仍以 Runtime 持久 Event Sequence 为事实；

@@ -24,6 +24,18 @@ export default defineConfig({
         target: "http://localhost:8080",
         changeOrigin: true,
       },
+      "/oauth2": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
+      "/login": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
+      "/logout": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
     },
   },
   // Vitest 使用浏览器语义环境并加载公共断言与清理逻辑。

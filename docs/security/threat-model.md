@@ -1,6 +1,6 @@
 ---
 owner: refinex
-updated: 2026-08-18
+updated: 2026-08-21
 status: active
 referenced_by: PLAN.md#phase-20--安全加固sandboxmcpskill-供应链与威胁测试
 ---
@@ -9,7 +9,7 @@ referenced_by: PLAN.md#phase-20--安全加固sandboxmcpskill-供应链与威胁�
 
 ## 1. 结论与适用范围
 
-本威胁模型覆盖 Gateway、Control、Runtime、Scheduler、Web、MySQL、Redis、Object Store、Qdrant、MCP、Skill、Sandbox 和软件供应链。四个部署单元及三套 Schema 所有权不变。固定上游只作为行为证据；AgentScope Provider 仍被限制在防腐层，DeepSeek Harness 仍只作视觉和交互参考。
+本威胁模型覆盖 Gateway、Control、Runtime、Scheduler、Web、Built-in Identity/外部 OIDC、MySQL、Redis、Object Store、Qdrant、MCP、Skill、Sandbox 和软件供应链。四个 AgentArk 部署单元不变；MySQL 增加由 Gateway 独占的 `agentark_identity`，与 Control、Runtime、Scheduler 继续使用独立 Schema/账号。固定上游只作为行为证据；AgentScope Provider 仍被限制在防腐层，DeepSeek Harness 仍只作视觉和交互参考。
 
 截至 Phase 20 收官，表中 Critical/High 风险均已处置为 `MITIGATED` 或因能力未装配而 `FAIL_CLOSED`，没有未解释开放项。`MITIGATED` 表示已有代码、配置与自动测试，不表示替代生产渗透、集群策略或云账号验收；后者归 Phase 22–23。
 
@@ -55,6 +55,11 @@ referenced_by: PLAN.md#phase-20--安全加固sandboxmcpskill-供应链与威胁�
 |---|---|---:|---|---|---|---|---|
 | TM-IAM-01 | Spoofing | Critical | JWT Algorithm/Audience/Issuer 混淆 | Gateway + 各 Backend | 非对称 JWK、Issuer/Audience/Algorithm 白名单、下游独立验证 | Gateway Security 集成测试 | MITIGATED |
 | TM-IAM-02 | Elevation | Critical | Tenant Header 或对象 ID 猜测跨租户 | Control/Runtime/Scheduler/Knowledge | Principal 决定 Scope；Repository/Vector/Object 显式租户过滤；Tenant 插件仅纵深防御 | 跨租户 SQL/API/Qdrant/Object/SSE 测试 | MITIGATED |
+| TM-IAM-03 | Spoofing/Information disclosure | Critical | XSS 窃取身份 Token、密码持久化或 Redis Session 被伪造 | Gateway + Web | Built-in 密码只在同源请求短暂存在；外部 Token 仅存服务端 Authorized Client；HttpOnly/Secure/SameSite=Lax 不透明 Cookie；Redis 随机 Session ID；Logout 撤销 | Built-in/OIDC 登录退出、Session 响应无 Token、Web Storage 空验证 | MITIGATED |
+| TM-IAM-04 | Tampering | Critical | OIDC State/Nonce/PKCE、Callback 或 Post-logout 开放重定向 | Gateway + IdP | Spring Security Authorization Code State/Nonce、S256 PKCE、精确受控 Redirect、Provider Metadata End Session、生产 HTTPS 门禁 | 登录 Redirect 参数、Logout 和 Helm 生产负例 | MITIGATED |
+| TM-IAM-05 | Elevation/DoS | High | 浏览器 Session 跨站副作用或密码暴力猜测 | Gateway + Identity/IdP | Session Cookie 副作用请求校验 CSRF；Redis 快速限流与 MySQL 持久失败计数/锁定；随机临时密码与首次修改 | CSRF Matcher、登录限流、持久锁定和真实登录 | MITIGATED |
+| TM-IAM-06 | Information disclosure | Critical | Identity 数据库泄漏后离线破解或签名私钥随库泄漏 | Gateway Identity | Argon2id PHC 摘要先经部署 Pepper 预处理；Pepper 和 PKCS#8 RSA 私钥只来自 SecretRef；数据库只保存 Pepper 版本和公钥元数据 | 密码服务测试、Schema 内容扫描、Secret/IaC 门禁 | MITIGATED |
+| TM-IAM-07 | Spoofing/Repudiation | High | 被窃取 Session 直接修改密码，或管理员重置与本人修改语义混淆 | Gateway Identity + Web | 本人修改要求当前密码、账号级 Redis 限流、凭据行锁和全 Session 注销；管理员重置要求高权限并生成一次性临时密码；两者使用不同 API 与安全事件 | 本人改密服务测试、OpenAPI 契约和真实浏览器会话失效验证 | MITIGATED |
 | TM-SEC-01 | Information disclosure | Critical | Secret 出现在源码、DB、Snapshot、日志、Trace、Event | Control/Runtime/Foundation | SecretRef、摘要存储、可清零 Resolver、Telemetry 默认正文关闭、Trivy Secret 门禁 | Vault/脱敏/Event/Snapshot/Secret Scan 测试 | MITIGATED |
 | TM-SEC-02 | Spoofing | High | 长期 Vault Token 泄漏或不能轮换 | Control | 按请求读取非符号链接短期 Token 文件；HTTPS；禁止重定向；访问审计 | `VaultKvV2SecretResolverTest`、`FileVaultTokenSource` | MITIGATED |
 | TM-SEC-03 | Tampering | High | 已吊销 Secret 被重新启用 | Control | `REVOKED` 终态、乐观锁、启停/轮换/吊销审计 | Secret Lifecycle API/Repository 测试 | MITIGATED |

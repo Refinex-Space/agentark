@@ -65,6 +65,7 @@ public class AgentArkSecurityAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public JwtDecoder jwtDecoder(AgentArkSecurityProperties properties) {
+        properties.validateTransportSecurity();
         if (properties.getAudiences().isEmpty()) {
             throw new IllegalStateException("security audiences must be configured");
         }

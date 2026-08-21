@@ -1,5 +1,35 @@
 @import "tailwindcss";
 
+/* shadcn login-05 使用的中性语义色；不覆盖控制台 --accent/--text 工作台 Token。 */
+@theme {
+  /* 登录页画布，对应 shadcn background。 */
+  --color-background: #ffffff;
+  /* 身份页主文本，对应 shadcn foreground。 */
+  --color-foreground: #171717;
+  /* 身份页主按钮与路径描边。 */
+  --color-primary: #171717;
+  /* 主按钮文字。 */
+  --color-primary-foreground: #fafafa;
+  /* 次按钮背景。 */
+  --color-secondary: #f7f7f7;
+  /* 次按钮文字。 */
+  --color-secondary-foreground: #171717;
+  /* 弱背景。 */
+  --color-muted: #f7f7f7;
+  /* 辅助说明文字。 */
+  --color-muted-foreground: #737373;
+  /* Ghost 按钮悬停底。 */
+  --color-accent: #f4f4f5;
+  /* Ghost 按钮悬停文字。 */
+  --color-accent-foreground: #171717;
+  /* 分栏与分割线边框。 */
+  --color-border: #e5e5e5;
+  /* 焦点环。 */
+  --color-ring: #171717;
+  /* 输入边框。 */
+  --color-input: #e5e5e5;
+}
+
 :root {
   --font-sans: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -1300,89 +1330,11 @@ a {
   gap: 0.75rem;
 }
 
-.auth-page,
 .not-found-page,
 .fatal-error {
   display: grid;
   min-height: calc(100vh - 8.5rem);
   place-items: center;
-}
-
-.auth-card {
-  display: grid;
-  width: min(100%, 30rem);
-  gap: 1rem;
-  padding: clamp(1.5rem, 4vw, 2.25rem);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  box-shadow: var(--shadow-md);
-}
-
-.auth-card__icon {
-  display: grid;
-  width: 3rem;
-  height: 3rem;
-  place-items: center;
-  border: 1px solid color-mix(in srgb, var(--accent) 32%, var(--border));
-  border-radius: 11px;
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-
-.auth-card h1 {
-  margin: 0;
-  letter-spacing: -0.035em;
-}
-
-.auth-card > p {
-  margin: 0;
-  color: var(--text-muted);
-  line-height: 1.65;
-}
-
-.auth-card small {
-  color: var(--text-subtle);
-  font-size: 0.7rem;
-  line-height: 1.5;
-}
-
-.auth-assurances {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-}
-
-.auth-assurances span {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  color: var(--success);
-  font-size: 0.72rem;
-  font-weight: 650;
-}
-
-.e2e-auth-form {
-  display: grid;
-  gap: var(--space-2);
-  border-top: 1px solid var(--border);
-  padding-top: var(--space-3);
-}
-
-.e2e-auth-form label {
-  display: grid;
-  gap: var(--space-1);
-  color: var(--text-muted);
-  font-size: 0.75rem;
-}
-
-.e2e-auth-form input {
-  min-height: 2.5rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--surface-raised);
-  color: var(--text);
-  padding-inline: 0.75rem;
 }
 
 @keyframes spin {

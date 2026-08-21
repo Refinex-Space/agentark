@@ -9,6 +9,21 @@ spring:
 
 # Scheduler 本地 Profile 仍只通过版本化 URL 与 Control/Runtime 协作。
 agentark:
+  # Foundation 本地身份验证配置。
+  foundation:
+    # Scheduler 管理 API 继续独立校验 JWT。
+    security:
+      # 只有显式身份 Overlay 才开启。
+      enabled: ${AGENTARK_LOCAL_SECURITY_ENABLED:false}
+      # Token 中受信 Issuer。
+      issuer-uri: ${AGENTARK_LOCAL_OIDC_ISSUER_URI:}
+      # Compose 内部 JWK Set 地址。
+      jwk-set-uri: ${AGENTARK_LOCAL_OIDC_JWK_SET_URI:}
+      # 只允许受控本地 HTTP 身份端点。
+      insecure-http-enabled: ${AGENTARK_LOCAL_SECURITY_INSECURE_HTTP_ENABLED:false}
+      # Scheduler 专属 Audience。
+      audiences:
+        - agentark-scheduler
   # Scheduler 本地运行配置。
   scheduler:
     # Control Plane 基础地址；Compose 使用服务 DNS 覆盖。

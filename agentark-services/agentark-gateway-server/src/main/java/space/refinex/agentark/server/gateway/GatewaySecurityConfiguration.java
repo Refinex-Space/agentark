@@ -26,9 +26,16 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
+import org.springframework.security.oauth2.client.oidc.web.server.logout.OidcClientInitiatedServerLogoutSuccessHandler;
+import org.springframework.security.oauth2.client.registration.ReactiveClientRegistrationRepository;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestCustomizers;
+import org.springframework.security.oauth2.client.web.server.DefaultServerOAuth2AuthorizationRequestResolver;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.authentication.RedirectServerAuthenticationSuccessHandler;
+import org.springframework.security.web.server.context.ServerSecurityContextRepository;
+import org.springframework.security.web.server.csrf.WebSessionServerCsrfTokenRepository;
 import org.springframework.security.web.server.header.ReferrerPolicyServerHttpHeadersWriter;
 import org.springframework.security.web.server.header.XFrameOptionsServerHttpHeadersWriter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -50,7 +57,7 @@ import java.util.List;
  * @author refinex
  */
 @Configuration(proxyBeanMethods = false)
-@EnableConfigurationProperties(GatewayProperties.class)
+@EnableConfigurationProperties({GatewayProperties.class, GatewayBffProperties.class, GatewayIdentityProperties.class})
 public class GatewaySecurityConfiguration {
 
     /**
@@ -87,8 +94,8 @@ public class GatewaySecurityConfiguration {
     /**
      * 创建绑定 Control 基础地址的非阻塞 API Key 内部客户端。
      *
-     * @param properties Gateway 地址配置
-     * @param builders   Spring Boot 可选观测客户端构建器
+     * @param properties          Gateway 地址配置
+     * @param builders            Spring Boot 可选观测客户端构建器
      * @param observationRegistry 当前 Micrometer Observation Registry
      * @return 无缓存 Control 客户端
      */
@@ -143,8 +150,8 @@ public class GatewaySecurityConfiguration {
     /**
      * 限流显式启用时要求 Redis RateLimiter 存在，避免保护能力缺失时静默放行。
      *
-     * @param rateLimiter  Redis 原子限流端口
-     * @param properties   Gateway 限流配置
+     * @param rateLimiter   Redis 原子限流端口
+     * @param properties    Gateway 限流配置
      * @param problemWriter 安全错误写出器
      * @return Gateway 限流过滤器
      */
@@ -218,6 +225,8 @@ public class GatewaySecurityConfiguration {
         CorsConfigurationSource corsSource,
         GatewaySecurityProblemWriter problemWriter) {
         return baseSecurity(http, corsSource, problemWriter)
+            .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .logout(ServerHttpSecurity.LogoutSpec::disable)
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers("/actuator/health/**").permitAll()
                 .pathMatchers("/internal", "/internal/**").permitAll()
@@ -241,13 +250,18 @@ public class GatewaySecurityConfiguration {
     }
 
     /**
-     * 安全启用时要求所有公共 API 经 Bearer JWT 或已验证 API Key 认证；Webhook 由下游签名校验。
+     * 安全启用时要求所有公共 API 经 Bearer JWT、已验证 API Key 或 BFF 会话认证；Webhook 由下游签名校验。
+     * BFF 启用时 Authorization Code 请求必须使用 S256 PKCE，并由 Redis Session 保存可刷新的 Authorized Client。
      *
-     * @param http               WebFlux Security Builder
-     * @param corsSource         精确 CORS 配置源
-     * @param decoder            响应式 JWT Decoder
-     * @param principalConverter Foundation Principal 转换器
-     * @param problemWriter      安全错误写出器
+     * @param http                WebFlux Security Builder
+     * @param corsSource          精确 CORS 配置源
+     * @param decoder             响应式 JWT Decoder
+     * @param principalConverter  Foundation Principal 转换器
+     * @param problemWriter       安全错误写出器
+     * @param bffProperties       浏览器 BFF 配置
+     * @param identityProperties  内置 Identity 配置
+     * @param clientRegistrations OIDC Client Registration 仓库
+     * @param securityContexts    可选 Redis Session SecurityContext Repository
      * @return 生产安全链
      */
     @Bean
@@ -258,16 +272,94 @@ public class GatewaySecurityConfiguration {
         CorsConfigurationSource corsSource,
         ReactiveJwtDecoder decoder,
         AgentArkJwtPrincipalConverter principalConverter,
-        GatewaySecurityProblemWriter problemWriter) {
+        GatewaySecurityProblemWriter problemWriter,
+        GatewayBffProperties bffProperties,
+        GatewayIdentityProperties identityProperties,
+        ObjectProvider<ReactiveClientRegistrationRepository> clientRegistrations,
+        ObjectProvider<ServerSecurityContextRepository> securityContexts) {
         GatewayJwtAuthenticationConverter converter =
             new GatewayJwtAuthenticationConverter(principalConverter);
-        return baseSecurity(http, corsSource, problemWriter)
-            .authorizeExchange(exchanges -> exchanges
-                .pathMatchers("/actuator/health/**").permitAll()
-                .pathMatchers("/internal", "/internal/**").permitAll()
-                .pathMatchers(HttpMethod.POST, "/api/v1/scheduler/webhooks/**").permitAll()
-                .pathMatchers("/actuator/info", "/api/v1/**").authenticated()
-                .anyExchange().denyAll())
+        ServerHttpSecurity configured = baseSecurity(http, corsSource, problemWriter);
+        if (bffProperties.isEnabled() && identityProperties.isEnabled()) {
+            throw new IllegalStateException(
+                "built-in identity and external OIDC BFF cannot both own the browser session");
+        }
+        boolean sessionEnabled = bffProperties.isEnabled() || identityProperties.isEnabled();
+        if (sessionEnabled) {
+            ServerSecurityContextRepository contexts = securityContexts.getIfAvailable();
+            if (contexts == null) {
+                throw new IllegalStateException(
+                    "ServerSecurityContextRepository is required when browser session auth is enabled");
+            }
+            configured.securityContextRepository(contexts);
+            WebSessionServerCsrfTokenRepository csrfTokens =
+                new WebSessionServerCsrfTokenRepository();
+            String cookieName = identityProperties.isEnabled()
+                ? identityProperties.getSessionCookieName()
+                : bffProperties.getSessionCookieName();
+            configured.csrf(csrf -> csrf
+                .csrfTokenRepository(csrfTokens)
+                .requireCsrfProtectionMatcher(new GatewayBffCsrfMatcher(cookieName)));
+        }
+        if (bffProperties.isEnabled()) {
+            ReactiveClientRegistrationRepository registrations =
+                clientRegistrations.getIfAvailable();
+            if (registrations == null) {
+                throw new IllegalStateException(
+                    "ReactiveClientRegistrationRepository is required when Gateway BFF is enabled");
+            }
+            DefaultServerOAuth2AuthorizationRequestResolver authorizationRequests =
+                new DefaultServerOAuth2AuthorizationRequestResolver(registrations);
+            authorizationRequests.setAuthorizationRequestCustomizer(
+                OAuth2AuthorizationRequestCustomizers.withPkce());
+            configured.oauth2Login(login -> login
+                .authorizationRequestResolver(authorizationRequests)
+                .authenticationSuccessHandler(
+                    new RedirectServerAuthenticationSuccessHandler(
+                        bffProperties.getPostLoginRedirectUri().toString())));
+            OidcClientInitiatedServerLogoutSuccessHandler logoutSuccess =
+                new OidcClientInitiatedServerLogoutSuccessHandler(registrations);
+            logoutSuccess.setPostLogoutRedirectUri(
+                bffProperties.getPostLogoutRedirectUri().toString());
+            configured.logout(logout -> logout
+                .requiresLogout(org.springframework.security.web.server.util.matcher
+                    .ServerWebExchangeMatchers.pathMatchers(
+                        HttpMethod.POST, "/api/v1/auth/logout"))
+                .logoutSuccessHandler(logoutSuccess));
+        } else if (!identityProperties.isEnabled()) {
+            configured.csrf(ServerHttpSecurity.CsrfSpec::disable)
+                .logout(ServerHttpSecurity.LogoutSpec::disable);
+        } else {
+            configured.logout(ServerHttpSecurity.LogoutSpec::disable);
+        }
+        return configured
+            .authorizeExchange(exchanges -> {
+                if (bffProperties.isEnabled()) {
+                    exchanges.pathMatchers(
+                        "/oauth2/authorization/**",
+                        "/login/oauth2/code/**",
+                        "/api/v1/auth/session").permitAll();
+                    exchanges.pathMatchers(HttpMethod.POST, "/api/v1/auth/logout").authenticated();
+                }
+                if (identityProperties.isEnabled()) {
+                    exchanges.pathMatchers(
+                        HttpMethod.GET,
+                        "/api/v1/auth/session",
+                        "/api/v1/auth/jwks").permitAll();
+                    exchanges.pathMatchers(
+                        HttpMethod.POST,
+                        "/api/v1/auth/login",
+                        "/api/v1/auth/required-password-change").permitAll();
+                    exchanges.pathMatchers(HttpMethod.POST, "/api/v1/auth/logout").permitAll();
+                    exchanges.pathMatchers("/api/v1/identity/**").authenticated();
+                }
+                exchanges
+                    .pathMatchers("/actuator/health/**").permitAll()
+                    .pathMatchers("/internal", "/internal/**").permitAll()
+                    .pathMatchers(HttpMethod.POST, "/api/v1/scheduler/webhooks/**").permitAll()
+                    .pathMatchers("/actuator/info", "/api/v1/**").authenticated()
+                    .anyExchange().denyAll();
+            })
             .oauth2ResourceServer(resourceServer -> resourceServer
                 .authenticationEntryPoint(problemWriter)
                 .accessDeniedHandler(problemWriter)
@@ -290,10 +382,8 @@ public class GatewaySecurityConfiguration {
         CorsConfigurationSource corsSource,
         GatewaySecurityProblemWriter problemWriter) {
         return http
-            .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
             .formLogin(ServerHttpSecurity.FormLoginSpec::disable)
-            .logout(ServerHttpSecurity.LogoutSpec::disable)
             .cors(cors -> cors.configurationSource(corsSource))
             .exceptionHandling(errors -> errors
                 .authenticationEntryPoint(problemWriter)
